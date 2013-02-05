@@ -704,6 +704,7 @@ sub filterSnpEventsWithNev
      #print "#for splicing events NEV calculation\n";
      if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoff);	} 
      if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps',  $nevCutoff); 	}
+     exit;
   }
 
   my %snpEventsNev = (
@@ -874,7 +875,7 @@ sub calSplicingEventNev
 
         if(defined($chrCE{$gene})){
           my $constExonSet = $chrCE{$gene};   
-	  #print "calConstRatio for gene $gene\n";
+	  print "$gene ";
           $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
           #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
@@ -927,14 +928,12 @@ sub calSplicingEventNev
 sub calConstRatio
 {
   my ($constExonSet, $bedRef) = @_;
-  
-  #print "\ncalConstRation: constExonSet: $constExonSet\n";
-
   my @allConstExons = split(';', $constExonSet);
   my ($readCount, $effLen) = (0, 0);
   foreach(@allConstExons){
     my ($s, $e) = split('-', $_);
     my ($r, $l) = getEffReadSumLength($bedRef, $s, $e);
+    print "$_: reads: $r, length: $l\n";
     $readCount += $r;
     $effLen += $l;
   }
@@ -942,6 +941,8 @@ sub calConstRatio
     print "Warning: a gene without constExonSet reads: $constExonSet\n"; 
     return 0;
   }
+ 
+  print "const read: $readCount const len: $effLen\n";
 
   return $readCount/$effLen;
 }
@@ -1265,11 +1266,6 @@ sub matchSnpPoswithSplicingEvents
   my @events = split('\t', $splicing);
   foreach(@events){
     my ($eRegion, $lRegion, $rRegion, $strand, $tag, $additional) = split(';', $_);
-    if(defined($additional)){ #has addtional field, i.e. est event
-      if($tag ne 'est'){
-        die "Parsing error of the EST events (unknown tag: $tag)\n";
-      }
-    }
     my ($eStart, $eEnd) = split(':', $eRegion);
     if($eStart <= $pos && $pos <= $eEnd){ # a snp match!
       $snpInfoToAdd .= $pos.";".$_."\t";

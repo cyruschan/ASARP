@@ -75,11 +75,12 @@ sub readBedByChr
       die "Error in calculating bin pos $sOff-$eOff for $start-$end\n";
     }
 
-    if($eBin > $sBin){ #if the item is across bins
-      $beds[$sBin] .="$sOff,".($TENKB-1).",$n\t";
-      $beds[$eBin] .="0,$eOff,$n\t"; 
-    }else{
-      $beds[$sBin] .="$sOff,$eOff,$n\t";
+    for(my $i=$sBin; $i<=$eBin; $i++){
+      my $startIn = $sOff;
+      if($i>$sBin){ $startIn = 0; }
+      my $endIn = $eOff;
+      if($i<$eBin){ $endIn = $TENKB-1; }
+      $beds[$i] .= "$startIn,$endIn,$n\t";
     }
   }
   close($bFh);
@@ -146,7 +147,7 @@ sub getReadSlice
   if($to - $from + 1 > $TENKB){
     die "ERROR: read count slice [$from, $to] longer than $TENKB is not yet supported. You need to modify the source to implement that\n";
   }
-  $from -= 1; $to -= 1; #the input positions are assumed to be 1-based (incl)
+  $from -= 1; $to -= 1; #the input positions are assumed to be 1-based (incl), now internally converted to 0-based
   my $sBin = int($from/$TENKB);
   my $eBin = int($to/$TENKB);
 
@@ -192,6 +193,8 @@ sub getSliceInBin{
    #get the intersect
    if($s > $to){ last; } #end already
    if($e < $from){ next; } #see the next one
+   
+   print "$s\t$e\t$n\t";
    
    if($e > $to){ $e = $to; }
    if($s < $from){ $s = $from; }

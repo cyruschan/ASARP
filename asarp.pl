@@ -15,6 +15,13 @@ our $ALRATIOCUTOFF = 0.2; #allelic ratio difference cutoff for AS SNVs
 my $defaultConfig='default.config';
 my ($snpF, $bedF, $genomeF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($defaultConfig); 
 
+my ($bedRef) = readBedByChr($bedF, $genomeF, 5);
+
+print "\ngetReadSlice\n";
+my ($c, $l) = getEffReadSumLength($bedRef, 96143563, 96143612);
+print "$c, $l\n";
+exit;
+
 my $transRef = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans');
 my $genesRef = getGeneIndex($transRef);
@@ -36,6 +43,7 @@ my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match sn
 #print "Pow Alt: \n";
 #printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
 #print "\n";
+
 #print "Pow Sp: \n";
 #printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
 #print "Ord Sp: \n";

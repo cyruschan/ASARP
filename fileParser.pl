@@ -112,7 +112,8 @@ sub readAllEvents
 
 #subroutine to read *.event files including rnaseq.event and annotation.event
 #	input:  file name (including the path) to be read
-#	output: the hashes and indices for the events
+#	tag:	text to indicate the type of events being parsed
+#	output: the event reference, which includes hashes and indices for the events
 sub readDifEvent
 {
    #array of hashes
@@ -173,10 +174,14 @@ sub readDifEvent
        }else{
          $strand = '-';
        }
+       # determine splicing type
+       my ($lStart, $lEnd) = split('-', $lRegion);
+       my ($rStart, $rEnd) = split('-', $rRegion);
+       my $spliceType = deriveSpliceType($start, $end, $lStart, $lEnd, $rStart, $rEnd);
 
-       $lRegion = join(':', split('-', $lRegion));
-       $rRegion = join(':', split('-', $rRegion));
-       $chrs[$chrID]{$start}.=$end.";".$geneName.";".$lRegion.";".$rRegion.";".$strand."\t";
+       $lRegion = $lStart.":".$lEnd;  #join(':', split('-', $lRegion));
+       $rRegion = $rStart.":".$rEnd;  #join(':', split('-', $rRegion));
+       $chrs[$chrID]{$start}.=$end.";".$geneName.";".$lRegion.";".$rRegion.";".$strand.";".$spliceType."\t"; # derived SP type added to all events
      }
    }
    close($fh);
@@ -274,12 +279,8 @@ sub addEventsByChr
     my @eSet = split('\t', $rnas{$eStart});
     foreach(@eSet){
       my ($eEnd, $gene, $lRegion, $rRegion, $strand, $additional) = split(';', $_);
-      $eventHash{$gene} .= join(';', $eStart.":".$eEnd, $lRegion, $rRegion, $strand);
-      if(defined($additional)){
-        $eventHash{$gene} .=";".$tag.";".$additional."\t";
-      }else{
-        $eventHash{$gene} .= ";".$tag."\t";
-      }
+      #all events have the uniform format now, and can be distinguished by $tag
+      $eventHash{$gene} .= join(';', $eStart.":".$eEnd, $lRegion, $rRegion, $strand, $additional, $tag)."\t";
     }
   }
   return \%eventHash;
@@ -584,7 +585,7 @@ sub readEstEventFile{
 }
 sub readEstEvent{
  
-  my $checkStrandConsist = 0; #not checking strand consistency between EST and Transcripts
+  my $checkStrandConsist = 0; #by defatult: not checking strand consistency between EST and Transcripts
 
   my ($fileName, $transRef, $annoEventsRef, $checkStrandInputFlag)=@_;
   if(defined($checkStrandInputFlag)){
@@ -677,7 +678,7 @@ sub readEstEvent{
 
 			 if(!$checkStrandConsist || $txStrand eq $strand){
 		           $genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
-                           $chrs[$i]{$eStart}.=$eEnd.";".$gene.";".$lRegion.";".$rRegion.";".$txStrand.";D:".$spliceType."\t";
+                           $chrs[$i]{$eStart}.=$eEnd.";".$gene.";".$lRegion.";".$rRegion.";".$txStrand.";".$spliceType."\t";
                          }
 			 #debug only
 		         #if($spliceType ne $type){
@@ -701,7 +702,7 @@ sub readEstEvent{
 	           if(!$checkStrandConsist || $txStrand eq $strand){
 		     $genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
 		   
-		     $chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$strand.";F:".$type."\t";
+		     $chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";F:".$type."\t"; #always follow the transcript strand; F means type stated in file 
 		   }
 	         }
 	       } #end of foreach(@evntSet)
