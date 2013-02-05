@@ -1,0 +1,37 @@
+There are 0 genes are under gene level SNV effect
+There are 3 genes whose powerful SNVs are all ASE
+There are 1 5' alternative initiation genes
+There are 0 3' alternative termination genes
+There are 1 alternative splicing genes
+There are 2 complex evented genes where
+There are 0 alternative splicing, initiation and termination evented genes
+There are 0 alternative splicing and initiation evented genes
+There are 2 alternative splicing and termination evented genes
+There are 0 alternative termination and initiation evented genes
+There are 4 event related genes
+SNVs
+Alternative Splicing
+CAST	chr5 96101944 A>G rs27524 5:12:0
+GPR177	chr1 68590734 T>C rs12092498 11:3:0
+ERAP1	chr5 96112005 C>T rs10515248 41:64:0
+CAST	chr5 96103352 C>T rs26481 1:9:0
+ERAP1	chr5 96107774 C>T rs27581 3:13:0
+ERAP1	chr5 96107801 A>G rs72773912 15:2:0
+CAST	chr5 96076487 G>A rs7724759 192:3:0
+CAST	chr5 96101959 C>T rs27525 4:12:0
+GPR177	chr1 68591173 A>G rs1046835 103:55:0
+CAST	chr5 96107005 A>G rs17402639 9:0:1
+Alternative Initiation
+GDI2	chr10 5855403 G>C rs3736461 5:27:0
+Alternative Termination
+GPR177	chr1 68591173 A>G rs1046835 103:55:0
+CAST	chr5 96107774 C>T rs27581 3:13:0
+CAST	chr5 96107801 A>G rs72773912 15:2:0
+GENES
+chr10	GDI2	Initiation	chr10 5855403 G>C rs3736461 5:27:0 0.026362	
+chr5	CTD-2260A17.2	AllASE	chr5 96254994 T>A rs17409040 169:5:0	chr5 96255017 T>C rs7714122 167:5:0	chr5 96215303 C>T na 96:3:0	chr5 96239258 T>A rs17408150 19:2:0	chr5 96254301 A>G rs17087180 207:2:0	chr5 96244719 T>C rs17486915 136:3:0	
+chr5	CAST	Complex	chr5 96103352 C>T rs26481 1:9:0 0.0154759	chr5 96101959 C>T rs27525 4:12:0 0.0207455	chr5 96107774 C>T rs27581 3:13:0 0.0213842	chr5 96107005 A>G rs17402639 9:0:1 0.0340138	chr5 96107801 A>G rs72773912 15:2:0 0.0213842	chr5 96101944 A>G rs27524 5:12:0 0.0207455	chr5 96076487 G>A rs7724759 192:3:0 0.334489	
+chr5	L-RAP	AllASE	chr5 96254994 T>A rs17409040 169:5:0	chr5 96255017 T>C rs7714122 167:5:0	chr5 96215303 C>T na 96:3:0	chr5 96239258 T>A rs17408150 19:2:0	chr5 96254301 A>G rs17087180 207:2:0	chr5 96244719 T>C rs17486915 136:3:0	
+chr5	ERAP2	AllASE	chr5 96254994 T>A rs17409040 169:5:0	chr5 96255017 T>C rs7714122 167:5:0	chr5 96215303 C>T na 96:3:0	chr5 96239258 T>A rs17408150 19:2:0	chr5 96254301 A>G rs17087180 207:2:0	chr5 96244719 T>C rs17486915 136:3:0	
+chr5	ERAP1	Splicing	chr5 96107774 C>T rs27581 3:13:0 0.0983292	chr5 96112005 C>T rs10515248 41:64:0 0.659139	chr5 96107801 A>G rs72773912 15:2:0 0.0983292	
+chr1	GPR177	Complex	chr1 68591173 A>G rs1046835 103:55:0 0.158104	chr1 68590734 T>C rs12092498 11:3:0 0.187919	
