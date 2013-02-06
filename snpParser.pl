@@ -891,6 +891,20 @@ sub calSplicingEventNev
      if($groupSnpInfo eq ''){ #no exon info
        $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos,"intron".$strand);
      }
+
+     # try the opposite strand only when there is no info for grouped SNP
+     if($groupSnpInfo eq '' && ($tag eq 'rna' || $tag eq 'est')){ # do not always follow the strand
+       my $antiStrand = '-';
+       if($antiStrand eq $strand){
+         $antiStrand = '+';
+       }
+       print "Trying the opposite strand $antiStrand\n";
+       $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos, "exon".$antiStrand);
+       if($groupSnpInfo eq ''){ #no exon info
+         $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos, "intron".$antiStrand);
+       }
+     }
+
      if($groupSnpInfo ne ''){ #there is information
        # refine (intersect) the event region $eRegion as needed
        my ($s, $e, $transIds) = split(';', $groupSnpInfo);
