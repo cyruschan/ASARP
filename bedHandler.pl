@@ -2,9 +2,8 @@
 use strict;
 #use IO::Handle;
 
-use MyConstants qw( $CHRNUM $TENKB $supportedList );
-
 require "fileParser.pl"; # need to use binarySearch
+our $TENKB = 10000; #10KB as the bin size, only used in the bed handler only
 
 ## This file handles the bed files parsing, reading and data retrieval.
 ## To manage a small memory footprint, a binned approach is used.
@@ -64,8 +63,16 @@ sub readBedByChr
     $count++;
     #if($count%($TENKB*100)==0){ print $count." ";  }
     my ($ch, $start, $end, $n) = split(' ', $_);
-    #$start; #already zero-based?
-    $end-=1;#1-based, converted back to zero based
+    #$start; #already zero-based? (according to bed standard format)
+    #$end-=1;#1-based, converted back to zero based
+    #debug modification, to reproduce Gang's results
+    $start -= 1; # falsely assume it's one-based
+    $end -= 1; #one-based and shifted one position to mimic overwriting..
+    #need to correct after the debug to reproduce Gang's results
+
+    #all converted to 1-based
+    $start += 1; #zero-based converted to 1-based
+    
     my $sBin = int($start/$TENKB);
     my $eBin = int($end/$TENKB);
 
@@ -145,17 +152,16 @@ sub getReadSlice
   #print "from: $from to $to\n";
   if($from > $to){ die "ERROR: wrong slice range: [$from, $to]\n"; }
   if($to - $from + 1 > $TENKB){
-    die "ERROR: read count slice [$from, $to] longer than $TENKB is not yet supported. You need to modify the source to implement that\n";
+    die "ERROR: read slice [$from, $to] longer than $TENKB is not yet supported. You need to modify the bedHandler source to implement that\n";
   }
-  $from -= 1; $to -= 1; #the input positions are assumed to be 1-based (incl), now internally converted to 0-based
+  #even internally we stick to 1-based (incl.) so the following line is commented.
+  #$from -= 1; $to -= 1; #the input positions are assumed to be 1-based (incl), now internally converted to 0-based
   my $sBin = int($from/$TENKB);
   my $eBin = int($to/$TENKB);
 
   my $sOff = $from-$sBin*$TENKB;
   my $eOff = $to-$eBin*$TENKB;
   my @readArray = ();
-
-  #print "bins: $sBin, $eBin, offs: $sOff, $eOff\n";
 
   if($eBin > $sBin){ #if the item is across bins
     if($eOff+$TENKB-$sOff+1 != $to-$from+1){
@@ -194,22 +200,30 @@ sub getSliceInBin{
    if($s > $to){ last; } #end already
    if($e < $from){ next; } #see the next one
    
-   print "$s\t$e\t$n\t";
-   
    if($e > $to){ $e = $to; }
    if($s < $from){ $s = $from; }
    for(my $j = $s; $j<=$e; $j++){
      if($res[$j-$from] >0){ die "Error overlap @res at pos $j-$from (the reads from bed.sam shouldn't overlap)\n";  }
      $res[$j-$from]=$n;
    }
+   #print "array $s-$from to $e-$from are filled with $n\n";
 
   }
+#  my $x=0;
+#  my $cc = 0;
+#  for(@res){
+#    print "$x\t$_\n";
+#    $cc += $_;
+#    $x++;
+#  }
+#  print "\nread count: $cc\n";
   return @res;
 }
 
+# obsolete as a more efficient implementation is used without needing a slice
 # sub routine to get the effective sum and effective length
 #the input positions ($from, $to) are assumed to be 1-based (incl)
-sub getEffReadSumLength
+sub getEffReadSumLengthObs
 {
   my ($bedRef, $from, $to) = @_;
   my @readArray = getReadSlice($bedRef, $from, $to);
@@ -219,6 +233,70 @@ sub getEffReadSumLength
       $readSum += $_;
       ++$readLen;
     }
+  }
+  #print "reads: $readSum, len: $readLen\n";
+  return ($readSum, $readLen);
+}
+
+sub getReadLengthInBin{
+  
+  my ($idxRef, $ref, $from, $to) = @_;
+  my @idx = @$idxRef;
+  my %reads = %$ref;
+  my ($c, $l) = (0, 0);
+
+  my ($loc, $unMatchFlag) = binarySearch($idxRef, $from, 0, @idx-1, 'left');
+  # need to shift to the previous one if $from is < $idx[$loc] but > $idx[$loc-1] (assumed > the end position of $idx[$loc-2], if any)
+  if($unMatchFlag == 1 && $loc>0){ $loc -= 1; }
+ 
+  for(my $i = $loc; $i < @idx; $i++){
+   my $s = $idx[$i];
+   my ($e, $n) = split(',', $reads{$s}); 
+
+   #get the intersect
+   if($s > $to){ last; } #end already
+   if($e < $from){ next; } #see the next one
+   
+   #print "$s\t$e\t$n\t";
+   
+   if($e > $to){ $e = $to; }
+   if($s < $from){ $s = $from; }
+   my $len = $e-$s+1;
+
+   $c += $n*$len;
+   $l += $len;
+  }
+
+  return ($c, $l);
+}
+sub getEffReadSumLength
+{
+  my ($bedRef, $from, $to) = @_;
+  my @beds = @{$bedRef->{'reads'}};
+  my @bedsIdx = @{$bedRef->{'reads_idx'}};
+  
+  #print "from: $from to $to\n";
+  if($from > $to){ die "ERROR: wrong slice range: [$from, $to]\n"; }
+  
+  #even internally we stick to 1-based (incl.) so the following line is commented.
+  #$from -= 1; $to -= 1; #the input positions are assumed to be 1-based (incl), now internally converted to 0-based
+  my $sBin = int($from/$TENKB);
+  my $eBin = int($to/$TENKB);
+
+  my $sOff = $from-$sBin*$TENKB;
+  my $eOff = $to-$eBin*$TENKB;
+  my ($readSum, $readLen) = (0, 0);
+
+  #print "bins: $sBin, $eBin, offs: $sOff, $eOff\n";
+  for(my $i=$sBin; $i<=$eBin; $i++){ #loop over all the bins 
+    # find the current start and end in the this bin
+    my $startIn = $sOff;
+    if($i>$sBin){ $startIn = 0; }
+    my $endIn = $eOff;
+    if($i<$eBin){ $endIn = $TENKB-1; }
+    my ($c, $l) = getReadLengthInBin($bedsIdx[$i], $beds[$i], $startIn, $endIn);
+    $readSum += $c;
+    $readLen += $l;
   }
   #print "reads: $readSum, len: $readLen\n";
   return ($readSum, $readLen);
@@ -259,18 +337,45 @@ sub printBedReads{
 }
 
 sub simpleTestReads{
-  my ($bedF, $genomeF) = @_;
-  my ($bedRef) = readBedByChr($bedF, $genomeF, 10);
+  my ($bedF, $genomeF, $chr) = @_;
+  my ($bedRef) = readBedByChr($bedF, $genomeF, $chr);
 
-  print "\ngetReadSlice\n";
-  my ($c, $l) = getEffReadSumLength($bedRef, 179987, 180064);
-  print "$c, $l\n";
+  my ($from, $to, $c, $l) = (0,0,0,0);
 
-  ($c, $l) = getEffReadSumLength($bedRef, 174710, 174750);
-  print "$c, $l\n";
+  ($from, $to) = (96139243, 96139530);
+  print "Test 1: ERAP1 I $from $to\n";
+  ($c, $l) = getEffReadSumLength($bedRef, $from, $to);
+  print "New: $c, $l\n";
+  ($c, $l) = getEffReadSumLengthObs($bedRef, $from, $to);
+  print "Old: $c, $l\n";
+  
+  ($from, $to) = (96143563, 96143612);
+  print "Test 2: ERAP1 I $from $to\n";
+  ($c, $l) = getEffReadSumLength($bedRef, $from, $to);
+  print "New: $c, $l\n";
+  ($c, $l) = getEffReadSumLengthObs($bedRef, $from, $to);
+  print "Old: $c, $l\n";
+  
+  ($from, $to) = (96121492, 96121675);
+  print "Test 3: ERAP1 II $from $to\n";
+  ($c, $l) = getEffReadSumLength($bedRef, $from, $to);
+  print "New: $c, $l\n";
+  ($c, $l) = getEffReadSumLengthObs($bedRef, $from, $to);
+  print "Old: $c, $l\n";
+ 
+ ($from, $to) = (96126288, 96126329);
+  print "Test 4: ERAP1 II $from $to\n";
+  ($c, $l) = getEffReadSumLength($bedRef, $from, $to);
+  print "New: $c, $l\n";
+  ($c, $l) = getEffReadSumLengthObs($bedRef, $from, $to);
+  print "Old: $c, $l\n";
 
-  ($c, $l) = getEffReadSumLength($bedRef, 135387008, 135387050);
-  print "$c, $l\n";
+  ($from, $to) = (96139243, 96139530);
+  print "Test 5: ERAP1 II $from $to\n";
+  ($c, $l) = getEffReadSumLength($bedRef, $from, $to);
+  print "New: $c, $l\n";
+  ($c, $l) = getEffReadSumLengthObs($bedRef, $from, $to);
+  print "Old: $c, $l\n";
 }
 
 1;

@@ -2,7 +2,7 @@
 use strict;
 #use IO::Handle;
 
-use MyConstants qw( $CHRNUM $TENKB $supportedList $supportedTags );
+use MyConstants qw( $CHRNUM $supportedList $supportedTags );
 require "bedHandler.pl"; #sub's for handling bed files
 
 # subroutine to read the annotation_file.config file and get all input file names

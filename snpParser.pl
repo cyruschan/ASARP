@@ -4,7 +4,7 @@ use Statistics::R; #interact with R
 require 'fileParser.pl';
 require 'bedHandler.pl';
 
-use MyConstants qw( $CHRNUM $TENKB $supportedList $supportedTags );
+use MyConstants qw( $CHRNUM $supportedList $supportedTags );
 
 # the sub routines to process snps
 # input
@@ -987,6 +987,7 @@ sub calAltEventNev
   my ($powAltsRef, $bedRef, $chr, $nevCutoff) = @_;
   my %allGeneSnps = %$powAltsRef;
   for(keys %allGeneSnps){
+     my $gene = $_;
      my $updatedEvents = '';
      my @allEvents = split('\t', $allGeneSnps{$_});
      foreach(@allEvents){
@@ -1008,6 +1009,7 @@ sub calAltEventNev
        }
        if(0 < $nev && $nev < $nevCutoff){
           $updatedEvents .= "$type,$pos,$nev,$altRegion,$constRegion\t";
+	  print "$gene\t$type,$pos,$nev,$altRegion,$constRegion\n";
        }
 
      }
