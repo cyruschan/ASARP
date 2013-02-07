@@ -29,11 +29,15 @@ my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef);
 
 my $snpRef = initSnp($snpF, $POWCUTOFF);
-#print "Powerful SNV List:\n";
+#print "SNV List:\n";
 #printListByKey($snpRef, 'powSnps');
+#printListByKey($snpRef, 'snps');
+
 my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 #print "Significant Snvs: \n";
 #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $PCUTOFF);
+#print "Ordinary Snvs: \n";
+#printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
 
 my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
 #print "Pow Alt: \n";
@@ -50,11 +54,11 @@ my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $
 #print "Pow NEV Alt: \n";
 #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
 #print "\n";
-print "Pow NEV Sp: \n";
-printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
-print "Ord NEV Sp: \n";
-printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
-print "\n";
+#print "Pow NEV Sp: \n";
+#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
+#print "Ord NEV Sp: \n";
+#printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
+#print "\n";
 
 print "processing ASE's\n";
 my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $PCUTOFF, $NEVCUTOFF, $ALRATIOCUTOFF);
@@ -63,6 +67,6 @@ print "\n";
 my $outputSnv = 'snv.predicted.txt';
 my $outputGene ='gene.predicted.txt';
 outputASARP($allAsarpsRef, 'ASEgene');
-outputASARP($allAsarpsRef, 'ASARPgene', $outputGene);
-outputASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
+outputASARP($allAsarpsRef, 'ASARPgene'); #, $outputGene);
+outputASARP($allAsarpsRef, 'ASARPsnp'); #, $outputSnv);
 

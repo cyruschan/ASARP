@@ -185,7 +185,6 @@ sub snpVsTrans{
 	    my ($txEnd, $cdsStart, $cdsEnd, $exonStarts, $exonEnds, $id, $gene, $isCoding, $txStrand) = split(';', $_);
 	    if($txEnd > $maxTxEnd){	$maxTxEnd = $txEnd;	}#always store the max transcript end
 	    if($sPos<=$txEnd){ # there is a hit
-	       #print "$si VS $newTi: $sPos hits $tPos, $txEnd\n";
 	       #$sPos<= $txEnd means the next $sPos may still match txEnd in @tSet, can't increase $ti.
 	       # further checking
 	       my @exss = split(',', $exonStarts);
@@ -221,11 +220,15 @@ sub snpVsTrans{
 		     $type = 'normal';
 		   }
 		   $snpInfoToAdd = 'exon:'.$type.';'.$gene.';'.$tPos.";".$id.';'.$exss[$j].';'.$exes[$j];
+
 		   last;
 	         }
 	       
 	         if($j >0 && $sPos > $exes[$j-1] && $sPos < $exss[$j]){ # in intron
 	           $snpInfoToAdd = 'intron:'.$txStrand.';'.$gene.';'.$tPos.";".$id.';'.($exes[$j-1]+1).';'.($exss[$j]-1);
+	           if($sPos == 96108701){
+		     print "snpInfo for $sPos (Intron) is $snpInfoToAdd\n";
+		   }
 		   last;
 	         }
                }
@@ -696,15 +699,14 @@ sub filterSnpEventsWithNev
 	$bedRef = readBedByChr($bedF, $genomeF, $i);
      }
 
-     #print "# for 5'/3' alt init/term events\n";
+     print "# for 5'/3' alt init/term events\n";
      #update (shortlist) the alt events with NEV values calculated from bed information
      if($powAltCnt  > 0){	$nevPowAlts[$i] = calAltEventNev(\%powAlts, $bedRef, $i, $nevCutoff);	}
      if($snpAltCnt  > 0){ 	$nevSnpAlts[$i] = calAltEventNev(\%snpAlts, $bedRef, $i, $nevCutoff);	}
 
-     #print "#for splicing events NEV calculation\n";
+     print "#for splicing events NEV calculation\n";
      if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoff);	} 
      if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps',  $nevCutoff); 	}
-     exit;
   }
 
   my %snpEventsNev = (
@@ -744,10 +746,10 @@ sub groupGeneSnps
   my %snpNegExonEnds = ();
   my %snpNegIntronStarts = ();
   my %snpNegIntronEnds = ();
-
   my @allSnps = split('\t', $geneSnps);
   foreach(@allSnps){
     my ($snpPos, $exonIntronType, $geneName, $txStart, $transId, $exonS, $exonE) =  split(';', $_);
+
     my @typeInfo = split(':', $exonIntronType); 
     if($typeInfo[-1] eq '+'){ #forward strand
       if($typeInfo[0] eq 'exon'){
@@ -770,7 +772,7 @@ sub groupGeneSnps
       }
     }else{ #strand is -
       if($typeInfo[0] eq 'exon'){
-        $snpsNeg{$snpPos} .= $transId.','; #defined now
+	$snpsNeg{$snpPos} .= $transId.','; #defined now
         if(!defined($snpNegExonStarts{$snpPos}) || $snpNegExonStarts{$snpPos} < $exonS){
           $snpNegExonStarts{$snpPos} = $exonS;
         }
@@ -789,31 +791,48 @@ sub groupGeneSnps
       }
     }
   }
+
   for(keys %snps){
     if(!defined($groups{$_})){
       $groups{$_} = {}; #empty hash
     }
     my %hash = %{$groups{$_}};
-
     if(defined($snpExonStarts{$_})){
       $hash{'exon+'} = join(';', $snpExonStarts{$_}, $snpExonEnds{$_}, $snps{$_});
-    }elsif(defined($snpIntronStarts{$_})){
+    }
+    $groups{$_} = \%hash; #update the reference
+  }
+
+  for(keys %snpsIn){
+    if(!defined($groups{$_})){
+      $groups{$_} = {}; #empty hash
+    }
+    my %hash = %{$groups{$_}};
+    if(defined($snpIntronStarts{$_})){
       $hash{'intron+'} = join(';', $snpIntronStarts{$_}, $snpIntronEnds{$_}, $snpsIn{$_});
     }
     $groups{$_} = \%hash; #update the reference
-  }  
+  }
+
   for(keys %snpsNeg){
     if(!defined($groups{$_})){
       $groups{$_} = {}; #empty hash
     }
     my %hash = %{$groups{$_}};
-
     if(defined($snpNegExonStarts{$_})){
       $hash{'exon-'} = join(';', $snpNegExonStarts{$_}, $snpNegExonEnds{$_}, $snpsNeg{$_});
-    }elsif(defined($snpNegIntronStarts{$_})){
+    }
+    $groups{$_} = \%hash;
+  }
+  
+  for(keys %snpsNegIn){
+    if(!defined($groups{$_})){
+      $groups{$_} = {}; #empty hash
+    }
+    my %hash = %{$groups{$_}};
+    if(defined($snpNegIntronStarts{$_})){
       $hash{'intron-'} = join(';', $snpNegIntronStarts{$_}, $snpNegIntronEnds{$_}, $snpsNegIn{$_});
     }
-
     $groups{$_} = \%hash;
   }
 
@@ -822,6 +841,7 @@ sub groupGeneSnps
 
 sub getGroupedSnpInfoByType{
   my ($groupsRef, $pos, $type) = @_;
+  #print  "Getting SNV $pos for type $type\n";
   my %groups = %$groupsRef;
   if(defined($groups{$pos})){
     my %snps = %{$groups{$pos}};
@@ -850,7 +870,7 @@ sub calSplicingEventNev
     if(defined($spEventsList{$_}->{'type'})){
       my $tag = $spEventsList{$_}->{'type'};
       if(checkSupportedType($tag)){
-        #print "Loading constitutive exons\n";
+        print "Loading constitutive exons for gene $_ with $tag\n";
         $spConstExons{$tag} = getConstitutiveExonsByChr($spEventsList{$_}, $chr);
 	#print "REF: $spConstExons{$tag}\n";
       }
@@ -877,7 +897,7 @@ sub calSplicingEventNev
           my $constExonSet = $chrCE{$gene};   
 	  print "$gene ";
           $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
-          #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
+          print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
         } #get the constitutive ratio if there is event evidence for this gene
       }
@@ -886,23 +906,10 @@ sub calSplicingEventNev
 
     my @allEvents = split('\t', $allGeneSpSnps{$gene});
     foreach(@allEvents){
-     my ($snpPos, $eRegion, $lRegion, $rRegion, $strand, $tag, $additional) = split(';', $_);
+     my ($snpPos, $eRegion, $lRegion, $rRegion, $strand, $additional, $tag) = split(';', $_);
      my $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos,"exon".$strand);
      if($groupSnpInfo eq ''){ #no exon info
        $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos,"intron".$strand);
-     }
-
-     # try the opposite strand only when there is no info for grouped SNP
-     if($groupSnpInfo eq '' && ($tag eq 'rna' || $tag eq 'est')){ # do not always follow the strand
-       my $antiStrand = '-';
-       if($antiStrand eq $strand){
-         $antiStrand = '+';
-       }
-       print "Trying the opposite strand $antiStrand\n";
-       $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos, "exon".$antiStrand);
-       if($groupSnpInfo eq ''){ #no exon info
-         $groupSnpInfo = getGroupedSnpInfoByType($groupsRef, $snpPos, "intron".$antiStrand);
-       }
      }
 
      if($groupSnpInfo ne ''){ #there is information
@@ -929,7 +936,7 @@ sub calSplicingEventNev
          print "We dont want this NEV: $nev, $_\n";
        }
      }else{
-       print "ERROR: SNP $snpPos should match some events $_\n";
+       print "ERROR: SNP $snpPos should match $gene with some events $_\n";
        exit;
      }
      
@@ -1281,7 +1288,7 @@ sub matchSnpPoswithSplicingEvents
   my $snpInfoToAdd = '';
   my @events = split('\t', $splicing);
   foreach(@events){
-    my ($eRegion, $lRegion, $rRegion, $strand, $tag, $additional) = split(';', $_);
+    my ($eRegion, $lRegion, $rRegion, $strand, $additional, $tag) = split(';', $_);
     my ($eStart, $eEnd) = split(':', $eRegion);
     if($eStart <= $pos && $pos <= $eEnd){ # a snp match!
       $snpInfoToAdd .= $pos.";".$_."\t";
