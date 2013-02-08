@@ -348,7 +348,6 @@ sub processASEWithNev
      my %asarpGeneHash = ();
      my %asarpSnpHash = ();
 
-
      my ($powGeneSnpChrRef) = getListByKeyChr($geneSnpRef, 'gPowSnps', $i);
      my %powGenes = %$powGeneSnpChrRef;
      my ($geneSnpChrRef) = getListByKeyChr($geneSnpRef, 'gSnps', $i);
@@ -494,7 +493,7 @@ sub processASEWithNev
 	         next; #cannot be the same pos, cannot be ASE SNP
 	       }
 	       print "# Step 2.1.3 make sure that $trgtPos and $ctrlPos are not in the same exon\n";
-	       if(areInDiffExonsIntrons(\%allSnpGroup, $trgtPos, $snpGroupRef, $ctrlPos)){
+	       if(areNotInSameExon(\%allSnpGroup, $trgtPos, $snpGroupRef, $ctrlPos)){
 	         # a valid target-control SNV pair, now check their allele difference
 		 # in the current implementation, one position is assumed to have possibly multiple SNV types separated by ';', so we need to split the tuple first
 
@@ -629,30 +628,33 @@ sub outputASARP{
   }
 
 }
-sub areInDiffExonsIntrons
+sub areNotInSameExon
 {
-  my ($targetRef, $target, $controlRef, $control) = @_;
+  my ($targetRef, $target, $controlRef, $control, $chrTransRef) = @_;
   my $targetSnpRef = $targetRef->{$target};
   my $controlSnpRef = $targetRef->{$control};
   my %targetSnp = %$targetSnpRef;
   my %controlSnp = %$controlSnpRef;
 
-  #my $areDiff = 1;
-  for my $tag ('exon+', 'exon-', 'intron+', 'intron-'){
+  # Step 1: a quick check with just the intersect exons (pre-screening)
+  if(defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'}) ||defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'})){
+    print "one of the 2 snps is in intron\n";
+    return 1;
+  }
+  
+  for my $tag ('exon+', 'exon-'){ # same intron is also considered "NotInSameExon", not need for 'intron+', 'intron-'){
 
     if(defined($targetSnp{$tag}) && defined($controlSnp{$tag})){
-      my ($tS, $tE, $tTransIds) = split(';', $targetSnp{$tag});
-      my ($cS, $cE, $cTransIds) = split(';', $controlSnp{$tag});
+      my ($tS, $tE, $tTransTxs) = split(';', $targetSnp{$tag});
+      my ($cS, $cE, $cTransTxs) = split(';', $controlSnp{$tag});
       if($tS<=$cE && $cS<=$tE){ #exon overlaps
-        
 	if($target == 96107774 || $target == 96107801 || $target == 96112005){
-	  print "$tag: overlap: $tS-$tE $cS-$cE \n$target: $tTransIds overlaps $control: $cTransIds\n";
+	  print "$tag: overlap: $tS-$tE $cS-$cE \n$target: $tTransTxs overlaps $control: $cTransTxs\n";
 	}
-        return 0; #not in the same
+	return 0;
       }
     }
   }
-
   return 1;
 }
 
@@ -706,7 +708,7 @@ sub filterSnpEventsWithNev
 
      print "#for splicing events NEV calculation\n";
      if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoff);	} 
-     if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps',  $nevCutoff); 	}
+     if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps', $nevCutoff); 	}
   }
 
   my %snpEventsNev = (
@@ -753,7 +755,7 @@ sub groupGeneSnps
     my @typeInfo = split(':', $exonIntronType); 
     if($typeInfo[-1] eq '+'){ #forward strand
       if($typeInfo[0] eq 'exon'){
-        $snps{$snpPos} .= $transId.','; #defined now
+        $snps{$snpPos} .= $txStart.','; #defined now
         if(!defined($snpExonStarts{$snpPos}) || $snpExonStarts{$snpPos} < $exonS){
           $snpExonStarts{$snpPos} = $exonS;
         }
@@ -762,7 +764,7 @@ sub groupGeneSnps
         }
       }
       else{ # intron type
-        $snpsIn{$snpPos} .= $transId.','; #defined now
+        $snpsIn{$snpPos} .= $txStart.','; #defined now
         if(!defined($snpIntronStarts{$snpPos}) || $snpIntronStarts{$snpPos} < $exonS){
           $snpIntronStarts{$snpPos} = $exonS;
         }
@@ -772,7 +774,7 @@ sub groupGeneSnps
       }
     }else{ #strand is -
       if($typeInfo[0] eq 'exon'){
-	$snpsNeg{$snpPos} .= $transId.','; #defined now
+	$snpsNeg{$snpPos} .= $txStart.','; #defined now
         if(!defined($snpNegExonStarts{$snpPos}) || $snpNegExonStarts{$snpPos} < $exonS){
           $snpNegExonStarts{$snpPos} = $exonS;
         }
@@ -781,7 +783,7 @@ sub groupGeneSnps
         }
       }
       else{ # intron type
-        $snpsNegIn{$snpPos} .= $transId.','; #defined now
+        $snpsNegIn{$snpPos} .= $txStart.','; #defined now
         if(!defined($snpNegIntronStarts{$snpPos}) || $snpNegIntronStarts{$snpPos} < $exonS){
           $snpNegIntronStarts{$snpPos} = $exonS;
         }

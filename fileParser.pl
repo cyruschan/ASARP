@@ -911,7 +911,7 @@ sub binarySearch{
     }
   }
   #this means $imin = $imax+1, and neither $arr[$imin] or $arr[$imax] equals $x
-  if($imax<0){ return (0, 1); } # imax == -1 has a different meaning in Perl!!
+  if($imax<0){ return (0, 1); } # $arr[$imax] when imax == -1 has a different meaning in Perl!!
   if($arr[$imax] < $x){ return ($imin, 1);  }
   return ($imax, 1);
 
