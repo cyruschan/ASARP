@@ -943,6 +943,20 @@ sub printChr
    else{ die "Unknown Chr $i\n"; }
 }
 
+# print out the chromosome based on its numeric value 1-$CHRNUM
+sub formatChr
+{
+   my $i=$_[0];
+   my $str = "chr";
+   my $chrX ='';
+   if($i>0 && $i<23){  $chrX = $i;  }
+   elsif($i==23){  $chrX = "X"; }
+   elsif($i==24){  $chrX = "Y"; }
+   else{ die "Unknown Chr $i\n"; }
+
+   return $str.$chrX;
+}
+
 # print those discarded chromosomes
 sub printDiscardedChrs
 { 

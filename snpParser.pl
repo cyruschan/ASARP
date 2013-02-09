@@ -54,21 +54,20 @@ sub initSnp{
       
       #use the R object to make a Chi-squared goodness-of-fit test
       $R->set('x', [$refAl, $altAl]);
-      $R->run('p = chisq.test(x)'); #default expected dist is c(0.5, 0.5)
-      my $testChi = $R->get('p');
-      my $pValue = @$testChi[-1];    
+      $R->run('p = chisq.test(x)$p.value'); #default expected dist is c(0.5, 0.5)
+      my $pValue = $R->get('p');
 
-        #print "Chr $chrID: Ref: $refAl, Alt: $altAl, Total: $totalAl\n";
-        #print "Chi-squared test\t$pValue\n";
+      #print "Chr $chrID: Ref: $refAl, Alt: $altAl, Total: $totalAl\n";
+      #print "Chi-squared test\t$pValue\n";
       
-        #bionomial test (exact):
-        #$R->run("p2 = binom.test($refAl, $totalAl, 0.5)");
-        #my $testBin = $R->get('p2');
-        #print "Binomial test\t\t";
-        #my $resBin = join(' ', @$testBin);
-        #if($resBin=~/p-value\s*[<|=]\s*(\S+)/){
-        #  print "$1\n";
-        #}
+      #bionomial test (exact):
+      #$R->run("p2 = binom.test($refAl, $totalAl, 0.5)");
+      #my $testBin = $R->get('p2');
+      #print "Binomial test\t\t";
+      #my $resBin = join(' ', @$testBin);
+      #if($resBin=~/p-value\s*[<|=]\s*(\S+)/){
+      #  print "$1\n";
+      #}
 
       if(defined($powSnps[$chrID]{$pos})){
 	  print "Warning: multiple powerful SNVs at the same position: $pos with ".$powSnps[$chrID]{$pos}."\n";
@@ -220,15 +219,11 @@ sub snpVsTrans{
 		     $type = 'normal';
 		   }
 		   $snpInfoToAdd = 'exon:'.$type.';'.$gene.';'.$tPos.";".$id.';'.$exss[$j].';'.$exes[$j];
-
 		   last;
 	         }
 	       
 	         if($j >0 && $sPos > $exes[$j-1] && $sPos < $exss[$j]){ # in intron
 	           $snpInfoToAdd = 'intron:'.$txStrand.';'.$gene.';'.$tPos.";".$id.';'.($exes[$j-1]+1).';'.($exss[$j]-1);
-	           if($sPos == 96108701){
-		     print "snpInfo for $sPos (Intron) is $snpInfoToAdd\n";
-		   }
 		   last;
 	         }
                }
@@ -319,7 +314,7 @@ sub getSnpInfo{
 #################################################
 sub processASEWithNev
 {
-  my ($snpRef, $geneSnpRef, $snpEventsNevRef, $pValueCutoff, $nevCutoff, $alleleRatioCutoff) = @_;
+  my ($snpRef, $geneSnpRef, $snpEventsNevRef, $snvPValueCutoff, $asarpPValueCutoff, $nevCutoff, $alleleRatioCutoff) = @_;
   my %ss = %$snpEventsNevRef;
 
   my ($powAltRef, $snpAltRef, $powSpRef, $snpSpRef) = ($ss{'nevPowSnpAlt'}, $ss{'nevSnpAlt'}, $ss{'nevPowSnpSp'}, $ss{'nevSnpSp'});
@@ -342,7 +337,7 @@ sub processASEWithNev
   # Create a communication bridge with R and start R
   my $R = Statistics::R->new();
   
-  for(my $i=5; $i<=$CHRNUM; $i++){
+  for(my $i=1; $i<=$CHRNUM; $i++){
      #init
      my %aseGeneHash = ();
      my %asarpGeneHash = ();
@@ -397,9 +392,8 @@ sub processASEWithNev
        for(keys %snpGroup){
          my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
 	 foreach(@allSnpInfo){
-	   print "in allSnpInfo: $_\n";
 	   my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
-           if($p <= $pValueCutoff){
+           if($p <= $snvPValueCutoff){
 	      $aseList{$pos} = 1; 
 	      $aseInfo .= "$snpId,$p,$alleles,$pos\t";
 	      $aseCount += 1;
@@ -425,74 +419,73 @@ sub processASEWithNev
 	 }
 	 my %allSnpGroup = (%snpGroup, %ordSnpGroup); #merge all the snp groups
 	 
-	 my ($isAltInit, $isAltSp) = (0, 0);
 	 for my $trgtPos (keys %allSnpGroup){ #each key is a snp
 	   my $targetFlag = 0; #set if it satisfies the target SNV condition
-	   my $stub = ",".$trgtPos.",";
+	   my ($altInit, $altTerm, $altSpInfo) = ('', '', '');
 	   
-	   if($gene eq 'ERAP1' || $gene eq 'CAST'){
-	     if($trgtPos == 96107774 || $trgtPos == 96107801 || $trgtPos == 96112005){
-	       print "Start testing $trgtPos for $gene\n";
-	     }
-	   }
 	   # Step 2.1.1. check if this snp is with any events, i.e. in any alternatively spliced regions (5'/3' or AS)
+	   
+	   my $stubEnd = ",".$trgtPos.",";
 	   if(defined($powAlts{$gene})){
-	     if($powAlts{$gene} =~ /$stub/){
+	     if($powAlts{$gene} =~ /([5|3][+|-])$stubEnd/){
 	       $targetFlag = 1;
-	       $isAltInit = 1;
-	       print "$trgtPos matched powAlts in $gene\n";
-	       #print "$powAlts{$gene}\n";
+	       my $endType = $1; #the matched parenthesis
+	       if($endType eq '5+' || $endType eq '5-'){
+	         $altInit = $endType;
+	       }else{
+	         $altTerm = $endType;
+	       }
 	     }
 	   }
-	   # the first !$isAltInit is imposed to save unnecessary time as the snp
+	   # the first $altInit ne '' is imposed to save unnecessary time as the snp
 	   # is either in %powAlts or %snpAlts
-	   if(!$isAltInit && defined($snpAlts{$gene})){
-	     if($snpAlts{$gene} =~ /$stub/){
+	   if($altInit eq '' && $altTerm eq '' && defined($snpAlts{$gene})){
+	     if($snpAlts{$gene} =~ /([5|3][+|-])$stubEnd/){
 	       $targetFlag = 1;
-	       $isAltInit = 1;
-	       print "$trgtPos matched snpAlts in $gene\n";
-	       #print "$snpAlts{$gene}\n";
+	       my $endType = $1; #the matched parenthesis
+	       if($endType eq '5+' || $endType eq '5-'){
+	         $altInit = $endType;
+	       }else{
+	         $altTerm = $endType;
+	       }
 	     }
 	   }
 
+
 	   #for Splicing the format is different
-	   $stub = ";".$trgtPos.";";
+	   my $stubSplicing = ";".$trgtPos.";";
 	   
 	   if(defined($powSps{$gene})){
-	     print "sp: $powSps{$gene}\n";
-	     if($powSps{$gene} =~ /$stub/){
+	     #print "sp: $powSps{$gene}\n";
+	     if($powSps{$gene} =~ /$stubSplicing/){
 	       $targetFlag = 1;
-	       $isAltSp = 1;
-	       print "$trgtPos matched powSps in $gene\n";
+	       #need to get more information from the gene
+	       $altSpInfo = 'Yes'; #just a dummy
+	       # have not got the exact AS type yet, e.g. SE, RI, ASS, UN
+	       #print "$trgtPos matched powSps in $gene\n";
 	       #print "$powSps{$gene}\n";
 	     }
 	   }
-	   # the first !$isAltSp is imposed to save unnecessary time as the snp
+	   # the first $altSpInfo ne '' is imposed to save unnecessary time as the snp
 	   # is either in %powSps or %snpSps
-	   if(!$isAltSp && defined($snpSps{$gene})){
-	     print "ord sp: $snpSps{$gene}\n";
-	     if($snpSps{$gene} =~ /$stub/){
+	   if($altSpInfo eq '' && defined($snpSps{$gene})){
+	     #print "ord sp: $snpSps{$gene}\n";
+	     if($snpSps{$gene} =~ /$stubSplicing/){
 	       $targetFlag = 1;
-	       $isAltSp = 1;
-	       print "$trgtPos matched snpSps in $gene\n";
+	       $altSpInfo = 'Yes'; #just a dummy
+	       #print "$trgtPos matched snpSps in $gene\n";
 	       #print "$snpSps{$gene}\n";
              }
 	   }
            
-	   if($gene eq 'ERAP1' || $gene eq 'CAST'){
-	     if($trgtPos == 96107774 || $trgtPos == 96107801 || $trgtPos == 96112005){
-	       print "isAltSp: $isAltSp\n";
-	       print "ord sp: $snpSps{$gene}\n"
-
-	     }
-	   }
 	   if($targetFlag){
-	     print "#Step 2.1.2 try to locate the control reference SNV (only from non-ASE powerful SNVs)\n";
+
+	     #Step 2.1.2 try to locate the control reference SNV (only from non-ASE powerful SNVs)
              for my $ctrlPos (keys %snpGroup){ #have to be powerful
-	       if($ctrlPos == $targetFlag || defined($aseList{$ctrlPos})){ 
+	       if($ctrlPos == $trgtPos || defined($aseList{$ctrlPos})){ 
 	         next; #cannot be the same pos, cannot be ASE SNP
 	       }
-	       print "# Step 2.1.3 make sure that $trgtPos and $ctrlPos are not in the same exon\n";
+	       # Step 2.1.3 make sure that $trgtPos and $ctrlPos are not in the same exon
 	       if(areNotInSameExon(\%allSnpGroup, $trgtPos, $snpGroupRef, $ctrlPos)){
 	         # a valid target-control SNV pair, now check their allele difference
 		 # in the current implementation, one position is assumed to have possibly multiple SNV types separated by ';', so we need to split the tuple first
@@ -517,37 +510,33 @@ sub processASEWithNev
 	   	     # Step 2.2 Performing fisher's test on target: $trgtPos VS control: $ctrlPos -- $_
 
 		     #Step 2.3 Use the R object to make a Fisher's exact test
-		     print "testing [$tAllel1, $tAllel2, $cAllel1, $cAllel2]\n";
+		     #print "testing [$tAllel1, $tAllel2, $cAllel1, $cAllel2]\n";
 		     $R->set('x', [$tAllel1, $tAllel2, $cAllel1, $cAllel2]);
 		     $R->run('xm = matrix(data = x, nrow = 2)');
 		     $R->run('p = fisher.test(xm)$p.value');
 		     my $pValue = $R->get('p');
-		     print "fisher test result 1: $pValue\n";
+		     #print "fisher test result 1: $pValue\n";
 		     
-		     print "testing [$tAllel2, $tAllel1, $cAllel1, $cAllel2]\n";
+		     #print "testing [$tAllel2, $tAllel1, $cAllel1, $cAllel2]\n";
 		     $R->set('x2', [$tAllel2, $tAllel1, $cAllel1, $cAllel2]);
 		     $R->run('xm2 = matrix(data = x2, nrow = 2)');
 		     $R->run('p2 = fisher.test(xm2)$p.value');
 		     my $pValue2 = $R->get('p2');
-		     print "fisher test result 2: $pValue2\n";
+		     #print "fisher test result 2: $pValue2\n";
 		     
 		     if($pValue2 < $pValue){ $pValue = $pValue2; } #get smaller p-value
-		     if($pValue <= $pValueCutoff){ #significant
-		       print "significant ratio differences found! $gene: $trgtPos (AI: $isAltInit AS: $isAltSp) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
+		     if($pValue <= $asarpPValueCutoff) { #significant
+		       #print "significant ratio differences found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
 		       #Step 2.4 Check if the allelic ratio difference is larger than the threshold
 		       my $tRatio = $tAllel1/($tAllel1+$tAllel2);
 		       my $cRatio = $cAllel1/($cAllel1+$cAllel2);
-	               if($gene eq 'ERAP1' || $gene eq 'CAST'){
-	                   if($trgtPos == 96107774 || $trgtPos == 96107801 || $trgtPos == 96112005){
-			     print "$trgtPos ratio differences: $tRatio VS $cRatio\n";
-			   }
-		       }
 		       if(abs($tRatio-$cRatio) >= $alleleRatioCutoff or abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){
-		         print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP found!\n";
+		         #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP found!\n";
 			 my $type ='';
-			 if($isAltInit){  $type .= 'AI,'; } #alternative 5' init/3' term
-			 if($isAltSp){ $type .= 'AS,'; } #alternative splicing
-			 $asarpGeneHash{$gene} .= "$type;$gene,$pValue,$trgtPos ID: $tSnpId [$tAlleles $tAllel1:$tAllel2],$ctrlPos [$cAlleles $cAllel1:$cAllel2]\t"; 
+			 if($altInit ne ''){  $type .= "AI:$altInit,"; } #alternative 5' initiation
+			 if($altTerm ne ''){  $type .= "AT:$altTerm,"; } #alternative 3' termination
+			 if($altSpInfo){ $type .= "AS:,"; } #alternative splicing
+			 $asarpGeneHash{$gene} .= "$type;$pValue;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1 $cAllel2\t"; 
 			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
 			   $asarpSnpHash{$trgtPos} .= $type.$snpStub;
@@ -580,7 +569,7 @@ sub processASEWithNev
   return \%allAsarps;
 }
 
-sub outputASARP{
+sub outputRawASARP{
   my ($allAsarpsRef, $key, $outputFile) = (undef, undef, undef);
   ($allAsarpsRef, $key, $outputFile) = @_;
  
@@ -594,7 +583,7 @@ sub outputASARP{
   my $header = '';
   my $isAsarp = 1;
   if($key eq 'ASEgene'){
-    $header = "genes with all powerful SNVs with ASEs";
+    $header = "ASE gene level (all powerful SNVs are ASEs)";
     $isAsarp = 0;
   }elsif($key eq 'ASARPgene'){
     $header = "ASARP gene level";
@@ -606,7 +595,6 @@ sub outputASARP{
 
   print $header."\n";
   my @allAsarps = @{$allAsarpsRef->{$key}};
-  my $count = 0;
   for(my $i=1; $i<=$CHRNUM; $i++){
 
     if(defined($allAsarps[$i])){
@@ -628,6 +616,134 @@ sub outputASARP{
   }
 
 }
+
+sub formatOutputVerNAR{
+
+  my ($allAsarpsRef, $outputFile) = (undef, undef, undef);
+  ($allAsarpsRef, $outputFile) = @_;
+ 
+  my $file = undef;
+  if(defined($outputFile)){
+   print "Output results to $outputFile\n";
+  }
+  # init the output string structure
+  my ($summary, $geneLevel, $snvLevel) = ("", "GENES\n", "SNVs\n");
+
+  my @allGeneAses = @{$allAsarpsRef->{'ASEgene'}};
+  my $aseCount = 0;
+  for(my $i=1; $i<=$CHRNUM; $i++){
+
+    if(defined($allGeneAses[$i])){
+      my %chrRes = %{$allGeneAses[$i]};
+      $aseCount += keys %chrRes;
+      for(keys %chrRes){ #gene
+         print "$_\n";
+	 my @info = split('\t', $chrRes{$_});
+	 foreach(@info){
+	   print "$_\n";
+	 }
+	 print "\n";
+
+	 $geneLevel .= formatChr($i)."\t".$_."\tAllASE\n";
+      }
+    }
+  }
+  if($aseCount>=2){	$summary .= "There are $aseCount genes";
+  }else{		$summary .= "There is $aseCount gene"; }
+  $summary .= " whose powerful SNVs are ASEs\n";
+ 
+  my ($geneSumRef, $snvSumRef) = formatGeneLevelVerNAR($allAsarpsRef->{'ASARPgene'});
+  my %snvHash = %$snvSumRef;
+  for(keys %snvHash){
+    if($_ eq 'AS'){
+      $snvLevel .= "Alternative Splicing\n";
+    }elsif($_ eq 'AI'){
+      $snvLevel .= "Alternative Initiation\n";
+    }elsif($_ eq 'AT'){
+      $snvLevel .= "Alternative Termination\n";
+    }else{
+      print "ERROR: unknown SNV event type: $_\n";
+      exit;
+    }
+    $snvLevel .= $snvHash{$_}."\n";
+  }
+
+  my %geneHash = %$geneSumRef;
+  my ($cntI, $cntS, $cntT, $cntComp) = (0, 0, 0, 0);
+  for my $gene (keys %geneHash){
+    my ($chr, $withTypes) = split('\t', $geneHash{$gene});
+    my @allEvents = split(';', $withTypes);
+    my $text = '';
+    if(@allEvents > 1){
+      ++$cntComp;
+      $text = "Complex";
+    }else{
+      if($allEvents[0] eq 'AI'){
+        ++$cntI;
+	$text = "Initiation";
+      }elsif($allEvents[0] eq 'AS'){
+        ++$cntS;
+	$text = "Splicing";
+      }elsif($allEvents[0] eq 'AT'){
+        ++$cntT;
+	$text = "Termination";
+      }
+    }
+    $geneLevel .= join('\t', $chr, $gene, $text)."\n";
+  }
+
+  $summary .= "There are $cntI 5' alternative initiation genes\n";
+  $summary .= "There are $cntT 5' alternative termination genes\n";
+  $summary .= "There are $cntS alternative splicing genes\n";
+  
+  $summary .= "There are $cntComp complex evented genes where\n";
+
+  return $summary.$snvLevel.$geneLevel;
+}
+
+
+sub formatGeneLevelVerNAR{
+  my ($inputRef) = @_; 
+  my @genes = @$inputRef;
+  my ($geneCnt, $typeCnt) = 0;
+  my %asarps = (); #store all gene level ASEs/ASARPs
+  my %geneTypes = (); #store how many different events the genes have
+
+  for(my $i=1; $i<=$CHRNUM; $i++){
+
+    if(defined($genes[$i])){
+      my %chrRes = %{$genes[$i]};
+      $geneCnt += keys %chrRes;
+      for my $gene (keys %chrRes){ #each gene
+        my %tabu = (); #just for this gene
+	
+	my @info = split('\t', $chrRes{$gene});
+	foreach(@info){
+	 my ($event, $pAsarp, $target, $control) = split(';', $_);
+	 my @allEvents = split(',', $event);
+	 for(@allEvents){
+	   my ($alt, $detail) = split(':', $_);
+           if(!defined($tabu{$target.$alt})){
+	     $asarps{$alt} .= $gene."\t".formatChr($i)." ". $target."\n";
+	     $tabu{$target.$alt} = $detail;
+	   }
+	   my $stub = $alt.";";
+	   if(!defined($geneTypes{$gene})){
+	     $geneTypes{$gene} = formatChr($i)."\t";
+	   }
+	   if(!($geneTypes{$gene} =~ $stub)){
+	     $geneTypes{$gene} .= $stub; #add this new alt type
+	   }
+	 }
+	}
+      }
+
+    }
+  }
+  return (\%geneTypes, \%asarps);
+}
+
+
 sub areNotInSameExon
 {
   my ($targetRef, $target, $controlRef, $control, $chrTransRef) = @_;
@@ -638,7 +754,7 @@ sub areNotInSameExon
 
   # Step 1: a quick check with just the intersect exons (pre-screening)
   if(defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'}) ||defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'})){
-    print "one of the 2 snps is in intron\n";
+    #print "one of the 2 snps is in intron\n";
     return 1;
   }
   
@@ -648,9 +764,7 @@ sub areNotInSameExon
       my ($tS, $tE, $tTransTxs) = split(';', $targetSnp{$tag});
       my ($cS, $cE, $cTransTxs) = split(';', $controlSnp{$tag});
       if($tS<=$cE && $cS<=$tE){ #exon overlaps
-	if($target == 96107774 || $target == 96107801 || $target == 96112005){
-	  print "$tag: overlap: $tS-$tE $cS-$cE \n$target: $tTransTxs overlaps $control: $cTransTxs\n";
-	}
+	#print "$tag: overlap: $tS-$tE $cS-$cE \n$target: $tTransTxs overlaps $control: $cTransTxs\n";
 	return 0;
       }
     }
@@ -682,7 +796,7 @@ sub filterSnpEventsWithNev
   my @nevSnpSps = ();
 
   print "Filtering splicing events (alternative splicing, 5'/3' alternations) based on NEV's.\n";
-  for(my $i=5; $i<=5 && $i<=$CHRNUM; $i++){
+  for(my $i=1; $i<=$CHRNUM; $i++){
      #init
      # get ready for ASARP (splicing and 5'/3' alt init/term events)
      my %powAlts = %{$allPowAlts[$i]};
@@ -701,12 +815,12 @@ sub filterSnpEventsWithNev
 	$bedRef = readBedByChr($bedF, $genomeF, $i);
      }
 
-     print "# for 5'/3' alt init/term events\n";
+     #print "# for 5'/3' alt init/term events\n";
      #update (shortlist) the alt events with NEV values calculated from bed information
      if($powAltCnt  > 0){	$nevPowAlts[$i] = calAltEventNev(\%powAlts, $bedRef, $i, $nevCutoff);	}
      if($snpAltCnt  > 0){ 	$nevSnpAlts[$i] = calAltEventNev(\%snpAlts, $bedRef, $i, $nevCutoff);	}
 
-     print "#for splicing events NEV calculation\n";
+     #print "#for splicing events NEV calculation\n";
      if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoff);	} 
      if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps', $nevCutoff); 	}
   }
@@ -872,9 +986,8 @@ sub calSplicingEventNev
     if(defined($spEventsList{$_}->{'type'})){
       my $tag = $spEventsList{$_}->{'type'};
       if(checkSupportedType($tag)){
-        print "Loading constitutive exons for gene $_ with $tag\n";
+        #print "Loading constitutive exons for gene $_ with $tag\n";
         $spConstExons{$tag} = getConstitutiveExonsByChr($spEventsList{$_}, $chr);
-	#print "REF: $spConstExons{$tag}\n";
       }
     }
     else{ die "Error parsing event: no type available for $_\n"; }
@@ -932,10 +1045,10 @@ sub calSplicingEventNev
        }
        my $nev = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
        if($nev>0 && $nev < $nevCutoff){
-         print "We want this NEV: $nev, $_\n";
+         #print "We want this NEV: $nev, $_\n";
 	 $spHash{$gene} .= join(";", $nev, $snpPos, $eRegion, $lRegion, $rRegion, $strand, $tag)."\t";
        }else{
-         print "We dont want this NEV: $nev, $_\n";
+         #print "We dont want this NEV: $nev, $_\n";
        }
      }else{
        print "ERROR: SNP $snpPos should match $gene with some events $_\n";
@@ -1307,7 +1420,7 @@ sub matchSnpPoswithSplicingEvents
 # print out the gene snps results for certain type (powerful or ordinary snps)
 sub printGetGeneSnpsResults
 {
-  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $pValueCutoff) = @_;
+  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $snvPValueCutoff) = @_;
   print "Gene level SNP ($geneSnpKey) VS transcript results\n";
 
   for (my $i=1; $i<=$CHRNUM; $i++){
@@ -1338,7 +1451,7 @@ sub printGetGeneSnpsResults
 	      if($geneSnpKey eq 'gPowSnps'){
 	        #$p."\t".$pos."\t".$alleles."\t".$snpName."\t".$refAl."\t".$altAl.";";
 		my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
-	        if($p <= $pValueCutoff){
+	        if($p <= $snvPValueCutoff){
 	          print "$snpId,$p,$alleles,$pos\t".$toPrint;
 	        }
 	      }else{
