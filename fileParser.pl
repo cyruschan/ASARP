@@ -601,7 +601,6 @@ sub readEstEvent{
   print "Mapping ests to transcripts to create est events\n";
   #print "Matching splicgraph event to genes\n"; #printout copied from Gang's code
   for(my $i=1; $i<=$CHRNUM; $i++){
-    if($i == 5){   print "Processing "; printChr($i); print "\n"; }
 
     my ($estRef, $estIdxRef) = getListByKeyChr($estListRef, 'events', $i);
     my @chrEsts_idx = @{$estIdxRef};

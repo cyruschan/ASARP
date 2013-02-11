@@ -371,7 +371,7 @@ sub processASEWithNev
      # Step 1.1: Genes with >= 2 Snps, and >= 1 powSnp
      for(keys %powGenes){ #genes with >= 1 powSnp
        my $gene = $_;
-       print "Gene $gene\n";
+       #print "Gene $gene\n";
        my $snpGroupRef = groupGeneSnps($powGenes{$gene});
        my %snpGroup = %$snpGroupRef;
        #print "grouped snp:\t";
@@ -402,13 +402,13 @@ sub processASEWithNev
        }
        # Step 1.2: all powSnps are ASEs and there are >=2 ASEs
        if($aseCount == keys %snpGroup && $aseCount >= 2){
-         print "Gene: $gene is a gene with all $aseCount ASE's: $aseInfo\n";
+         #print "Gene: $gene is a gene with all $aseCount ASE's: $aseInfo\n";
 	 $aseGeneHash{$gene} = $aseInfo;
 
        }
        else{  
 	 
-	 print "Gene: $gene is not gene-level ASE ($aseCount out of ".scalar(keys %snpGroup).")\n";
+	 #print "Gene: $gene is not gene-level ASE ($aseCount out of ".scalar(keys %snpGroup).")\n";
          #stage 2: ASARP: including Alternative splicing and 5'/3' Alt init/term
          #Step 2.1 get target (all snps passing NEV filter, incl. non-powerful snps) and control (non-ASE powerful snps) SNPs
 	 #besids %snpGroup, we also need %ordSnpGroup
@@ -637,13 +637,7 @@ sub formatOutputVerNAR{
       my %chrRes = %{$allGeneAses[$i]};
       $aseCount += keys %chrRes;
       for(keys %chrRes){ #gene
-         print "$_\n";
-	 my @info = split('\t', $chrRes{$_});
-	 foreach(@info){
-	   print "$_\n";
-	 }
-	 print "\n";
-
+	 #my @info = split('\t', $chrRes{$_});
 	 $geneLevel .= formatChr($i)."\t".$_."\tAllASE\n";
       }
     }
@@ -670,12 +664,26 @@ sub formatOutputVerNAR{
 
   my %geneHash = %$geneSumRef;
   my ($cntI, $cntS, $cntT, $cntComp) = (0, 0, 0, 0);
+  my ($cntSIT, $cntSI, $cntST, $cntIT) = (0, 0, 0, 0); #for complex genes
   for my $gene (keys %geneHash){
     my ($chr, $withTypes) = split('\t', $geneHash{$gene});
     my @allEvents = split(';', $withTypes);
     my $text = '';
     if(@allEvents > 1){
       ++$cntComp;
+      if($withTypes =~ 'AI;' && $withTypes =~ 'AS;' && $withTypes =~ 'AT;'){
+        ++$cntSIT;
+      }
+      elsif($withTypes =~ 'AI;' && $withTypes =~ 'AS;'){
+        ++$cntSI;
+      }
+      elsif($withTypes =~ 'AS;' && $withTypes =~ 'AT;'){
+        ++$cntST;
+      }
+      elsif($withTypes =~ 'AI;' && $withTypes =~ 'AT;'){
+        ++$cntIT;
+      }
+
       $text = "Complex";
     }else{
       if($allEvents[0] eq 'AI'){
@@ -689,14 +697,21 @@ sub formatOutputVerNAR{
 	$text = "Termination";
       }
     }
-    $geneLevel .= join('\t', $chr, $gene, $text)."\n";
+    $geneLevel .= join("\t", $chr, $gene, $text)."\n";
   }
 
   $summary .= "There are $cntI 5' alternative initiation genes\n";
-  $summary .= "There are $cntT 5' alternative termination genes\n";
+  $summary .= "There are $cntT 3' alternative termination genes\n";
   $summary .= "There are $cntS alternative splicing genes\n";
   
-  $summary .= "There are $cntComp complex evented genes where\n";
+  $summary .= "There are $cntComp complex evented genes where\n".
+  "  There are $cntSIT alternative splicing, initiation and termination evented genes\n".
+  "  There are $cntSI alternative splicing and initiation evented genes\n".
+  "  There are $cntST alternative splicing and termination evented genes\n".
+  "  There are $cntIT alternative initiation and termination evented genes\n";
+  my $cntTotalAsarp = $cntI + $cntT + $cntS + $cntComp;
+
+  $summary .= "There are $cntTotalAsarp event related (non-all-ASE) genes\n\n";
 
   return $summary.$snvLevel.$geneLevel;
 }
@@ -1010,9 +1025,9 @@ sub calSplicingEventNev
 
         if(defined($chrCE{$gene})){
           my $constExonSet = $chrCE{$gene};   
-	  print "$gene ";
+	  #print "$gene ";
           $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
-          print "$t: $gene const ratio: $geneConstRatio{$t}\n";
+          #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
         } #get the constitutive ratio if there is event evidence for this gene
       }
@@ -1069,7 +1084,7 @@ sub calConstRatio
   foreach(@allConstExons){
     my ($s, $e) = split('-', $_);
     my ($r, $l) = getEffReadSumLength($bedRef, $s, $e);
-    print "$_: reads: $r, length: $l\n";
+    #print "$_: reads: $r, length: $l\n";
     $readCount += $r;
     $effLen += $l;
   }
@@ -1078,7 +1093,7 @@ sub calConstRatio
     return 0;
   }
  
-  print "const read: $readCount const len: $effLen\n";
+  #print "const read: $readCount const len: $effLen\n";
 
   return $readCount/$effLen;
 }

@@ -52,27 +52,27 @@ my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match sn
 
 print "\n\nCalculating NEV\n";
 my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $genomeF, $allEventsListRef, $NEVCUTOFF); 
-print "Pow NEV Alt: \n";
-printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
-print "\n";
-print "NEV Alt: \n";
-printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
-print "\n\n";
-print "Pow NEV Sp: \n";
-printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
-print "\n";
-print "NEV Sp: \n";
-printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
-print "\n";
+#print "Pow NEV Alt: \n";
+#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
+#print "\n";
+#print "NEV Alt: \n";
+#printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
+#print "\n\n";
+#print "Pow NEV Sp: \n";
+#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
+#print "\n";
 
 
 print "processing ASE's\n";
 my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFF, $ALRATIOCUTOFF);
 
 print "\n";
+my $outputASE = 'ase.predicted.txt';
 my $outputSnv = 'snv.predicted.txt';
 my $outputGene ='gene.predicted.txt';
-outputRawASARP($allAsarpsRef, 'ASEgene');
-outputRawASARP($allAsarpsRef, 'ASARPgene'); #, $outputGene);
-outputRawASARP($allAsarpsRef, 'ASARPsnp'); #, $outputSnv);
+outputRawASARP($allAsarpsRef, 'ASEgene', $outputASE);
+outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
+outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
 
+my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
+print $allNarOutput;
