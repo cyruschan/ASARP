@@ -20,27 +20,13 @@ our $TENKB = 10000; #10KB as the bin size, only used in the bed handler only
 #	output: the reference to the bed arrays (index: genomic coordinates, elements: read counts)
 sub readBedByChr
 {
-  #my ($bedFiles, $genomePath) = @_;
+  #my ($bedFiles) = @_;
   #my @files = glob($bedFiles);  
   #for my $file (@files){
   #  open(my $fh, "<", $file) or die "Cannot open bed file: $file\n";
   #  close($fh);
   #}
-  my ($bedFolder, $genomePath, $chr) = @_;
-  if(!($genomePath =~ /[\\|\/]$/)){
-    $genomePath = $genomePath."/";  }
-  my $chrFile = $genomePath."chr".$chr.".fa";
-
-  open(my $cFh, "<", $chrFile) or die "Cannot open chromosome file: $chrFile\n";
-  #get all the data without newlines
-  my @seqs = <$cFh>;
-  close($cFh);
-  my $header = $seqs[0]; #\n included
-  my $noNewlines = @seqs -1; #first newline in $header
-  if(!$seqs[-1] =~ /\n$/){ $noNewlines-=1;  }
-  my $fileSize = -s $chrFile; #get file size
-  my $charSize = $fileSize - length($header) - $noNewlines; 
-  
+  my ($bedFolder, $chr) = @_;
   my @beds = (); #use a binned function to save memory
   
   my @reads = ();
@@ -54,7 +40,6 @@ sub readBedByChr
   open(my $bFh, "<", $bedFile) or die "Cannot open bed file: $bedFile\n";
   my $dummy = <$bFh>; chomp $dummy;
   print "Reading bed file: $bedFile...\t";
-  #print "Chromosome size: $charSize\n";
   if(!$dummy =~ /chr$chr/){  die "Inconsistent chr $chr with $dummy in $bedFile\n"; }
   $dummy = <$bFh>; #get rid of the first 2 header lines
   my $count = 0;
@@ -308,7 +293,6 @@ sub getEffReadSumLength
 sub printBedReads{
 
   # read bed by chromosome
-  #my $bedRef = readBedByChr($bedF, $genomeF, 10);
   my ($bedRef) = @_;
   my @beds = @{$bedRef->{'reads'}};
   my @bedsIdx = @{$bedRef->{'reads_idx'}};
@@ -337,8 +321,8 @@ sub printBedReads{
 }
 
 sub simpleTestReads{
-  my ($bedF, $genomeF, $chr) = @_;
-  my ($bedRef) = readBedByChr($bedF, $genomeF, $chr);
+  my ($bedF, $chr) = @_;
+  my ($bedRef) = readBedByChr($bedF, $chr);
 
   my ($from, $to, $c, $l) = (0,0,0,0);
 

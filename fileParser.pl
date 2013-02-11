@@ -22,7 +22,7 @@ sub getRefFileConfig
   close($fh);
 
   #get all file names, F means file name/path
-  my ($snpF, $bedF, $genomeF, $rnaseqF, $xiaoF, $splicingF, $estF) = ('', '', '', '', '', '', '');
+  my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = ('', '', '', '', '', ''); #$genomeF
   
   # match and output all files
   for(keys %filemap){
@@ -34,9 +34,6 @@ sub getRefFileConfig
     }
     elsif($k eq 'bedfolder'){
       $bedF=$curFile;
-    }
-    elsif($k eq 'genomepath'){
-      $genomeF=$curFile;
     }
     elsif($k eq 'rnaseqfile'){
       $rnaseqF=$curFile;
@@ -52,10 +49,13 @@ sub getRefFileConfig
     }else{
       die "ERROR: Unknown file_var in config file $config: $k with file/path: $curFile\n";
     }
+    #elsif($k eq 'genomepath'){
+    #  $genomeF=$curFile;
+    #}
   }
   # checking
-  if($snpF eq '' || $bedF eq '' || $genomeF eq '' || $xiaoF eq '' || $splicingF eq ''){
-    die "ERROR: Required user-specific input file(s) not all provided:\nsnpfile=$snpF\nbedfile=$bedF\ngenomepath=$genomeF\nxiaofile=$xiaoF\nsplicingfile=$splicingF\n";
+  if($snpF eq '' || $bedF eq '' || $xiaoF eq '' || $splicingF eq ''){
+    die "ERROR: Required user-specific input file(s) not all provided:\nsnpfile=$snpF\nbedfile=$bedF\nxiaofile=$xiaoF\nsplicingfile=$splicingF\n";
   }
   if($rnaseqF eq '' || $estF eq ''){
     print "NOTE: Optional user-specific (RNA-Seq/EST) splicing events file(s) not used:\nrnaseqfile=$rnaseqF\nestfile=$estF\n";
@@ -68,7 +68,7 @@ sub getRefFileConfig
   #}
 
   #return
-  return ($snpF, $bedF, $genomeF, $rnaseqF, $xiaoF, $splicingF, $estF);
+  return ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF);
 
 }
 

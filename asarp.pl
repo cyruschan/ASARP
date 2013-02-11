@@ -14,10 +14,10 @@ our $ALRATIOCUTOFF = 0.2; #allelic ratio difference cutoff for AS SNVs
 
 #my $defaultConfig='test.config';
 my $defaultConfig='default.config';
-my ($snpF, $bedF, $genomeF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($defaultConfig); 
+my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($defaultConfig); 
 
-#my ($bedRef) = readBedByChr($bedF, $genomeF, 5);
-#simpleTestReads($bedF, $genomeF, 5);
+#my ($bedRef) = readBedByChr($bedF, 5);
+#simpleTestReads($bedF, 5);
 
 my $transRef = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans');
@@ -51,7 +51,7 @@ my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match sn
 #printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
 
 print "\n\nCalculating NEV\n";
-my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $genomeF, $allEventsListRef, $NEVCUTOFF); 
+my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFF); 
 #print "Pow NEV Alt: \n";
 #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
 #print "\n";

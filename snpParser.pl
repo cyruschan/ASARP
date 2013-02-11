@@ -792,7 +792,7 @@ sub areNotInSameExon
 #################################################
 sub filterSnpEventsWithNev
 {
-  my ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $genomeF, $spEventsListRef, $nevCutoff) = @_;
+  my ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $spEventsListRef, $nevCutoff) = @_;
   
   # Preparation of all the splicing and 5'/3' alt init/term events from $snpEventsRef
   my %ss = %$snpEventsRef;
@@ -827,7 +827,7 @@ sub filterSnpEventsWithNev
      if($powAltCnt  > 0 || $snpAltCnt > 0 || $powSpCnt > 0 || $snpSpCnt > 0){ #it only makes sense when snps are there
         #readBed
         printChr($i); print "\n";
-	$bedRef = readBedByChr($bedF, $genomeF, $i);
+	$bedRef = readBedByChr($bedF, $i);
      }
 
      #print "# for 5'/3' alt init/term events\n";
