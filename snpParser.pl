@@ -162,9 +162,9 @@ sub snpVsTrans{
     if(@snps_idx==0 || @trans_idx==0){
       next;
     }
-    print "Processing "; printChr($i); print "\t";
-    print "SNVs ($snpTypeKey): ", scalar @snps_idx, "; ";
-    print "Transcripts: ", scalar @trans_idx, "\n";
+    #print "Processing "; printChr($i); print "\t";
+    #print "SNVs ($snpTypeKey): ", scalar @snps_idx, "; ";
+    #print "Transcripts: ", scalar @trans_idx, "\n";
     
     my ($si, $ti) = (0, 0);
     while($si<@snps_idx && $ti<@trans_idx){
@@ -1065,8 +1065,8 @@ sub calSplicingEventNev
          #print "We dont want this NEV: $nev, $_\n";
        }
      }else{
-       print "ERROR: SNP $snpPos should match $gene with some events $_\n";
-       exit;
+       print "WARNING: SNP $snpPos should match $gene with some events $_\n";
+       #exit;
      }
      
        
@@ -1159,7 +1159,7 @@ sub calAltEventNev
        }
        if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
           $updatedEvents .= "$type,$pos,$nev,$altRegion,$constRegion\t";
-	  print "$gene\t$type,$pos,$nev,$altRegion,$constRegion\n";
+	  #print "$gene\t$type,$pos,$nev,$altRegion,$constRegion\n";
        }
 
      }
@@ -1208,7 +1208,7 @@ sub setSnpAltEvents{
 sub snpVsAltEvents
 {
   my ($snpEventRef, $geneSnpRef, $geneSnpKey, $altEventRef) = @_;
-  print "Gene level SNP ($geneSnpKey) VS Alternative transcript ends (5', 3')\n";
+  #print "Gene level SNP ($geneSnpKey) VS Alternative transcript ends (5', 3')\n";
   my @snpEvents = @$snpEventRef;
 
   for (my $i=1; $i<=$CHRNUM; $i++){
@@ -1351,7 +1351,7 @@ sub setSnpSplicingEvents{
 sub snpVsSplicingEvents
 {
   my ($snpEventRef, $geneSnpRef, $geneSnpKey, $SplicingEventsRef) = @_;
-  print "Gene level SNP ($geneSnpKey) VS Splicing events\n";
+  #print "Gene level SNP ($geneSnpKey) VS Splicing events\n";
   my @snpEvents = @$snpEventRef;
 
   for (my $i=1; $i<=$CHRNUM; $i++){
