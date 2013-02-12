@@ -1052,8 +1052,7 @@ sub calSplicingEventNev
        }
        #print "Effective length: ".($eEnd-$eStart+1)."\n";
        if(!defined($geneConstRatio{$tag})){
-         die "Error: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
-       
+         print "Warning: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
        }
        my $nev = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
        if($nev>$nevCutoffLower && $nev < $nevCutoffUpper){
