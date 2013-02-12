@@ -202,8 +202,8 @@ sub snpVsTrans{
 		     }elsif($txStrand eq '-' && $sPos <$cdsStart){ #3'UTR reverse strand
 		       $type = '3\'UTR:-';
 		     }else{
-		       if($txStrand eq '+'){  $type = 'first'; }
-		       else{ $type = 'last';  }
+		       if($txStrand eq '+'){  $type = 'first:+'; }
+		       else{ $type = 'last:+';  }
 		     }
 		   }elsif($j == $exNo-1){ #last exon start/first exon end: hv to know strand
 		     if($txStrand eq '+' && $sPos >$cdsEnd){ #3'UTR
@@ -212,11 +212,11 @@ sub snpVsTrans{
 		     elsif($txStrand eq '-' && $sPos >$cdsEnd){ #5'UTR on reverse strand
 		       $type = '5\'UTR:-';
 		     }else{ 
-		       if($txStrand eq '-'){  $type = 'first'; }
-		       else{ $type = 'last';  }
+		       if($txStrand eq '-'){  $type = 'first:-'; }
+		       else{ $type = 'last:-';  }
 		     }
 		   }else{
-		     $type = 'normal';
+		     $type = 'normal:'.$txStrand;
 		   }
 		   $snpInfoToAdd = 'exon:'.$type.';'.$gene.';'.$tPos.";".$id.';'.$exss[$j].';'.$exes[$j];
 		   last;
@@ -314,7 +314,7 @@ sub getSnpInfo{
 #################################################
 sub processASEWithNev
 {
-  my ($snpRef, $geneSnpRef, $snpEventsNevRef, $snvPValueCutoff, $asarpPValueCutoff, $nevCutoff, $alleleRatioCutoff) = @_;
+  my ($snpRef, $geneSnpRef, $snpEventsNevRef, $snvPValueCutoff, $asarpPValueCutoff, $alleleRatioCutoff) = @_;
   my %ss = %$snpEventsNevRef;
 
   my ($powAltRef, $snpAltRef, $powSpRef, $snpSpRef) = ($ss{'nevPowSnpAlt'}, $ss{'nevSnpAlt'}, $ss{'nevPowSnpSp'}, $ss{'nevSnpSp'});
@@ -792,7 +792,7 @@ sub areNotInSameExon
 #################################################
 sub filterSnpEventsWithNev
 {
-  my ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $spEventsListRef, $nevCutoff) = @_;
+  my ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $spEventsListRef, $nevCutoffLower, $nevCutoffUpper) = @_;
   
   # Preparation of all the splicing and 5'/3' alt init/term events from $snpEventsRef
   my %ss = %$snpEventsRef;
@@ -832,12 +832,12 @@ sub filterSnpEventsWithNev
 
      #print "# for 5'/3' alt init/term events\n";
      #update (shortlist) the alt events with NEV values calculated from bed information
-     if($powAltCnt  > 0){	$nevPowAlts[$i] = calAltEventNev(\%powAlts, $bedRef, $i, $nevCutoff);	}
-     if($snpAltCnt  > 0){ 	$nevSnpAlts[$i] = calAltEventNev(\%snpAlts, $bedRef, $i, $nevCutoff);	}
+     if($powAltCnt  > 0){	$nevPowAlts[$i] = calAltEventNev(\%powAlts, $bedRef, $i, $nevCutoffLower, $nevCutoffUpper);	}
+     if($snpAltCnt  > 0){ 	$nevSnpAlts[$i] = calAltEventNev(\%snpAlts, $bedRef, $i, $nevCutoffLower, $nevCutoffUpper);	}
 
      #print "#for splicing events NEV calculation\n";
-     if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoff);	} 
-     if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps', $nevCutoff); 	}
+     if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoffLower, $nevCutoffUpper);	} 
+     if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps', $nevCutoffLower, $nevCutoffUpper); 	}
   }
 
   my %snpEventsNev = (
@@ -855,10 +855,10 @@ sub filterSnpEventsWithNev
 # the input $geneSnps is the value containing all snps under the gene key (a string not yet split)
 sub groupGeneSnps
 {
-  #print "Group GeneSnps\n";
   my ($geneSnps) = @_;
   my %groups = ();
   
+  #print "Group GeneSnps $geneSnps\n\n";
   # side-track: get all Snps first
   my %snps = ();
   my %snpsNeg = ();
@@ -880,7 +880,6 @@ sub groupGeneSnps
   my @allSnps = split('\t', $geneSnps);
   foreach(@allSnps){
     my ($snpPos, $exonIntronType, $geneName, $txStart, $transId, $exonS, $exonE) =  split(';', $_);
-
     my @typeInfo = split(':', $exonIntronType); 
     if($typeInfo[-1] eq '+'){ #forward strand
       if($typeInfo[0] eq 'exon'){
@@ -987,7 +986,7 @@ sub getGroupedSnpInfoByType{
 sub calSplicingEventNev
 {
   #print "Splicing\n";
-  my ($spsRef, $bedRef, $chr, $spEventsListRef, $gSnpRef, $gSnpKey, $nevCutoff) = @_;
+  my ($spsRef, $bedRef, $chr, $spEventsListRef, $gSnpRef, $gSnpKey, $nevCutoffLower, $nevCutoffUpper) = @_;
   
   # gene level Snps information for splicing NEV calculation 
   my ($geneSnpChrRef) = getListByKeyChr($gSnpRef, $gSnpKey, $chr);
@@ -1059,7 +1058,7 @@ sub calSplicingEventNev
        
        }
        my $nev = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
-       if($nev>0 && $nev < $nevCutoff){
+       if($nev>$nevCutoffLower && $nev < $nevCutoffUpper){
          #print "We want this NEV: $nev, $_\n";
 	 $spHash{$gene} .= join(";", $nev, $snpPos, $eRegion, $lRegion, $rRegion, $strand, $tag)."\t";
        }else{
@@ -1135,7 +1134,7 @@ sub calSpNev
 
 sub calAltEventNev
 {
-  my ($powAltsRef, $bedRef, $chr, $nevCutoff) = @_;
+  my ($powAltsRef, $bedRef, $chr, $nevCutoffLower, $nevCutoffUpper) = @_;
   my %allGeneSnps = %$powAltsRef;
   for(keys %allGeneSnps){
      my $gene = $_;
@@ -1158,7 +1157,7 @@ sub calAltEventNev
        if($constRatio>0){
          $nev = $altRatio/$constRatio;
        }
-       if(0 < $nev && $nev < $nevCutoff){
+       if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
           $updatedEvents .= "$type,$pos,$nev,$altRegion,$constRegion\t";
 	  print "$gene\t$type,$pos,$nev,$altRegion,$constRegion\n";
        }

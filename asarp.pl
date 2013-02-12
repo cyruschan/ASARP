@@ -4,17 +4,13 @@ use strict;
 require "fileParser.pl"; #sub's for input annotation files
 require "snpParser.pl"; #sub's for snps
 require "bedHandler.pl"; #for bed.sam
+my ($outputFile, $configs, $params) = getArgs(@ARGV); 
+# all the annotations, events, reference files
+my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); 
+# all the p-values cutoffs, thresholds
+my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
 
-# global variables as potential parameters here
-our $POWCUTOFF = 20; #threshold of powerful snvs
-our $SNVPCUTOFF = 0.014;  #p-value cutoff for the Chi-squared test
-our $ASARPPCUTOFF = 0.05; #p-value cutoff for the Fisher'exact test
-our $NEVCUTOFF = 0.8; #normalized expression value (NEV) cutoff for alternative regions/exons
-our $ALRATIOCUTOFF = 0.2; #allelic ratio difference cutoff for AS SNVs
-
-#my $defaultConfig='test.config';
-my $defaultConfig='default.config';
-my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($defaultConfig); 
+#p-value cutoffs for the Chi-sequared and Fisher exact tests.
 
 #my ($bedRef) = readBedByChr($bedF, 5);
 #simpleTestReads($bedF, 5);
@@ -36,7 +32,7 @@ my $snpRef = initSnp($snpF, $POWCUTOFF);
 
 my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 #print "Significant Snvs: \n";
-#printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $PCUTOFF);
+#printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $SNVPCUTOFF);
 #print "Ordinary Snvs: \n";
 #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
 
@@ -51,7 +47,7 @@ my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match sn
 #printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
 
 print "\n\nCalculating NEV\n";
-my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFF); 
+my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
 #print "Pow NEV Alt: \n";
 #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
 #print "\n";
@@ -64,7 +60,7 @@ my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $
 
 
 print "processing ASE's\n";
-my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFF, $ALRATIOCUTOFF);
+my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
 
 print "\n";
 my $outputASE = 'ase.predicted.txt';
@@ -75,4 +71,15 @@ outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
 
 my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
-print $allNarOutput;
+if(defined($outputFile)){
+  my $isOpen = open(my $fp, ">", $outputFile);
+  if(!$isOpen){
+    print "Warning: cannot open file: $outputFile to write the predicted results; will print on screen instead\n";
+    print $allNarOutput;
+  }else{
+    print $fp $allNarOutput;
+    close($fp);
+  }
+}else{
+  print $allNarOutput;
+}

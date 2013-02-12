@@ -5,6 +5,100 @@ use strict;
 use MyConstants qw( $CHRNUM $supportedList $supportedTags );
 require "bedHandler.pl"; #sub's for handling bed files
 
+# subroutine to get the arguments to the entry program
+sub getArgs{
+
+  my ($outputFile, $inputConfig, $inputParam) = @_;
+
+  #my $configs='test.config';
+  my $configs='default.config';
+  my $params = 'default.param';
+
+  if(defined($inputConfig)){
+    $configs = $inputConfig;
+    print "User ";
+  }else{	print "Default ";	 }
+  print "config file: $configs used\n";
+
+  if(defined($inputParam)){
+    $params = $inputParam;
+    print "User ";
+  }else{	print "Default ";	 }
+  print "parameter file: $params used\n";
+
+  if(defined($outputFile)){
+    print "User specified output file: $outputFile\n";
+  }
+  
+  return ($outputFile, $configs, $params);
+
+}
+
+
+# subroutine to read the *.param file and get all input parameters
+sub getParameters
+{
+  my ($config) = @_;
+  my %filemap = ();
+  open(my $fh, "<", $config) or die "Cannot open parameter file: $config\n";
+  print "Reading parameters in file: $config...\n";
+  while(<$fh>){ #read each line of the file handle
+    chomp;
+    if($_ =~/^(\w+)\t\s*([0-9|\.|\+|\-|e|E]+)\s*$/){
+      #get the file_var ($1) and file_path ($2)
+      my $argName = lc $1;
+      $filemap{$argName} = $2;
+    }else{
+      if(!($_ =~ /^\#/ || $_ =~ /^\s*$/)){
+        print "Error: cannot parse the parameter in line: $_\n";
+        exit;
+      }
+    }
+  }
+  close($fh);
+
+  my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = (undef, undef, undef, undef, undef, undef);
+  for(keys %filemap){
+    my ($name, $val) = ($_, $filemap{$_});
+    if($name eq 'p_chi_snv'){
+      $SNVPCUTOFF = $val; #p-value cutoff for the Chi-squared test
+    }
+    elsif($name eq 'p_fisher_pair'){
+      $ASARPPCUTOFF = $val; #p-value cutoff for the Fisher'exact test
+    }
+    elsif($name eq 'nev_upper'){
+      $NEVCUTOFFUPPER = $val;
+    }
+    elsif($name eq 'nev_lower'){
+      $NEVCUTOFFLOWER = $val;
+    }
+    elsif($name eq 'ratio_diff'){
+      $ALRATIOCUTOFF = $val;
+    }
+    elsif($name eq 'powerful_snv'){
+      $POWCUTOFF = $val;
+    }else{
+      print "Error parsing the parameter type: $name with value $val\n";
+      exit;
+    }
+  }
+
+  if(!defined($POWCUTOFF)){
+    die "Error: cutoff for powerful SNVs (parameter: powerful_snv) not set\n";
+  }
+  if(!defined($SNVPCUTOFF)){
+    die "Error: p-value cutoff for the Chi-Squared Test on alleles of individual SNVs (parameter: p_chi_snv) not set\n";
+  }
+  if(!defined($ASARPPCUTOFF)){
+    die "Error: p-value cutoff for the Fisher Exact Test on target-control SNV pairs (parameter: p_fisher_pair) not set\n";
+  }
+  if(!defined($NEVCUTOFFUPPER) || !defined($NEVCUTOFFLOWER) || !defined($ALRATIOCUTOFF)){
+    die "Error: cutoff(s) for the Normalized Expression Value (NEV) lower/upper bound(s) and/or allele-pair ratio difference (parameters: nev_lower, nev_upper and ratio_diff) not set\n";
+  }
+  return ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF);
+
+}
+
 # subroutine to read the annotation_file.config file and get all input file names
 sub getRefFileConfig
 {
@@ -16,7 +110,8 @@ sub getRefFileConfig
     chomp;
     if($_ =~/^(\w+)\t\s*([\w|\.|\\|\/|\*]+)\s*$/){
       #get the file_var ($1) and file_path ($2)
-      $filemap{$1} = $2;
+      my $argName = lc $1;
+      $filemap{$argName} = $2;
     }
   }
   close($fh);
