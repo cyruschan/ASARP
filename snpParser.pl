@@ -1019,12 +1019,10 @@ sub calSplicingEventNev
     #pre-calculate all the geneConstRatios
     for my $t (keys %spConstExons){
       if(defined($spConstExons{$t})){
-        #print "tag: $t\n";
         my %chrCE = %{$spConstExons{$t}};
 
         if(defined($chrCE{$gene})){
           my $constExonSet = $chrCE{$gene};   
-	  #print "$gene ";
           $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
           #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
@@ -1054,7 +1052,7 @@ sub calSplicingEventNev
        }
        #print "Effective length: ".($eEnd-$eStart+1)."\n";
        if(!defined($geneConstRatio{$tag})){
-         die "Error: not const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
+         die "Error: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
        
        }
        my $nev = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
@@ -1065,11 +1063,9 @@ sub calSplicingEventNev
          #print "We dont want this NEV: $nev, $_\n";
        }
      }else{
-       print "WARNING: SNP $snpPos should match $gene with some events $_\n";
+       print "WARNING: SNP $snpPos $tag event does not match $gene: $_\n";
        #exit;
      }
-     
-       
     }
   }
   return \%spHash;

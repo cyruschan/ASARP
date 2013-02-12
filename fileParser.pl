@@ -170,16 +170,16 @@ sub getRefFileConfig
 ## a wrapper sub for all splicing related events
 sub readAllEvents
 {
-  my ($splicingF, $rnaseqF, $estF, $transRef) = @_;
+  my ($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef) = @_;
   my %spEventsList = ();
 
-  my $annoEventsRef = readDifEvent($splicingF, 'anno');
+  my $annoEventsRef = readDifEvent($splicingF, 'anno', $geneNamesRef, $estF);
   $spEventsList{'anno'} = $annoEventsRef;
   #printListByKey($annoEventsRef, 'events');
   
   #optional event annotations
   if($rnaseqF ne ''){ #not empty
-    my $rnaEventsRef = readDifEvent($rnaseqF, 'rna');
+    my $rnaEventsRef = readDifEvent($rnaseqF, 'rna', $geneNamesRef);
     #printListByKey($rnaEventsRef, 'events');
     $spEventsList{'rna'} = $rnaEventsRef;
   }
@@ -219,46 +219,78 @@ sub readDifEvent
      push @constExons, {};
    }
 
-   my ($fileName, $tag)=@_;
+   my ($fileName, $tag, $geneNamesRef, $isEstNeeded)=@_;
+   if(defined($isEstNeeded) && $isEstNeeded ne ''){
+     $isEstNeeded = 1;
+   }else{
+     $isEstNeeded = 0;
+   }
    open(my $fh, "<", $fileName) or die "Cannot open event file: $fileName\n";
    print "Reading alternative splicing events from ", $fileName, "\n";
    my $count=0;
    my $geneName = undef;
    my $constExonList = undef;
 
+   #to handle those genes without annotation events, but may be used in est events
+   my $annotationChr = 0; #to get the gene name and confirm the chromosome faster
+   my @geneNames = @$geneNamesRef;
+
    while(<$fh>){
      $count++;
-     if(!($count%10000)){
-       #print $count, "\t";
-       #if($count > 100){ last; }
-       #STDOUT->autoflush(1);#need to flush if STDOUT not attached to terminal
-     }
+     #if(!($count%10000)){	print $count, "\t";     }
      chomp;
      if($_ =~/^\>/){
        my @geneInfo = split('\t', $_);
        $geneName = substr($geneInfo[0],1); #gene name no >
+       $geneName = uc $geneName;
+
+       $constExonList = undef; #for checking
        if(@geneInfo > 1){
          $constExonList = $geneInfo[1];
+         #find and set the const exons for the gen even it (possibly) has no events
+	 if($isEstNeeded){
+	   for(my $x = 0; $x <= $CHRNUM; $x++){
+	     if(defined($geneNames[$x]) && defined($geneNames[$x]->{$geneName})){
+               #if($x > $currentChr+1){
+	       #  print "Warning: gene $geneName is in a different chromosome ($x)\n";
+	       #  #print "from the neighboring events ($currentChr); skipped\n";
+	       #  last;
+	       #}
+	       #if($x == $currentChr + 1){
+	       #  print "Warning special: $geneName in $x\n";
+	       #}
+	       $constExons[$x]{$geneName} = $constExonList;
+	       $annotationChr = $x;
+	       #print "$x\t$geneName\n";
+	       last;
+	     }
+	     #if($x==$CHRNUM){ print  "Warning: cannot find $geneName in any chromosomes\n"; }
+	   }
+	 }
        }
      }elsif($_ =~/^EVENT\t/){
        #get the line
        my ($dummy, $chrRaw, $geneNameCheck, $strand, $evtRegion, $lRegion, $rRegion)
        = split(/\t/, $_);
+       $geneNameCheck = uc $geneNameCheck;
        if($geneNameCheck ne $geneName){
          die "Inconsistent gene name in line $count: $geneNameCheck and $geneName\n";
        }
        my $chrID = getChrID($chrRaw);
-       #check numeric
+       #check numeric, skip all non-cannonical chromosomes
        if(!($chrID=~/^\d+$/)){ 
          #print "$chrID\n"; 
 	 next; 
        }
        # store the constitutive exon set list to the gene
        if(!defined($constExonList)){
-         die "No const exon info for $geneName!\n";
+         die "Error: No const exon info for $geneName EVENT!\n";
        }
        if(!defined($constExons[$chrID]{$geneName})){
          $constExons[$chrID]{$geneName} = $constExonList;
+	 if($isEstNeeded && $annotationChr != $chrID){
+	   #print "Warning: Gene $geneName event in ".formatChr($chrID).", annotation in ".formatChr($annotationChr)."\n";
+	 }
        }
        #could make it 0-based by $chrID-=1; here, but not convenient for biologists
        my ($start, $end) = split(/\-/, $evtRegion);
@@ -598,8 +630,12 @@ sub getGeneIndex{
 
   # this is the init for gene indices
   my @geneIndices = ();
+  my @geneNames = ();
+
+
   for(my $i=0; $i<=$CHRNUM; $i++){
     push @geneIndices, (); #array of arrays of strings
+    push @geneNames, ();
   }
   for(my $i=1; $i<=$CHRNUM; $i++){
     my %genes = ();
@@ -613,15 +649,15 @@ sub getGeneIndex{
 
     foreach(@trans_idx){
       my $txStart = $_;
-      my @transList = split('\t',$txStart);
+      my @transList = split('\t', $trans{$txStart});
       foreach(@transList){
-        my ($txEnd, $cdsS, $cdsE, $exSs, $exEs, $id, $gene, $isCoding, $strand) = split(';', $trans{$_});
-        ######################### for gene indices
+        my ($txEnd, $cdsS, $cdsE, $exSs, $exEs, $id, $gene, $isCoding, $strand) = split(';', $_);
+	######################### for gene indices
 	if(!defined($genes{$gene})){
           $genes{$gene} = $txStart; #initial minimal
 	  $genesArray[$g] = $gene.';'.$txStart.';'.$txEnd;
 	  $g++;
-        }elsif($genes{$gene}>=$txStart){
+        }elsif($genes{$gene}> $txStart){
           die "This is not possible for $gene at $genes{$gene} as $txStart is sorted\n";
         }
 
@@ -629,8 +665,10 @@ sub getGeneIndex{
     }
     ######################### for gene indices
     $geneIndices[$i] = \@genesArray;
+    $geneNames[$i] = \%genes;
   }
-  return \@geneIndices;
+
+  return (\@geneIndices, \@geneNames);
 }
 
 # sub routine to read the est event file (est.event)

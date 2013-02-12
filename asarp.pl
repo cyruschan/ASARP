@@ -10,19 +10,17 @@ my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($confi
 # all the p-values cutoffs, thresholds
 my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
 
-#p-value cutoffs for the Chi-sequared and Fisher exact tests.
-
 #my ($bedRef) = readBedByChr($bedF, 5);
 #simpleTestReads($bedF, 5);
 
 my $transRef = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans');
-my $genesRef = getGeneIndex($transRef);
+my ($genesRef, $geneNamesRef) = getGeneIndex($transRef);
 my $altRef = getGeneAltTransEnds($transRef);
 #printAltEnds($altRef);
 
 # read all events from annotations and optionally rna-seq and est event files
-my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef);
+my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef);
 
 my $snpRef = initSnp($snpF, $POWCUTOFF);
@@ -64,11 +62,11 @@ my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPC
 
 print "\n";
 my $outputASE = 'ase.predicted.txt';
-my $outputSnv = 'snv.predicted.txt';
-my $outputGene ='gene.predicted.txt';
+#my $outputSnv = 'snv.predicted.txt';
+#my $outputGene ='gene.predicted.txt';
 outputRawASARP($allAsarpsRef, 'ASEgene', $outputASE);
-outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
-outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
+#outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
+#outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
 
 my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
 if(defined($outputFile)){
