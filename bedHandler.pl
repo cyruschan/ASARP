@@ -35,7 +35,7 @@ sub readBedByChr
   if(!($bedFolder =~ /[\\|\/]$/)){
     $bedFolder .= "/";
   }
-  my $bedFile = $bedFolder."chr".$chr.".sam.bed";
+  my $bedFile = $bedFolder.formatChr($chr).".sam.bed";
 
   open(my $bFh, "<", $bedFile) or die "Cannot open bed file: $bedFile\n";
   my $dummy = <$bFh>; chomp $dummy;
@@ -279,7 +279,10 @@ sub getEffReadSumLength
     if($i>$sBin){ $startIn = 0; }
     my $endIn = $eOff;
     if($i<$eBin){ $endIn = $TENKB-1; }
-    my ($c, $l) = getReadLengthInBin($bedsIdx[$i], $beds[$i], $startIn, $endIn);
+    my ($c, $l) = (0, 0);
+    if(defined($bedsIdx[$i])){
+      ($c, $l) = getReadLengthInBin($bedsIdx[$i], $beds[$i], $startIn, $endIn);
+    }
     $readSum += $c;
     $readLen += $l;
   }
