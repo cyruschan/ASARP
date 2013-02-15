@@ -376,7 +376,7 @@ sub processASEWithNev
        my %snpGroup = %$snpGroupRef;
        #print "grouped snp:\t";
        #for(keys %snpGroup){ 
-       #  print "SNP $_: $snpGroup{$_}\n";
+       #  print "SNP $_: "; # $snpGroup{$_}\n";
        #   my %snpHs = %{$snpGroup{$_}};
        #   for(keys %snpHs){
        #     print "$_: $snpHs{$_}\t";
@@ -451,7 +451,6 @@ sub processASEWithNev
 	     }
 	   }
 
-
 	   #for Splicing the format is different
 	   my $stubSplicing = ";".$trgtPos.";";
 	   
@@ -479,7 +478,6 @@ sub processASEWithNev
 	   }
            
 	   if($targetFlag){
-
 	     #Step 2.1.2 try to locate the control reference SNV (only from non-ASE powerful SNVs)
              for my $ctrlPos (keys %snpGroup){ #have to be powerful
 	       if($ctrlPos == $trgtPos || defined($aseList{$ctrlPos})){ 
@@ -487,7 +485,7 @@ sub processASEWithNev
 	       }
 	       # Step 2.1.3 make sure that $trgtPos and $ctrlPos are not in the same exon
 	       if(areNotInSameExon(\%allSnpGroup, $trgtPos, $snpGroupRef, $ctrlPos)){
-	         # a valid target-control SNV pair, now check their allele difference
+	         # a valid target-control SNV pair, now check their allele difference\n";
 		 # in the current implementation, one position is assumed to have possibly multiple SNV types separated by ';', so we need to split the tuple first
 
                  my $targetSnpInfo = undef;
@@ -768,7 +766,7 @@ sub areNotInSameExon
   my %controlSnp = %$controlSnpRef;
 
   # Step 1: a quick check with just the intersect exons (pre-screening)
-  if(defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'}) ||defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'})){
+  if(defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'}) ||defined($controlSnp{'intron+'}) || defined($controlSnp{'intron-'})){
     #print "one of the 2 snps is in intron\n";
     return 1;
   }
@@ -776,11 +774,35 @@ sub areNotInSameExon
   for my $tag ('exon+', 'exon-'){ # same intron is also considered "NotInSameExon", not need for 'intron+', 'intron-'){
 
     if(defined($targetSnp{$tag}) && defined($controlSnp{$tag})){
-      my ($tS, $tE, $tTransTxs) = split(';', $targetSnp{$tag});
-      my ($cS, $cE, $cTransTxs) = split(';', $controlSnp{$tag});
+      my ($tS, $tE, $tTransIds) = split(';', $targetSnp{$tag});
+      my ($cS, $cE, $cTransIds) = split(';', $controlSnp{$tag});
+      my $nonOverlapFlag = 1;
+      #print "$target: $targetSnp{$tag}\n";
+      #print "$control: $controlSnp{$tag}\n";
       if($tS<=$cE && $cS<=$tE){ #exon overlaps
-	#print "$tag: overlap: $tS-$tE $cS-$cE \n$target: $tTransTxs overlaps $control: $cTransTxs\n";
-	return 0;
+	#print "$tag: overlap: $tS-$tE $cS-$cE \n$target overlaps $control\n";
+	$nonOverlapFlag = 0;
+      }
+      if(!$nonOverlapFlag){
+        my @tIds = split(',', $tTransIds);
+	my @cIds = split(',', $cTransIds);
+	if((scalar @tIds) != (scalar @cIds)){
+	  #print "different transcript IDs\n";
+	  return 1;
+	}else{
+	  for my $tOneId (@tIds){
+	    for my $cOneId (@cIds){
+	      if($tOneId ne $cOneId){
+	        #print "not overlap: $tOneId ne $cOneId";
+		$nonOverlapFlag = 1;
+		last;
+	      }
+	    }
+	    if($nonOverlapFlag){ return 1;	}
+	  }
+	  print "Finally overlap: #all transcript ID's are the same\n";
+	  return 0; 
+	}
       }
     }
   }
@@ -883,7 +905,7 @@ sub groupGeneSnps
     my @typeInfo = split(':', $exonIntronType); 
     if($typeInfo[-1] eq '+'){ #forward strand
       if($typeInfo[0] eq 'exon'){
-        $snps{$snpPos} .= $txStart.','; #defined now
+        $snps{$snpPos} .= $transId.','; #defined now
         if(!defined($snpExonStarts{$snpPos}) || $snpExonStarts{$snpPos} < $exonS){
           $snpExonStarts{$snpPos} = $exonS;
         }
@@ -892,7 +914,7 @@ sub groupGeneSnps
         }
       }
       else{ # intron type
-        $snpsIn{$snpPos} .= $txStart.','; #defined now
+        $snpsIn{$snpPos} .= $transId.','; #defined now
         if(!defined($snpIntronStarts{$snpPos}) || $snpIntronStarts{$snpPos} < $exonS){
           $snpIntronStarts{$snpPos} = $exonS;
         }
@@ -902,7 +924,7 @@ sub groupGeneSnps
       }
     }else{ #strand is -
       if($typeInfo[0] eq 'exon'){
-	$snpsNeg{$snpPos} .= $txStart.','; #defined now
+	$snpsNeg{$snpPos} .= $transId.','; #defined now
         if(!defined($snpNegExonStarts{$snpPos}) || $snpNegExonStarts{$snpPos} < $exonS){
           $snpNegExonStarts{$snpPos} = $exonS;
         }
@@ -911,7 +933,7 @@ sub groupGeneSnps
         }
       }
       else{ # intron type
-        $snpsNegIn{$snpPos} .= $txStart.','; #defined now
+        $snpsNegIn{$snpPos} .= $transId.','; #defined now
         if(!defined($snpNegIntronStarts{$snpPos}) || $snpNegIntronStarts{$snpPos} < $exonS){
           $snpNegIntronStarts{$snpPos} = $exonS;
         }
@@ -1023,7 +1045,8 @@ sub calSplicingEventNev
 
         if(defined($chrCE{$gene})){
           my $constExonSet = $chrCE{$gene};   
-          $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
+          print "$gene ";
+	  $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
           #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
         } #get the constitutive ratio if there is event evidence for this gene
@@ -1088,7 +1111,7 @@ sub calConstRatio
     return 0;
   }
  
-  #print "const read: $readCount const len: $effLen\n";
+  print "const read: $readCount const len: $effLen\n";
 
   return $readCount/$effLen;
 }
@@ -1153,6 +1176,7 @@ sub calAltEventNev
        if($constRatio>0){
          $nev = $altRatio/$constRatio;
        }
+       #print "$gene $pos NEV $nev\n";
        if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
           $updatedEvents .= "$type,$pos,$nev,$altRegion,$constRegion\t";
 	  #print "$gene\t$type,$pos,$nev,$altRegion,$constRegion\n";

@@ -30,15 +30,16 @@ my $snpRef = initSnp($snpF, $POWCUTOFF);
 
 my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 #print "Significant Snvs: \n";
-#printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $SNVPCUTOFF);
+#printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
 #print "Ordinary Snvs: \n";
 #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+
 
 my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
 #print "Pow Alt: \n";
 #printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
-#print "\n";
-
+#print "Snp Alt: \n";
+#printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
 #print "Pow Sp: \n";
 #printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
 #print "Ord Sp: \n";
@@ -48,25 +49,24 @@ print "\n\nCalculating NEV\n";
 my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
 #print "Pow NEV Alt: \n";
 #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
-#print "\n";
 #print "NEV Alt: \n";
 #printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
 #print "\n\n";
 #print "Pow NEV Sp: \n";
 #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
-#print "\n";
-
+#print "NEV Sp: \n";
+#printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
 
 print "processing ASE's\n";
 my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
 
 print "\n";
-my $outputASE = 'ase.predicted.txt';
-#my $outputSnv = 'snv.predicted.txt';
-#my $outputGene ='gene.predicted.txt';
+my $outputASE = 'fake.ase.predicted.txt';
+my $outputSnv = 'fake.snv.predicted.txt';
+my $outputGene ='fake.gene.predicted.txt';
 outputRawASARP($allAsarpsRef, 'ASEgene', $outputASE);
-#outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
-#outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
+outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
+outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
 
 my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
 if(defined($outputFile)){

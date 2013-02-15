@@ -36,8 +36,12 @@ sub readBedByChr
     $bedFolder .= "/";
   }
   my $bedFile = $bedFolder.formatChr($chr).".sam.bed";
-
-  open(my $bFh, "<", $bedFile) or die "Cannot open bed file: $bedFile\n";
+  my $bFh = undef;
+  if(!open($bFh, "<", $bedFile)){
+    print "No sam.bed extension, try one.pos extension\n";
+    $bedFile = $bedFolder.formatChr($chr).".one.pos";
+    open($bFh, "<", $bedFile) or die "Cannot open bed file: $bedFile\n";
+  }
   my $dummy = <$bFh>; chomp $dummy;
   print "Reading bed file: $bedFile...\t";
   if(!$dummy =~ /chr$chr/){  die "Inconsistent chr $chr with $dummy in $bedFile\n"; }
