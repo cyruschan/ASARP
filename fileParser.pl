@@ -827,16 +827,16 @@ sub readEstEvent{
 		   }
 		 }
 
-	         if(!$isInJunction && (!defined($genesTabu{$gene}) || !($genesTabu{$gene}=~/$eStart-$eEnd/))){
+	         #if(!$isInJunction && (!defined($genesTabu{$gene}) || !($genesTabu{$gene}=~/$eStart-$eEnd/))){
 	           #there may be multiple events
 		   #add this into the gene: 'F' means the original est.event 'F'ile information is used.
 	           #print $gene." ".$splice[$i]{$gene}."\n";
-	           if(!$checkStrandConsist || $txStrand eq $strand){
-		     $genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
+	           #if(!$checkStrandConsist || $txStrand eq $strand){
+		     #$genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
 		   
-		     $chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";F:".$type."\t"; #always follow the transcript strand; F means type stated in file 
-		   }
-	         }
+		     #$chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";F:".$type."\t"; #always follow the transcript strand; F means type stated in file 
+		   #}
+	         #}
 	       } #end of foreach(@evntSet)
 	     }
 	   } #end of foreach (@tSet)
