@@ -203,7 +203,7 @@ sub snpVsTrans{
 		       $type = '3\'UTR:-';
 		     }else{
 		       if($txStrand eq '+'){  $type = 'first:+'; }
-		       else{ $type = 'last:+';  }
+		       else{ $type = 'last:-';  }
 		     }
 		   }elsif($j == $exNo-1){ #last exon start/first exon end: hv to know strand
 		     if($txStrand eq '+' && $sPos >$cdsEnd){ #3'UTR
@@ -213,7 +213,7 @@ sub snpVsTrans{
 		       $type = '5\'UTR:-';
 		     }else{ 
 		       if($txStrand eq '-'){  $type = 'first:-'; }
-		       else{ $type = 'last:-';  }
+		       else{ $type = 'last:+';  }
 		     }
 		   }else{
 		     $type = 'normal:'.$txStrand;
@@ -534,7 +534,7 @@ sub processASEWithNev
 			 if($altInit ne ''){  $type .= "AI:$altInit,"; } #alternative 5' initiation
 			 if($altTerm ne ''){  $type .= "AT:$altTerm,"; } #alternative 3' termination
 			 if($altSpInfo){ $type .= "AS:,"; } #alternative splicing
-			 $asarpGeneHash{$gene} .= "$type;$pValue;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1 $cAllel2\t"; 
+			 $asarpGeneHash{$gene} .= "$type;$pValue;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1:$cAllel2;$tRatio $cRatio\t"; 
 			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
 			   $asarpSnpHash{$trgtPos} .= $type.$snpStub;
@@ -764,13 +764,14 @@ sub areNotInSameExon
   my $controlSnpRef = $targetRef->{$control};
   my %targetSnp = %$targetSnpRef;
   my %controlSnp = %$controlSnpRef;
-
+  
   # Step 1: a quick check with just the intersect exons (pre-screening)
   if(defined($targetSnp{'intron+'}) || defined($targetSnp{'intron-'}) ||defined($controlSnp{'intron+'}) || defined($controlSnp{'intron-'})){
-    #print "one of the 2 snps is in intron\n";
+    #print "$target $control one of the 2 snps is in intron\n";
     return 1;
   }
-  
+ 
+  # Step 2: if they are only in exons, have to also check whether there is any transcript in which one is absent
   for my $tag ('exon+', 'exon-'){ # same intron is also considered "NotInSameExon", not need for 'intron+', 'intron-'){
 
     if(defined($targetSnp{$tag}) && defined($controlSnp{$tag})){
@@ -779,34 +780,39 @@ sub areNotInSameExon
       my $nonOverlapFlag = 1;
       #print "$target: $targetSnp{$tag}\n";
       #print "$control: $controlSnp{$tag}\n";
-      if($tS<=$cE && $cS<=$tE){ #exon overlaps
-	#print "$tag: overlap: $tS-$tE $cS-$cE \n$target overlaps $control\n";
-	$nonOverlapFlag = 0;
+      if($tS > $cE || $cS > $tE){ #exon overlaps
+	#print "$target not overlaps $control $tag: $tS-$tE $cS-$cE\n";
+        return 1;
       }
-      if(!$nonOverlapFlag){
-        my @tIds = split(',', $tTransIds);
-	my @cIds = split(',', $cTransIds);
-	if((scalar @tIds) != (scalar @cIds)){
-	  #print "different transcript IDs\n";
-	  return 1;
-	}else{
-	  for my $tOneId (@tIds){
-	    for my $cOneId (@cIds){
-	      if($tOneId ne $cOneId){
-	        #print "not overlap: $tOneId ne $cOneId";
-		$nonOverlapFlag = 1;
-		last;
-	      }
-	    }
-	    if($nonOverlapFlag){ return 1;	}
+      
+      #check if they are from different transcripts
+      my @tIds = split(',', $tTransIds);
+      my @cIds = split(',', $cTransIds);
+      my $tIdSize = @tIds;
+      my $cIdSize = @cIds;
+      if($tIdSize != $cIdSize){
+        #print "$target $control different transcript IDs: $tIdSize != $cIdSize\n";
+	return 1;
+      }else{
+        @tIds = sort @tIds;
+	@cIds = sort @cIds;
+	for(my $q = 0; $q < $tIdSize; $q++){
+	  if($tIds[$q] ne $cIds[$q]){
+	    #print "$target $control different at $tIds[$q] $cIds[$q]\n";
+	    return 1;
 	  }
-	  print "Finally overlap: #all transcript ID's are the same\n";
-	  return 0; 
 	}
+	#they are always in the same exon (have to go through + and -)
+      }
+    }else{ 
+      if(defined($targetSnp{$tag}) || defined($controlSnp{$tag})){
+        #print "$target and $control one not defined with $tag\n";
+        return 1; 
       }
     }
   }
-  return 1;
+  #print "$target and $control do overlap\n";
+  return 0;
 }
 
 
@@ -1045,9 +1051,9 @@ sub calSplicingEventNev
 
         if(defined($chrCE{$gene})){
           my $constExonSet = $chrCE{$gene};   
-          print "$gene ";
+          #print "$gene ";
 	  $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
-          #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
+	  #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
         } #get the constitutive ratio if there is event evidence for this gene
       }
@@ -1075,7 +1081,7 @@ sub calSplicingEventNev
        }
        #print "Effective length: ".($eEnd-$eStart+1)."\n";
        if(!defined($geneConstRatio{$tag})){
-         print "Warning: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
+         #print "Warning: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
          last;
        }
        my $nev = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
@@ -1086,7 +1092,7 @@ sub calSplicingEventNev
          #print "We dont want this NEV: $nev, $_\n";
        }
      }else{
-       print "WARNING: SNP $snpPos $tag event does not match $gene: $_\n";
+       #print "WARNING: SNP $snpPos $tag event does not match $gene: $_\n";
        #exit;
      }
     }
@@ -1107,11 +1113,11 @@ sub calConstRatio
     $effLen += $l;
   }
   if($effLen == 0){ 
-    print "Warning: a gene without constExonSet reads: $constExonSet\n"; 
+    #print "Warning: a gene without constExonSet reads: $constExonSet\n"; 
     return 0;
   }
  
-  print "const read: $readCount const len: $effLen\n";
+  #print "const read: $readCount const len: $effLen\n";
 
   return $readCount/$effLen;
 }

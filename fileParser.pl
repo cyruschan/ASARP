@@ -173,7 +173,7 @@ sub readAllEvents
   my ($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef) = @_;
   my %spEventsList = ();
 
-  my $annoEventsRef = readDifEvent($splicingF, 'anno', $geneNamesRef, $estF);
+  my $annoEventsRef = readDifEvent($splicingF, 'anno', $geneNamesRef, ""); #debug $estF);
   $spEventsList{'anno'} = $annoEventsRef;
   #printListByKey($annoEventsRef, 'events');
   
@@ -221,6 +221,7 @@ sub readDifEvent
 
    my ($fileName, $tag, $geneNamesRef, $isEstNeeded)=@_;
    if(defined($isEstNeeded) && $isEstNeeded ne ''){
+     print "The constitutive exon set will be used by est events: $isEstNeeded\n";
      $isEstNeeded = 1;
    }else{
      $isEstNeeded = 0;
@@ -242,7 +243,7 @@ sub readDifEvent
      if($_ =~/^\>/){
        my @geneInfo = split('\t', $_);
        $geneName = substr($geneInfo[0],1); #gene name no >
-       $geneName = uc $geneName;
+       # just debug $geneName = uc $geneName;
 
        $constExonList = undef; #for checking
        if(@geneInfo > 1){
@@ -272,7 +273,7 @@ sub readDifEvent
        #get the line
        my ($dummy, $chrRaw, $geneNameCheck, $strand, $evtRegion, $lRegion, $rRegion)
        = split(/\t/, $_);
-       $geneNameCheck = uc $geneNameCheck;
+       #just debug $geneNameCheck = uc $geneNameCheck;
        if($geneNameCheck ne $geneName){
          die "Inconsistent gene name in line $count: $geneNameCheck and $geneName\n";
        }
@@ -288,9 +289,9 @@ sub readDifEvent
        }
        if(!defined($constExons[$chrID]{$geneName})){
          $constExons[$chrID]{$geneName} = $constExonList;
-	 if($isEstNeeded && $annotationChr != $chrID){
+	 #if($isEstNeeded && $annotationChr != $chrID){
 	   #print "Warning: Gene $geneName event in ".formatChr($chrID).", annotation in ".formatChr($annotationChr)."\n";
-	 }
+	 #}
        }
        #could make it 0-based by $chrID-=1; here, but not convenient for biologists
        my ($start, $end) = split(/\-/, $evtRegion);
@@ -770,12 +771,13 @@ sub readEstEvent{
                  my $isInJunction = 0; # to indicate whether the est event is within certain junction
 		 my ($eEnd,$type,$pos,$strand) = split(';', $_);
 	         # start investigating event right ($eEnd)     
-	         #perform a binary search to locate the start: boundary cases (i.e. matches) put to the left
-                 my ($loc, $unMatchFlag) = binarySearch(\@exss, $eStart, 0, $exNo-1, 'left');
+	         #perform a binary search to locate the start against exon ends: boundary cases (i.e. matches) put to the left
+                 #corrected: junction should be something in between exons (intronic)
+		 my ($loc, $unMatchFlag) = binarySearch(\@exes, $eStart, 0, $exNo-1, 'left');
 	       
 	         if($loc>0 && $loc<$exNo){ #not the first nor after the last exon in the exon set
-	           # no need to do binary search on exes, just check
-		   if($eEnd <= $exes[$loc]){
+	           # no need to do binary search on exes, just check whether the end is < exon start
+		   if($eEnd < $exss[$loc]){
 		     #event right VS transcript exon end: eStart-$eEnd is some junction
 		     
 		     #add the splicing info only if it is not yet added to this gene's profile
@@ -785,7 +787,7 @@ sub readEstEvent{
 		       $isInJunction = 1; # there is a junction
 		       my ($lEnd, $rStart) = ($exes[$loc-1], $exss[$loc]); #left flanking region end and right flanking region start
                        #left flanking region start is the closest exon start
-		       my $lStart = $exss[$loc-1]; #just the previous exon's start, assuming they are sorted in the transcriptlist
+		       my $lStart = $exss[$loc-1]; #initially the previous exon's start
 		       # so there may be other exon sets starting with the same start but with different ends
 		       for(my $lPos = $loc-1; $lPos>0 && $exss[$lPos-1]>=$exss[$loc-1]; --$lPos){
 		         if($lStart < $exss[$lPos-1]){ #find the maximal
@@ -827,9 +829,7 @@ sub readEstEvent{
 
 	         if(!$isInJunction && (!defined($genesTabu{$gene}) || !($genesTabu{$gene}=~/$eStart-$eEnd/))){
 	           #there may be multiple events
-		 
 		   #add this into the gene: 'F' means the original est.event 'F'ile information is used.
-	           #$splice[$i]{$gene} .= join(';', ('F', $type, $eStart, $eEnd, -1, -1, -1, -1)).'\t';
 	           #print $gene." ".$splice[$i]{$gene}."\n";
 	           if(!$checkStrandConsist || $txStrand eq $strand){
 		     $genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
