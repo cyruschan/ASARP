@@ -173,7 +173,7 @@ sub readAllEvents
   my ($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef) = @_;
   my %spEventsList = ();
 
-  my $annoEventsRef = readDifEvent($splicingF, 'anno', $geneNamesRef, ""); #debug $estF);
+  my $annoEventsRef = readDifEvent($splicingF, 'anno', $geneNamesRef, $estF); #debug "");
   $spEventsList{'anno'} = $annoEventsRef;
   #printListByKey($annoEventsRef, 'events');
   
@@ -243,7 +243,7 @@ sub readDifEvent
      if($_ =~/^\>/){
        my @geneInfo = split('\t', $_);
        $geneName = substr($geneInfo[0],1); #gene name no >
-       # just debug $geneName = uc $geneName;
+       $geneName = uc $geneName;
 
        $constExonList = undef; #for checking
        if(@geneInfo > 1){
@@ -273,7 +273,7 @@ sub readDifEvent
        #get the line
        my ($dummy, $chrRaw, $geneNameCheck, $strand, $evtRegion, $lRegion, $rRegion)
        = split(/\t/, $_);
-       #just debug $geneNameCheck = uc $geneNameCheck;
+       $geneNameCheck = uc $geneNameCheck;
        if($geneNameCheck ne $geneName){
          die "Inconsistent gene name in line $count: $geneNameCheck and $geneName\n";
        }
@@ -720,7 +720,7 @@ sub readEstEventFile{
 sub readEstEvent{
  
   my $checkStrandConsist = 0; #by defatult: not checking strand consistency between EST and Transcripts
-
+  my $isNonFlankingEventKept = 1; #whether to keep events without flanking regions: no-0; yes-1
   my ($fileName, $transRef, $annoEventsRef, $checkStrandInputFlag)=@_;
   if(defined($checkStrandInputFlag)){
     $checkStrandConsist = $checkStrandInputFlag;
@@ -743,7 +743,6 @@ sub readEstEvent{
     my %trans = %$chrTransRef; #chromosome specific
     my ($ei, $ti) = (0, 0); #est index and transcript index
 
-    my %genesTabu = ();
     #print "SP Events: ".scalar @chrEsts_idx."; Transcripts: ".scalar @trans_idx."\n"; 
     while($ei < @chrEsts_idx && $ti < @trans_idx){
        my $eStart = $chrEsts_idx[$ei];
@@ -780,8 +779,7 @@ sub readEstEvent{
 		   if($eEnd < $exss[$loc]){
 		     #event right VS transcript exon end: eStart-$eEnd is some junction
 		     
-		     #add the splicing info only if it is not yet added to this gene's profile
-		     if(!defined($genesTabu{$gene}) || !($genesTabu{$gene}=~/$eStart-$eEnd/)){
+		     if(1){#
 		       # a new event for this gene
 		       # calculate the junction region
 		       $isInJunction = 1; # there is a junction
@@ -802,7 +800,7 @@ sub readEstEvent{
 		       }
 
 		       my $spliceType = deriveSpliceType($eStart, $eEnd, $lStart, $lEnd, $rStart, $rEnd);
-		       if(1){ #$spliceType ne 'UN')
+		       if(1){ #$spliceType ne 'UN') #keeping 'UN' derived type as well
 		         # 'D' means 'D'erived from the flanking regions.
 		         #$splice[$i]{$gene} .= join(';', ('D', $spliceType, $eStart, $eEnd, $lStart, $lEnd, $rStart, $rEnd))."\t"; 
 		         #print $gene." ".$splice[$i]{$gene}."\n";
@@ -811,32 +809,22 @@ sub readEstEvent{
 			 my $rRegion = $rStart.":".$rEnd;
 
 			 if(!$checkStrandConsist || $txStrand eq $strand){
-		           $genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
                            $chrs[$i]{$eStart}.=$eEnd.";".$gene.";".$lRegion.";".$rRegion.";".$txStrand.";".$spliceType."\t";
                          }
-			 #debug only
-		         #if($spliceType ne $type){
-		         #  print "s: $exonStarts\ne: $exonEnds\n";
-		         #  print "$eStart-$eEnd at [$loc] $gene ";
-			 #
-		  	 #  print "Error: derived: $spliceType X file: $type\n";
-		         #}
 		       }
 
 		     }
 		   }
 		 }
 
-	         #if(!$isInJunction && (!defined($genesTabu{$gene}) || !($genesTabu{$gene}=~/$eStart-$eEnd/))){
+	         if(!$isInJunction && $isNonFlankingEventKept){
 	           #there may be multiple events
 		   #add this into the gene: 'F' means the original est.event 'F'ile information is used.
 	           #print $gene." ".$splice[$i]{$gene}."\n";
-	           #if(!$checkStrandConsist || $txStrand eq $strand){
-		     #$genesTabu{$gene} .= "$eStart-$eEnd\t"; #already added
-		   
-		     #$chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";F:".$type."\t"; #always follow the transcript strand; F means type stated in file 
-		   #}
-	         #}
+	           if(!$checkStrandConsist || $txStrand eq $strand){
+		     $chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";F:".$type."\t";
+		   }
+	         }
 	       } #end of foreach(@evntSet)
 	     }
 	   } #end of foreach (@tSet)
@@ -938,7 +926,7 @@ sub printListByKey{
        printChr($i); print "\n";
        my $x=0;
        foreach(@chr_idx){
-         $x++; if($i>10){ last; }
+         $x++;
          print $_."\t".$chr_hash{$_}."\n";
        }
        print "\n";
