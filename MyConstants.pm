@@ -8,11 +8,9 @@ use base 'Exporter';
 our @EXPORT = qw();
 our @EXPORT_OK = qw( $CHRNUM $supportedList $supportedTags );
 
-# better way to forbid modifying, but requires installation
+# better way to forbid modifying, but requires installation. e.g.
 #Readonly::Scalar our $CHRNUM => 24; #total number of chromosomes handled
-#Readonly::Scalar our $TENKB => 10000; #10KB as the bin size
 #Readonly::Scalar our $supportedList => ' snps; powSnps; trans; events; geneSnps;';
-
 
 our $CHRNUM = 24; #total number of chromosomes handled
 #each key word should be prefixed by space ' ' and suffixed by ';'
@@ -27,30 +25,30 @@ MyConstants -- All the constants used by the ASARP pipeline.
 =head1 SYNOPSIS
   
   use MyConstants qw( $CHRNUM $supportedList $supportedTags );
-  Then the constants can be used.
+
+Then the constants can be used.
 
 =head1 DESCRIPTION
 
-This module does not really contain actual subroutines,
+This module does not really contain any actual subroutines,
 it only provides the constants convenient to use in the 
 other related modules/source files of the ASARP pipeline.
 
 =head2 Constants
 
-=over 12
+=over 6
 
 =item C<$CHRNUM>
 
-The total number of chromosomes handled in the pipeline. 24 means 1-22, X and Y.
+The total number of chromosomes supported and handled in the pipeline. Currently it is set to 24 for chromsomes 1-22, X and Y. Need to modify implementations of L<fileParser> and L<snpParser> to include extra chromosomes.
 
 =item C<$supportedList>
 
-The supported attributes in the internal data structures, which are with hashes and indices for all chromosomes as an array. The space and semicolon surrounding are literally added as the prefix and the suffix respectively.
+The supported attribute keywords for querying the internal data structures. Each of these structure is formatted inside its own wrapper as an array of hashes and indices, where each array index indicates one chromosome, i.e. 1, 2, ..., 23 (X) or 24 (Y). The space and semicolon surrounding each keyword are literally added as the disambiguating prefix and suffix. See the utility subs section in L<fileParser> for more details.
 
 =item C<$supportedTags>
 
-The supported types (tags) of input splicing event sources for the SNVs. The space and semicolon surrounding are literally added as the prefix and the suffix respectively.
-
+The supported types (tags) of input splicing event sources for the SNVs, namely 'anno', 'rna' and 'est'. The space and semicolon surrounding each type (tag) are literally added as the disambiguating prefix and suffix. One can extend this by modifying the implementations. See the input file formats in L<fileParser> for more details.
 
 =back
 
@@ -60,10 +58,14 @@ L<fileParser>, L<snpParser>
 
 =head1 COPYRIGHT
 
-Xiao Lab, Department of Integrative Biology & Physiology, UCLA
+This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.
+
+This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.
 
 =head1 AUTHOR
 
 Cyrus Tak-Ming CHAN
+
+Xiao Lab, Department of Integrative Biology & Physiology, UCLA
 
 =cut

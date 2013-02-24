@@ -4,24 +4,22 @@ use strict;
 require "fileParser.pl"; #sub's for input annotation files
 require "snpParser.pl"; #sub's for snps
 require "bedHandler.pl"; #for bed.sam
+
+# input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
 my ($outputFile, $configs, $params) = getArgs(@ARGV); 
-# all the annotations, events, reference files
-my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); 
-# all the p-values cutoffs, thresholds
-my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
+my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); # input annotation/event files
+my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
 
-#my ($bedRef) = readBedByChr($bedF, 5);
-#simpleTestReads($bedF, 5);
-
+# read the transcript annotation file
 my $transRef = readTranscriptFile($xiaoF);
-#printListByKey($transRef, 'trans');
-my ($genesRef, $geneNamesRef) = getGeneIndex($transRef);
-my $altRef = getGeneAltTransEnds($transRef);
-#printAltEnds($altRef);
+#printListByKey($transRef, 'trans'); #utility sub: show transcripts (key: trans)
+my ($genesRef, $geneNamesRef) = getGeneIndex($transRef); #get indices of gene transcript starts and gene names
+my $altRef = getGeneAltTransEnds($transRef); #get alternative initiation/termination (AI/AT) events from transcripts
+#printAltEnds($altRef); #utility sub: show AI/AT events derived from transcripts
 
-# read all events from annotations and optionally rna-seq and est event files
+# read all annotations, optionally rna-seq and est, splicing events and compile them
 my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
-my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef);
+my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef); #compile events from different sources
 
 my $snpRef = initSnp($snpF, $POWCUTOFF);
 #print "SNV List:\n";
@@ -62,9 +60,9 @@ print "processing ASE's\n";
 my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
 
 print "\n";
-my $outputASE = 'test.ase.predicted.txt';
-my $outputSnv = 'test.snv.predicted.txt';
-my $outputGene ='test.gene.predicted.txt';
+my $outputASE = $outputFile.'.ase.prediction';
+my $outputSnv = $outputFile.'.snv.prediction';
+my $outputGene = $outputFile.'.gene.prediction';
 outputRawASARP($allAsarpsRef, 'ASEgene', $outputASE);
 outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
@@ -82,3 +80,47 @@ if(defined($outputFile)){
 }else{
   print $allNarOutput;
 }
+
+=head1 NAME
+
+asarp.pl -- The application script of the ASARP pipeline.
+
+=head1 SYNOPSIS
+
+Look at the source: F<../asarp.pl> and it is self-explanatory. Basically 3 steps:
+
+1. parse the input files and compile alternative mRNA processing events. see L<fileParser>
+
+2. get the SNVs and match them with the events. see L<snpParser>
+
+3. process ASE and ASARP and output the formatted results. see source and L<snpParser>
+
+=head1 DESCRIPTION
+
+The methodology in detail is explained in the paper: 
+
+Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104
+
+and its Supplementary Materials
+
+G<img/demo.jpeg>
+
+See http://nar.oxfordjournals.org/content/40/13/e104 for more details.
+
+=head1 SEE ALSO
+
+L<fileParser>, L<snpParser>, L<MyConstants>
+
+=head1 COPYRIGHT
+
+This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.
+
+This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.
+
+=head1 AUTHOR
+
+Cyrus Tak-Ming CHAN
+
+Xiao Lab, Department of Integrative Biology & Physiology, UCLA
+
+=cut
