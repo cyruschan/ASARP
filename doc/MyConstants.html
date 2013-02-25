@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<title>
+MyConstants
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
+<ul>
+<li><a href='#Constants'>Constants</a></li>
+</ul>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>MyConstants -- All the constants used by the ASARP pipeline.</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<pre>  use MyConstants qw( $CHRNUM $supportedList $supportedTags );</pre>
+<p>Then the constants can be used.</p>
+<a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
+<p>This module does not really contain any actual subroutines,
+it only provides the constants convenient to use in the
+other related modules/source files of the ASARP pipeline.</p>
+<a name='Constants'></a><h2>Constants</h2>
+<ul>
+<li><a name='$CHRNUM'></a><code>$CHRNUM</code></li>
+<p>The total number of chromosomes supported and handled in the pipeline. Currently it is set to 24 for chromsomes 1-22, X and Y. Need to modify implementations of <i><a href='fileParser.html' target='_blank'>fileParser</a></i> and <i><a href='snpParser.html' target='_blank'>snpParser</a></i> to include extra chromosomes.</p>
+<li><a name='$supportedList'></a><code>$supportedList</code></li>
+<p>The supported attribute keywords for querying the internal data structures. Each of these structure is formatted inside its own wrapper as an array of hashes and indices, where each array index indicates one chromosome, i.e. 1, 2, ..., 23 (X) or 24 (Y). The space and semicolon surrounding each keyword are literally added as the disambiguating prefix and suffix. See the utility subs section in <i><a href='fileParser.html' target='_blank'>fileParser</a></i> for more details.</p>
+<li><a name='$supportedTags'></a><code>$supportedTags</code></li>
+<p>The supported types (tags) of input splicing event sources for the SNVs, namely 'anno', 'rna' and 'est'. The space and semicolon surrounding each type (tag) are literally added as the disambiguating prefix and suffix. One can extend this by modifying the implementations. See the input file formats in <i><a href='fileParser.html' target='_blank'>fileParser</a></i> for more details.</p>
+</ul>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='fileParser.html' target='_blank'>fileParser</a></i>, <i><a href='snpParser.html' target='_blank'>snpParser</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

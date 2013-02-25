@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<title>
+fileParser
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
+<ul>
+<li><a href='#Sub-routines (major)'>Sub-routines (major)</a></li>
+<li><a href='#Utility subs'>Utility subs</a></li>
+</ul>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>filePaser -- All the sub-routines for getting and parsing input files (NOT involving SNV handling) in the ASARP pipeline.</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<pre>	require &quot;fileParser.pl&quot;;
+
+	# input arguments: $outputFile--output, 
+	# $configs--input configuration file, $params--parameter file
+	my ($outputFile, $configs, $params) = getArgs(@ARGV); 
+	my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs);
+	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
+
+	# read the transcript annotation file
+	my $transRef = readTranscriptFile($xiaoF);
+	
+	#get alternative initiation/termination (AI/AT) events from transcripts
+	my $altRef = getGeneAltTransEnds($transRef); 
+
+	# get indices of gene transcript starts and gene names (prepared also for SNVs)
+	my ($genesRef, $geneNamesRef) = getGeneIndex($transRef); 
+
+	# read all annotations, optionally rna-seq and est, events and compile them
+	my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
+	my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef);</pre>
+<a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
+<p>This perl file contains all the sub-routines that handle the input arguments, read configuration files, and parse all the annotations and events that are input to be matched with SNVs to discover ASE/ASARP. SNVs are handled separately in <i><a href='snpParser.html' target='_blank'>snpParser</a></i>.</p>
+<a name='Sub-routines (major)'></a><h2>Sub-routines (major)</h2>
+<p>These are the major (interface) sub-routines that will be used in correlation with SNVs in the whole pipeline. Read them one by one as they are quite procedural.</p>
+<ul>
+<li><a name='getRefFileConfig'></a><code>getRefFileConfig</code></li>
+<p>get all input annotation/event file/folder paths contained in the configuration file.</p>
+<pre> input: $configs --configuration file, check out default.config for the formats.
+ 
+ output: ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) 
+ --SNV list file path ($snpF), 
+ --the (sam.)bed folder path ($bedF), 
+ --rna-seq.event file path ($rnaseqF, optional: '' returned if not provided in $configs), 
+ --transcript annotation file path ($xiaoF), 
+ --annotation.event path ($splicingF), 
+ --est.event file path ($estF, optional: '' returned if not provided in $configs)</pre>
+<p>The default config file as an example can be found in <i><a href='../default.config' target='_blank'>../default.config</a></i>.</p>
+<p>Lines for RNA-Seq.event and EST.event file paths may be skipped as they are optional.</p>
+<p><b>File formats</b>:</p>
+<ul>
+<li><a name='Annotation file format: Transcript and gene annotation specified in $xiaoF'></a>Annotation file format:
+Transcript and gene annotation specified in <code>$xiaoF</code></li>
+<p>The example file by default, <i><a href='../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt' target='_blank'>../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt</a></i>,
+was created by merging ensembl Refseq, UCSC knowngene, Gencode
+gene, and Vegagene.</p>
+<p><i>Format</i> (tab delimited):
+ID, chr, strand, txStart,
+txEnd, cdsstart, cdsend, exoncount, exonstarts, exonends, genename,
+cdsstartstat,cdsendstat</p>
+<p><i>IMPORTANT</i>: all coordinates are hg19, 0-based start and 1-based end
+coordinates (UCSC convention) **in this file only???**.</p>
+<li><a name='Event (splicing event) file formats:'></a>Event (splicing event) file formats:</li>
+<p>Annotation events specified in <code>$splicingF</code> (example: <i><a href='../data/annotation.event' target='_blank'>../data/annotation.event</a></i>)</p>
+<p>The file contains splicing events as annotated in the above file
+(<code>$xiaoF</code>).  The format is the same as that for rnaseq_event.
+(1-based start and end)</p>
+<p>RNA-Seq events specified in <code>$rnaseqF</code> (example: <i><a href='../data/rnaseq.event' target='_blank'>../data/rnaseq.event</a></i>)</p>
+<p>The file contains splicing events as determined by our RNA-seq data.
+It lists the events for each gene. The format of the events is,
+EVENT, chromosome, genename, strand, event_region, flanking_region_1,
+flanking_region_2, where *_region are in the format of
+starting_coordinate-ending_coordinate. (1-based start and end)</p>
+<p>EST events specified in <code>$estF</code> (example: <i><a href='../data/est.event' target='_blank'>../data/est.event</a></i>)</p>
+<p>The file contains splicing events as determined from hg19 EST and cDNA data.
+The format is tab-delimited as: event_type, event_name, starting_coordinate,
+ending_coordinate. (1-based start and end)</p>
+</ul>
+<li><a name='getParameters'></a><code>getParameters</code></li>
+<p>get all the numeric parameters including p-value cutoffs, NEV lower/upper thresholds, and the allelic ratio difference threshold.</p>
+<pre> input: $params --configuration file for the parameters
+
+ output: ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF)
+ --read count cutoff for powerful SNVs ($POWCUTOFF),
+ --Chi-Squared Test p-value cutoff for individual SNVs ($SNVPCUTOFF),
+ --Fisher's Exact Test p-value cutoff for target-control SNV pairs in ASARP ($ASARPPCUTOFF),
+ --NEV lower and upper cutoffs (excl.) ($NEVCUTOFFLOWER, $NEVCUTOFFUPPER),
+ --allelic ratio difference cutoff for target-control SNV pairs in ASARP ($ALRATIOCUTOFF)</pre>
+<p>The default parameter config file as an example can be found in <i><a href='../default.param' target='_blank'>../default.param</a></i>.
+All parameters are required and have to be set.</p>
+<li><a name='readTranscriptFile'></a><code>readTranscriptFile</code></li>
+<p>read the transcript annotation file</p>
+<pre> input: $xiaoF --file path of the transcript (also gene) annotation file. 
+
+ output: $transRef --reference to an array of the parsed transcripts. </pre>
+<p>The results can be printed out using utility sub using key 'trans': <code>printListByKey($transRef, 'trans');</code></p>
+<li><a name='getGeneIndex'></a><code>getGeneIndex</code></li>
+<p>intermediate sub to get indices of gene transcript starts and gene names</p>
+<pre> input: $transRef (see above)
+
+ output: $genesRef --reference to the index for every gene's minimal transcript start
+
+ 	 $geneNamesRef --reference to the gene names
+	</pre>
+<li><a name='getGeneAltTransEnds'></a><code>getGeneAltTransEnds</code></li>
+<p>get alternative initiation/termination (AI/AT) events from transcripts</p>
+<pre> input: $transRef (see above)
+
+ output: $altRef--reference to the AI/AT events</pre>
+<p>The AI/AT results can be printed out using utility sub: <code>printAltEnds($altRef);</code></p>
+<li><a name='readAllEvents'></a><code>readAllEvents</code></li>
+<p>read all annotations, optionally rna-seq and est, splicing events</p>
+<pre> input: ($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
+ --event files (see above): anno ($splicingF), rna ($rnaseqF), est ($estF)
+ --see above for $transRef, $geneNamesRef
+ 
+ output: $allEventsListRef --the reference to a hash of 
+ all 'anno', optionally 'rna', 'est' events parsed
+ quoted are keys to access them in the hash
+	</pre>
+<li><a name='compileGeneSplicingEvents'></a><code>compileGeneSplicingEvents</code></li>
+<p>compile events from different files and arrange them according to genes</p>
+<pre> input: ($genesRef, values %$allEventsListRef)
+ --see above for $genesRef
+ --the 2nd argument is the event type(s) provided, e.g. 'anno', 'rna', 'est'
+ output: $splicingRef --reference to all the splicing events </pre>
+</ul>
+<a name='Utility subs'></a><h2>Utility subs</h2>
+<p>Utility sub-routines are implemented to get or display parsing annotations/events for intermediate usage or checking.</p>
+<p>Parsing results are usually arranged in an internal data structure whose reference is returned.</p>
+<ul>
+<li><a name='The 1st layer is a hash with 3 keys: the data 'x', its companian index 'x_idx', and 'type' indicating the tag or telling briefly what the data is about.'></a>The 1st layer is a hash with 3 keys: the data 'x', its companian index 'x_idx', and 'type' indicating the tag or telling briefly what the data is about.</li>
+<li><a name='The 2nd layer is an array with number of elements equal to the chromosome number (see constant $CHRNUM in MyConstants).'></a>The 2nd layer is an array with number of elements equal to the chromosome number (see constant $CHRNUM in <i><a href='MyConstants.html' target='_blank'>MyConstants</a></i>).</li>
+<li><a name='The 3rd layer (i.e. each element representing one chromosome) is the reference to a hash containing specific information of that structure. E.g. in the case of transcript annotation, the keys are the starting locations of the transcripts, and the values are the transcript information where multiple transcripts are separated by &quot;\t&quot;.'></a>The 3rd layer (i.e. each element representing one chromosome) is the reference to a hash containing specific information of that structure. E.g. in the case of transcript annotation, the keys are the starting locations of the transcripts, and the values are the transcript information where multiple transcripts are separated by &quot;\t&quot;.</li>
+</ul>
+<ul>
+<li><a name='printListByKey'></a><code>printListByKey</code></li>
+<p>the general print procedure for the arrays of hash+idx structures used</p>
+<pre>  input: ($ref, $key) --the reference to a structure and the corresponding key for the structure.
+  output: print out the content of the structure chromosome by chromosome.</pre>
+<p>e.g. <code>printListByKey($transRef, 'trans');</code> to print out all transcripts;</p>
+<p>or <code>printListByKey($snpRef, 'powSnps');</code> to print out all powerful SNVs (SNPs)</p>
+<li><a name='getListTag'></a><code>getListTag</code></li>
+<p>get list tag (type of resources)</p>
+<pre>  input: the reference to the structure of events/annotations of a certain type
+  output: the tagged type (or simply tag) for this list</pre>
+<li><a name='getListByKeyChr'></a><code>getListByKeyChr</code></li>
+<p>get the references to hash+idx of a particular chromsome number from an internal structure</p>
+<pre>  input: ($ref, $key, $chr) 
+  --reference to the structure, corresponding key of the structure, the chromosome number specified (1 - $CHRNUM)
+  
+  output: ($hsArry[$chr], $idxArry[$chr]) 
+  --the references to hash+idx of a particular chromsome number</pre>
+<p>This utility sub is frequently used in the intermediate processing of all kinds of events, annotations and SNVs.</p>
+<li><a name='binarySearch'></a><code>binarySearch</code></li>
+<p>serve as a general utility to get the location of an element in an ordered list (a good example is the indices _idx)</p>
+<p>binary search for insert (or location), including left, right insert (location) cases, similar to bisectin Python. Assume the elements in the list are sorted in an ascending order and there is no duplicate.</p>
+<pre>  input: ($listRef, $x, $imin, $imax, $type) 
+  --the reference to a list, the element to be searched ($x), 
+  --starting index ($imin), e.g. 0, ending index ($imax), e.g. size of the list - 1,
+  --$type: 'left' or 'right' mimicing left or right bisect. 'left': if $x matches an element, the return location will be left to the element; 'right': return location right to the element
+
+  output: ($loc, $flag) 
+  --location of $x in the list (NOTE: range is 0 to size of list, 0-base)
+  --match flag: 1 means match, 0 means no match</pre>
+<li><a name='Other utility subs'></a>Other utility subs</li>
+<p>Who actually cares? If you do, kindly go to have a look at the source: <i><a href='../fileParser.pl' target='_blank'>../fileParser.pl</a></i>. There will be some comments around. Good luck! : )</p>
+</ul>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='snpParser.html' target='_blank'>snpParser</a></i>, <i><a href='MyConstants.html' target='_blank'>MyConstants</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>
