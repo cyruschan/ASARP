@@ -1533,7 +1533,29 @@ sub printSnpEventsResultsByType
 
 =head1 NAME
 
-snpParser.pl -- All the sub-routines for SNV (sometimes termed SNP internally) handling in the ASARP pipeline.
+snpParser.pl -- All the sub-routines for SNV (sometimes termed interchangeably as SNP internally) handling in the ASARP pipeline.
+
+=head1 TERMININOLOGY
+
+=over 6
+
+=item Allele-Specific Alternative RNA Processing (ASARP) types:
+
+ASE: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (1:1 for Ref:Alt).
+
+AS: Alternative Splicing; AI: Alternative (5'-end) Initiation; AT: Alternative (3'-end) Termination, or Alternative Poly-Adenylation
+
+=item NEV: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as 
+
+NEV_sp = min (NEV_flanking, NEV_gene), where
+
+NEV_flanking = (# event_reads/event_length)/(# flanking_region_total_reads/flanking_region_total_length), and
+
+NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_constitutive_exon_length)
+
+*_length means the total number of positions within the * region with non-zero reads.
+
+=back
 
 =head1 SYNOPSIS
 
@@ -1576,7 +1598,7 @@ Basically there are 3 steps:
 
 2. match the SNVs to transcripts, and then events, and then filter them based on the PSI like Normalized Expression Value (NEV) calculation
 
-3. process the SNVs with ASE patterns and SNV pairs with ASARP, and output the formatted results
+3. process the SNVs with ASE patterns and SNV pairs with other ASARP patterns: AI/AT/AS, and output the formatted results
 
 =head2 Sub-routines (major)
 
@@ -1649,25 +1671,27 @@ process ASE and ASARP
 format results to output
 
   input: ($allAsarpsRef, $key, $outputFile)
-  --reference to ASARP results
+  --reference to ASARP results ($allAsarpsRef)
   --result type to output ($key) with choices: 
   'ASEgene'--ASE results arranged by genes,
   'ASARPgene'--ASARP results arranged by genes
   'ASARPsnp' --ASARP results arranged by SNVs
-  --output file for the results ($outputFile)
+  --the output file for the results ($outputFile)
 
   output: corresponding ASE/ASARP results written to $outputGene
 
 =item C<formatOutputVerNAR>
+
 format results to be like the old version for NAR
-my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
-
-G<img/demo.jpeg>
-
+  
+  input: $allAsarpsRef --see above
+  
+  output: ($allNarOutput) 
+  --text formatted according to the old version
 
 =head1 SEE ALSO
 
-L<fileParser>, L<snpParser>, L<MyConstants>
+L<asarp>, L<fileParser>, L<MyConstants>
 
 =head1 COPYRIGHT
 

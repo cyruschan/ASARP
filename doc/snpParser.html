@@ -11,6 +11,7 @@ snpParser
 <div class="toc">
 <ul>
 <li><a href='#NAME'>NAME</a></li>
+<li><a href='#TERMININOLOGY'>TERMININOLOGY</a></li>
 <li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
 <li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
 <ul>
@@ -23,7 +24,18 @@ snpParser
 </div>
 <div class='pod'>
 <a name='NAME'></a><h1>NAME</h1>
-<p>snpParser.pl -- All the sub-routines for SNV (sometimes termed SNP internally) handling in the ASARP pipeline.</p>
+<p>snpParser.pl -- All the sub-routines for SNV (sometimes termed interchangeably as SNP internally) handling in the ASARP pipeline.</p>
+<a name='TERMININOLOGY'></a><h1>TERMININOLOGY</h1>
+<ul>
+<li><a name='Allele-Specific Alternative RNA Processing (ASARP) types:'></a>Allele-Specific Alternative RNA Processing (ASARP) types:</li>
+<p>ASE: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (1:1 for Ref:Alt).</p>
+<p>AS: Alternative Splicing; AI: Alternative (5'-end) Initiation; AT: Alternative (3'-end) Termination, or Alternative Poly-Adenylation</p>
+<li><a name='NEV: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as'></a>NEV: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as</li>
+<p>NEV_sp = min (NEV_flanking, NEV_gene), where</p>
+<p>NEV_flanking = (# event_reads/event_length)/(# flanking_region_total_reads/flanking_region_total_length), and</p>
+<p>NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_constitutive_exon_length)</p>
+<p>*_length means the total number of positions within the * region with non-zero reads.</p>
+</ul>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
 <pre>
 	require &quot;fileParser.pl&quot;; #sub's for input annotation files
@@ -54,11 +66,11 @@ snpParser
 	outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 	my $allNarOutput = formatOutputVerNAR($allAsarpsRef);</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
-<p>This perl file contains all the sub-routines for SNV handling and ASARP processing, as well as result formatting. They are quite procedural and one should first get the input files such as annotations and events using the sub-routines in <i><a href='fileParser.html' target='_blank'>fileParser</a></i>.</p>
+<p>This perl file contains all the sub-routines for SNV handling and ASARP processing, as well as result formatting. They are quite procedural and one should first get the input files such as annotations and events using the sub-routines in <i><a href='fileParser.html'>fileParser</a></i>.</p>
 <p>Basically there are 3 steps:</p>
 <p>1. read and parse the individual SNVs</p>
 <p>2. match the SNVs to transcripts, and then events, and then filter them based on the PSI like Normalized Expression Value (NEV) calculation</p>
-<p>3. process the SNVs with ASE patterns and SNV pairs with ASARP, and output the formatted results</p>
+<p>3. process the SNVs with ASE patterns and SNV pairs with other ASARP patterns: AI/AT/AS, and output the formatted results</p>
 <a name='Sub-routines (major)'></a><h2>Sub-routines (major)</h2>
 <ul>
 <li><a name='initSnp'></a><code>initSnp</code></li>
@@ -111,20 +123,22 @@ snpParser
 <li><a name='outputRawASARP'></a><code>outputRawASARP</code></li>
 <p>format results to output</p>
 <pre>  input: ($allAsarpsRef, $key, $outputFile)
-  --reference to ASARP results
+  --reference to ASARP results ($allAsarpsRef)
   --result type to output ($key) with choices: 
   'ASEgene'--ASE results arranged by genes,
   'ASARPgene'--ASARP results arranged by genes
   'ASARPsnp' --ASARP results arranged by SNVs
-  --output file for the results ($outputFile)
+  --the output file for the results ($outputFile)
 
   output: corresponding ASE/ASARP results written to $outputGene</pre>
-<li><a name='formatOutputVerNAR format results to be like the old version for NAR my $allNarOutput = formatOutputVerNAR($allAsarpsRef);'></a><code>formatOutputVerNAR</code>
-format results to be like the old version for NAR
-my $allNarOutput = formatOutputVerNAR($allAsarpsRef);</li>
-<p><img src='img/demo.jpeg' border=0></p>
+<li><a name='formatOutputVerNAR'></a><code>formatOutputVerNAR</code></li>
+<p>format results to be like the old version for NAR</p>
+<pre>  input: $allAsarpsRef --see above
+  
+  output: ($allNarOutput) 
+  --text formatted according to the old version</pre>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
-<p><i><a href='fileParser.html' target='_blank'>fileParser</a></i>, <i><a href='snpParser.html' target='_blank'>snpParser</a></i>, <i><a href='MyConstants.html' target='_blank'>MyConstants</a></i></p>
+<p><i><a href='asarp.html'>asarp</a></i>, <i><a href='fileParser.html'>fileParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
 <p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
 <p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>

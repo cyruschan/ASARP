@@ -32,7 +32,8 @@ fileParser
 	# $configs--input configuration file, $params--parameter file
 	my ($outputFile, $configs, $params) = getArgs(@ARGV); 
 	my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs);
-	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
+	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, 
+	$NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
 
 	# read the transcript annotation file
 	my $transRef = readTranscriptFile($xiaoF);
@@ -47,7 +48,7 @@ fileParser
 	my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 	my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef);</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
-<p>This perl file contains all the sub-routines that handle the input arguments, read configuration files, and parse all the annotations and events that are input to be matched with SNVs to discover ASE/ASARP. SNVs are handled separately in <i><a href='snpParser.html' target='_blank'>snpParser</a></i>.</p>
+<p>This perl file contains all the sub-routines that handle the input arguments, read configuration files, and parse all the annotations and events that are input to be matched with SNVs to discover ASE/ASARP. SNVs are handled separately in <i><a href='snpParser.html'>snpParser</a></i>.</p>
 <a name='Sub-routines (major)'></a><h2>Sub-routines (major)</h2>
 <p>These are the major (interface) sub-routines that will be used in correlation with SNVs in the whole pipeline. Read them one by one as they are quite procedural.</p>
 <ul>
@@ -147,7 +148,7 @@ All parameters are required and have to be set.</p>
 <p>Parsing results are usually arranged in an internal data structure whose reference is returned.</p>
 <ul>
 <li><a name='The 1st layer is a hash with 3 keys: the data 'x', its companian index 'x_idx', and 'type' indicating the tag or telling briefly what the data is about.'></a>The 1st layer is a hash with 3 keys: the data 'x', its companian index 'x_idx', and 'type' indicating the tag or telling briefly what the data is about.</li>
-<li><a name='The 2nd layer is an array with number of elements equal to the chromosome number (see constant $CHRNUM in MyConstants).'></a>The 2nd layer is an array with number of elements equal to the chromosome number (see constant $CHRNUM in <i><a href='MyConstants.html' target='_blank'>MyConstants</a></i>).</li>
+<li><a name='The 2nd layer is an array with number of elements equal to the chromosome number (see constant $CHRNUM in MyConstants).'></a>The 2nd layer is an array with number of elements equal to the chromosome number (see constant $CHRNUM in <i><a href='MyConstants.html'>MyConstants</a></i>).</li>
 <li><a name='The 3rd layer (i.e. each element representing one chromosome) is the reference to a hash containing specific information of that structure. E.g. in the case of transcript annotation, the keys are the starting locations of the transcripts, and the values are the transcript information where multiple transcripts are separated by &quot;\t&quot;.'></a>The 3rd layer (i.e. each element representing one chromosome) is the reference to a hash containing specific information of that structure. E.g. in the case of transcript annotation, the keys are the starting locations of the transcripts, and the values are the transcript information where multiple transcripts are separated by &quot;\t&quot;.</li>
 </ul>
 <ul>
@@ -164,7 +165,9 @@ All parameters are required and have to be set.</p>
 <li><a name='getListByKeyChr'></a><code>getListByKeyChr</code></li>
 <p>get the references to hash+idx of a particular chromsome number from an internal structure</p>
 <pre>  input: ($ref, $key, $chr) 
-  --reference to the structure, corresponding key of the structure, the chromosome number specified (1 - $CHRNUM)
+  --reference to the structure ($ref), 
+  --the corresponding key of the structure ($key), 
+  --the chromosome number specified ($chr in the range of 1 - $CHRNUM)
   
   output: ($hsArry[$chr], $idxArry[$chr]) 
   --the references to hash+idx of a particular chromsome number</pre>
@@ -175,16 +178,18 @@ All parameters are required and have to be set.</p>
 <pre>  input: ($listRef, $x, $imin, $imax, $type) 
   --the reference to a list, the element to be searched ($x), 
   --starting index ($imin), e.g. 0, ending index ($imax), e.g. size of the list - 1,
-  --$type: 'left' or 'right' mimicing left or right bisect. 'left': if $x matches an element, the return location will be left to the element; 'right': return location right to the element
+  --$type: 'left' (default) or 'right' mimicing left or right bisect. 
+  'left': if $x matches an element, the return location will be left to the element; 
+  'right': the return location right to the element if matched
 
   output: ($loc, $flag) 
   --location of $x in the list (NOTE: range is 0 to size of list, 0-base)
   --match flag: 1 means match, 0 means no match</pre>
 <li><a name='Other utility subs'></a>Other utility subs</li>
-<p>Who actually cares? If you do, kindly go to have a look at the source: <i><a href='../fileParser.pl' target='_blank'>../fileParser.pl</a></i>. There will be some comments around. Good luck! : )</p>
+<p>Kindly go to have a look at the source: <i><a href='../fileParser.pl' target='_blank'>../fileParser.pl</a></i>. There will be some comments around. Good luck!</p>
 </ul>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
-<p><i><a href='snpParser.html' target='_blank'>snpParser</a></i>, <i><a href='MyConstants.html' target='_blank'>MyConstants</a></i></p>
+<p><i><a href='asarp.html'>asarp</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
 <p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
 <p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>

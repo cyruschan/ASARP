@@ -36,7 +36,7 @@ my $podhtml = Pod::HtmlEasy->new(
       if(defined($section)){
         $section = "#$section" if $section ne '' ;
       }
-      return "<i><a href='$text.html' target='_blank'>$text</a></i>"; #relative link customized for this internal doc
+      return "<i><a href='$text.html'>$text</a></i>"; #relative link customized for this internal doc
       #return "<i><a href='http://search.cpan.org/perldoc?$page$section'>$text</a></i>" ;	
     }												 
     elsif( $type eq 'man' ) { return "<i>$text</i>" ;}

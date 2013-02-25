@@ -1102,7 +1102,8 @@ filePaser.pl -- All the sub-routines for getting and parsing input files (NOT in
 	# $configs--input configuration file, $params--parameter file
 	my ($outputFile, $configs, $params) = getArgs(@ARGV); 
 	my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs);
-	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
+	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, 
+	$NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
 
 	# read the transcript annotation file
 	my $transRef = readTranscriptFile($xiaoF);
@@ -1300,7 +1301,9 @@ get list tag (type of resources)
 get the references to hash+idx of a particular chromsome number from an internal structure
 
   input: ($ref, $key, $chr) 
-  --reference to the structure, corresponding key of the structure, the chromosome number specified (1 - $CHRNUM)
+  --reference to the structure ($ref), 
+  --the corresponding key of the structure ($key), 
+  --the chromosome number specified ($chr in the range of 1 - $CHRNUM)
   
   output: ($hsArry[$chr], $idxArry[$chr]) 
   --the references to hash+idx of a particular chromsome number
@@ -1316,7 +1319,9 @@ binary search for insert (or location), including left, right insert (location) 
   input: ($listRef, $x, $imin, $imax, $type) 
   --the reference to a list, the element to be searched ($x), 
   --starting index ($imin), e.g. 0, ending index ($imax), e.g. size of the list - 1,
-  --$type: 'left' or 'right' mimicing left or right bisect. 'left': if $x matches an element, the return location will be left to the element; 'right': return location right to the element
+  --$type: 'left' (default) or 'right' mimicing left or right bisect. 
+  'left': if $x matches an element, the return location will be left to the element; 
+  'right': the return location right to the element if matched
 
   output: ($loc, $flag) 
   --location of $x in the list (NOTE: range is 0 to size of list, 0-base)
@@ -1324,13 +1329,13 @@ binary search for insert (or location), including left, right insert (location) 
 
 =item Other utility subs
 
-Who actually cares? If you do, kindly go to have a look at the source: F<../fileParser.pl>. There will be some comments around. Good luck! : )
+Kindly go to have a look at the source: F<../fileParser.pl>. There will be some comments around. Good luck!
 
 =back
 
 =head1 SEE ALSO
 
-L<snpParser>, L<MyConstants>
+L<asarp>, L<snpParser>, L<MyConstants>
 
 =head1 COPYRIGHT
 

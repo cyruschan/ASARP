@@ -83,17 +83,17 @@ if(defined($outputFile)){
 
 =head1 NAME
 
-asarp.pl -- The application script of the ASARP pipeline.
+asarp.pl -- The main application script, i.e. the entry program, of the ASARP pipeline.
 
 =head1 SYNOPSIS
 
-Look at the source: F<../asarp.pl> and it is self-explanatory. Basically 3 steps:
+Look at the source: F<../asarp.pl> and it is self-explanatory. There are basically 3 steps:
 
 1. parse the input files and compile alternative mRNA processing events. see L<fileParser>
 
 2. get the SNVs and match them with the events. see L<snpParser>
 
-3. process ASE and ASARP and output the formatted results. see source and L<snpParser>
+3. process ASARP (including ASE) patterns and output the formatted results. see source and L<snpParser>
 
 =head1 DESCRIPTION
 
@@ -103,9 +103,9 @@ Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of alle
 
 and its Supplementary Materials
 
-G<img/demo.jpeg>
-
 See http://nar.oxfordjournals.org/content/40/13/e104 for more details.
+
+G<img/demo.jpeg>
 
 =head1 SEE ALSO
 
