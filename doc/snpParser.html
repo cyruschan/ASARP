@@ -13,6 +13,9 @@ snpParser
 <li><a href='#NAME'>NAME</a></li>
 <li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
 <li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
+<ul>
+<li><a href='#Sub-routines (major)'>Sub-routines (major)</a></li>
+</ul>
 <li><a href='#SEE ALSO'>SEE ALSO</a></li>
 <li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
 <li><a href='#AUTHOR'>AUTHOR</a></li>
@@ -38,22 +41,88 @@ snpParser
 
 	# calculate NEV and filter the matched gene SNVs with AI/AT/AS events
 	my ($snpsNevRef) = 
-	filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
+	filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, 
+	$allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
 
 	# process ASE and ASARP
 	my ($allAsarpsRef) = 
-	processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+	processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, 
+	$ASARPPCUTOFF, $ALRATIOCUTOFF);
 
 	# format results to output
 	my $outputGene = $outputFile.'.gene.prediction';
 	outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 	my $allNarOutput = formatOutputVerNAR($allAsarpsRef);</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
-<p>The methodology in detail is explained in the paper:</p>
-<p>Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104</p>
-<p>and its Supplementary Materials</p>
+<p>This perl file contains all the sub-routines for SNV handling and ASARP processing, as well as result formatting. They are quite procedural and one should first get the input files such as annotations and events using the sub-routines in <i><a href='fileParser.html' target='_blank'>fileParser</a></i>.</p>
+<p>Basically there are 3 steps:</p>
+<p>1. read and parse the individual SNVs</p>
+<p>2. match the SNVs to transcripts, and then events, and then filter them based on the PSI like Normalized Expression Value (NEV) calculation</p>
+<p>3. process the SNVs with ASE patterns and SNV pairs with ASARP, and output the formatted results</p>
+<a name='Sub-routines (major)'></a><h2>Sub-routines (major)</h2>
+<ul>
+<li><a name='initSnp'></a><code>initSnp</code></li>
+<p>read and parse SNVs</p>
+<pre>  input: ($snpF, $POWCUTOFF) --SNV file path, powerful SNV cutoff
+  
+  output $snpRef 
+  --reference to SNVs, categorized into powerful/non-powerful internally
+  
+  p-value cutoff (Chi-Squared)</pre>
+<li><a name='setGeneSnps'></a><code>setGeneSnps</code></li>
+<p>match SNVs with gene transcript annotations</p>
+<pre>  input: ($snpRef, $transRef);
+  --reference to SNVs, reference to gene transcripts
+  
+  output: $geneSnpRef 
+  --reference to SNVs matching gene transcripts</pre>
+<li><a name='setSnpEvents'></a><code>setSnpEvents</code></li>
+<p>match gene SNVs with AI/AT and alternative splicing (AS) events</p>
+<pre>  input: ($geneSnpRef, $altRef, $splicingRef)
+  --reference to gene SNVs ($geneSnpRef), 
+  --reference to AI/AT events ($altRef)
+  --reference to AS events ($splicingRef)
+
+  output: ($snpEventsRef) --gene SNVs matching AI/AT/AS events</pre>
+<li><a name='filterSnpEventsWithNev'></a><code>filterSnpEventsWithNev</code></li>
+<p>calculate NEV and filter the matched gene SNVs with AI/AT/AS events</p>
+<pre>  input: ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, 
+  $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER)
+  --reference to SNVs ($snpRef),
+  --reference to gene SNVs ($geneSnpRef),
+  --reference to SNVs matching AI/AT/AS events ($snpEventsRef),
+  --reference to bed folder for mapped reads ($bedF),
+  --reference to all parsed events ($allEvetnsListRef),
+  --lower and upper cutoffs (excl.) for NEV ($NEVCUTOFFLOWER/UPPER)
+
+  output: ($snpsNevRef) --gene SNVs matching NEV and AI/AT/AS events </pre>
+<li><a name='processASEWithNev'></a><code>processASEWithNev</code></li>
+<p>process ASE and ASARP</p>
+<pre>  intput: ($snpRef, $geneSnpRef, $snpsNevRef, 
+  $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF)
+  --see above for $snpRef, $geneSnpRef, $snpsNevRef
+  --Chi-Squared Test p-value cutoff on individual SNVs for ASE ($SNVPCUTOFF)
+  --Fisher's Exact Test p-value cutoff on target-control SNV pairs for
+  ASARP ($ASARPPCUTOFF)
+  --allelic ratio difference cutoff for target-control SNV pairs for
+  ASARP ($ALRATIOCUTOFF)
+
+  output: ($allAsarpsRef) --reference to all ASE and ASARP results </pre>
+<li><a name='outputRawASARP'></a><code>outputRawASARP</code></li>
+<p>format results to output</p>
+<pre>  input: ($allAsarpsRef, $key, $outputFile)
+  --reference to ASARP results
+  --result type to output ($key) with choices: 
+  'ASEgene'--ASE results arranged by genes,
+  'ASARPgene'--ASARP results arranged by genes
+  'ASARPsnp' --ASARP results arranged by SNVs
+  --output file for the results ($outputFile)
+
+  output: corresponding ASE/ASARP results written to $outputGene</pre>
+<li><a name='formatOutputVerNAR format results to be like the old version for NAR my $allNarOutput = formatOutputVerNAR($allAsarpsRef);'></a><code>formatOutputVerNAR</code>
+format results to be like the old version for NAR
+my $allNarOutput = formatOutputVerNAR($allAsarpsRef);</li>
 <p><img src='img/demo.jpeg' border=0></p>
-<p>See <a href='http://nar.oxfordjournals.org/content/40/13/e104' target='_blank'>nar.oxfordjournals.org</a> for more details.</p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='fileParser.html' target='_blank'>fileParser</a></i>, <i><a href='snpParser.html' target='_blank'>snpParser</a></i>, <i><a href='MyConstants.html' target='_blank'>MyConstants</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
