@@ -26,6 +26,8 @@ snpParser
 <a name='NAME'></a><h1>NAME</h1>
 <p>snpParser.pl -- All the sub-routines for SNV (sometimes termed interchangeably as SNP internally) handling in the ASARP pipeline.</p>
 <a name='TERMININOLOGY'></a><h1>TERMININOLOGY</h1>
+<p>The procedures (rules) for ASARP are illustrated in the following figure and terminology explained blow:</p>
+<p><img src='img/ASARP.png' border=0></p>
 <ul>
 <li><a name='Allele-Specific Alternative RNA Processing (ASARP) types:'></a>Allele-Specific Alternative RNA Processing (ASARP) types:</li>
 <p>ASE: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (1:1 for Ref:Alt).</p>
@@ -71,6 +73,8 @@ snpParser
 <p>1. read and parse the individual SNVs</p>
 <p>2. match the SNVs to transcripts, and then events, and then filter them based on the PSI like Normalized Expression Value (NEV) calculation</p>
 <p>3. process the SNVs with ASE patterns and SNV pairs with other ASARP patterns: AI/AT/AS, and output the formatted results</p>
+<p>AI/AT/AS categories are briefly illustrated below (where the red dots represent SNVs):</p>
+<p><img src='img/Types.png' border=0></p>
 <a name='Sub-routines (major)'></a><h2>Sub-routines (major)</h2>
 <ul>
 <li><a name='initSnp'></a><code>initSnp</code></li>

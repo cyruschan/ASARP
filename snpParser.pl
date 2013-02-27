@@ -1537,6 +1537,10 @@ snpParser.pl -- All the sub-routines for SNV (sometimes termed interchangeably a
 
 =head1 TERMININOLOGY
 
+The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:
+
+G<img/ASARP.png>
+
 =over 6
 
 =item Allele-Specific Alternative RNA Processing (ASARP) types:
@@ -1599,6 +1603,10 @@ Basically there are 3 steps:
 2. match the SNVs to transcripts, and then events, and then filter them based on the PSI like Normalized Expression Value (NEV) calculation
 
 3. process the SNVs with ASE patterns and SNV pairs with other ASARP patterns: AI/AT/AS, and output the formatted results
+
+AI/AT/AS categories are briefly illustrated below (where the red dots represent SNVs):
+
+G<img/Types.png>
 
 =head2 Sub-routines (major)
 

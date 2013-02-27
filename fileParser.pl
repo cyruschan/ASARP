@@ -3,31 +3,33 @@ use strict;
 #use IO::Handle;
 
 use MyConstants qw( $CHRNUM $supportedList $supportedTags );
-require "bedHandler.pl"; #sub's for handling bed files
+require "bedHandler.pl"; #sub's for handling bedgraph files
 
 # subroutine to get the arguments to the entry program
 sub getArgs{
 
   my ($outputFile, $inputConfig, $inputParam) = @_;
 
-  #my $configs='test.config';
-  my $configs='default.config';
+  my $configs='';
   my $params = 'default.param';
 
   if(defined($inputConfig)){
     $configs = $inputConfig;
-    print "User ";
-  }else{	print "Default ";	 }
-  print "config file: $configs used\n";
+  }else{
+    die "ERROR: configuration file not provided\n";
+  }
+  print "Config file: $configs\n";
 
   if(defined($inputParam)){
     $params = $inputParam;
     print "User ";
   }else{	print "Default ";	 }
-  print "parameter file: $params used\n";
+  print "parameter file: $params\n";
 
   if(defined($outputFile)){
-    print "User specified output file: $outputFile\n";
+    print "Output file: $outputFile\n";
+  }else{
+    die "ERROR: output file not provided\n";
   }
   
   return ($outputFile, $configs, $params);
@@ -118,7 +120,7 @@ sub getRefFileConfig
 
   #get all file names, F means file name/path
   my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = ('', '', '', '', '', ''); #$genomeF
-  
+  my $bedExt = ''; # optional bedgraph file extension, e.g. chr10.sam.bedgraph has extension "sam.bedgraph" (no leading dot)
   # match and output all files
   for(keys %filemap){
     my $k = $_;
@@ -141,6 +143,9 @@ sub getRefFileConfig
     }
     elsif($k eq 'estfile'){
       $estF=$curFile;
+    }
+    elsif($k eq 'bedext'){ #optional: bed folder extension
+      $bedExt=$curFile;
     }else{
       die "ERROR: Unknown file_var in config file $config: $k with file/path: $curFile\n";
     }
@@ -156,7 +161,13 @@ sub getRefFileConfig
     print "NOTE: Optional user-specific (RNA-Seq/EST) splicing events file(s) not used:\nrnaseqfile=$rnaseqF\nestfile=$estF\n";
   }
   #die "ERROR: Required annotation file(s) undefined:\nxiaofile=$xiaoF\nsplicingfile=$splicingF\n";
-
+  if($bedExt eq ''){
+    print "NOTE: default bedgraph extension will be used (.bedgraph)\n";
+    $bedExt = 'bedgraph';
+  }else{
+    print "NOTE: user provided bedgraph extension used: $bedExt\n";
+  }
+  $bedF .= "\t".$bedExt;
   # print all the file names
   #for(keys %filemap){
   #  print $_, " = \t\t", $filemap{$_}, "\n";
@@ -1122,6 +1133,10 @@ filePaser.pl -- All the sub-routines for getting and parsing input files (NOT in
 
 This perl file contains all the sub-routines that handle the input arguments, read configuration files, and parse all the annotations and events that are input to be matched with SNVs to discover ASE/ASARP. SNVs are handled separately in L<snpParser>.
 
+After the processing shown above, the alternative processing events are in the form shown in the figure above, where SNVs (the red dot) will be matched and later Normalized Expression Values can be calculated (NEVs derived from the read counts in orange) to filter alternative patterns in L<snpParser>.
+
+G<img/Event.png>
+
 =head2 Sub-routines (major)
 
 These are the major (interface) sub-routines that will be used in correlation with SNVs in the whole pipeline. Read them one by one as they are quite procedural.
@@ -1136,7 +1151,9 @@ get all input annotation/event file/folder paths contained in the configuration 
  
  output: ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) 
  --SNV list file path ($snpF), 
- --the (sam.)bed folder path ($bedF), 
+ --the bedgraph folder path and the specified file extension separated by tab ($bedF), 
+   user-specified bedgraph extension can be provided in the configuration file: 
+   e.g. bedext<TAB>sam.bed
  --rna-seq.event file path ($rnaseqF, optional: '' returned if not provided in $configs), 
  --transcript annotation file path ($xiaoF), 
  --annotation.event path ($splicingF), 

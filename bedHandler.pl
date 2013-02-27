@@ -26,7 +26,8 @@ sub readBedByChr
   #  open(my $fh, "<", $file) or die "Cannot open bed file: $file\n";
   #  close($fh);
   #}
-  my ($bedFolder, $chr) = @_;
+  my ($bedF, $chr) = @_;
+  my ($bedFolder, $bedExt) = split('\t', $bedF);
   my @beds = (); #use a binned function to save memory
   
   my @reads = ();
@@ -35,13 +36,10 @@ sub readBedByChr
   if(!($bedFolder =~ /[\\|\/]$/)){
     $bedFolder .= "/";
   }
-  my $bedFile = $bedFolder.formatChr($chr).".sam.bed";
+  my $bedFile = $bedFolder.formatChr($chr).".".$bedExt;
   my $bFh = undef;
-  if(!open($bFh, "<", $bedFile)){
-    print "No sam.bed extension, try one.pos extension\n";
-    $bedFile = $bedFolder.formatChr($chr).".one.pos";
-    open($bFh, "<", $bedFile) or die "Cannot open bed file: $bedFile\n";
-  }
+  open($bFh, "<", $bedFile) or die "Error: Cannot open bedgraph file: $bedFile\n";
+  
   my $dummy = <$bFh>; chomp $dummy;
   print "Reading bed file: $bedFile...\t";
   if(!$dummy =~ /chr$chr/){  die "Inconsistent chr $chr with $dummy in $bedFile\n"; }
@@ -52,12 +50,14 @@ sub readBedByChr
     $count++;
     #if($count%($TENKB*100)==0){ print $count." ";  }
     my ($ch, $start, $end, $n) = split(' ', $_);
-    #$start; #already zero-based? (according to bed standard format)
-    #$end-=1;#1-based, converted back to zero based
+    
+    #IMPORTANT: bedgraph file standard: 0-based start and 1-based end
+    # http://genome.ucsc.edu/goldenPath/help/bedgraph.html 
+
     #debug modification, to reproduce Gang's results
     $start -= 1; # falsely assume it's one-based
     $end -= 1; #one-based and shifted one position to mimic overwriting..
-    #need to correct after the debug to reproduce Gang's results
+    #need to comment out after the debug to reproduce Gang's results
 
     #all converted to 1-based
     $start += 1; #zero-based converted to 1-based

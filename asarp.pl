@@ -5,6 +5,11 @@ require "fileParser.pl"; #sub's for input annotation files
 require "snpParser.pl"; #sub's for snps
 require "bedHandler.pl"; #for bed.sam
 
+if(@ARGV < 2){
+  print "USAGE: perl $0 output_file config_file [optional: parameter_file]\n";
+  exit;
+}
+
 # input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
 my ($outputFile, $configs, $params) = getArgs(@ARGV); 
 my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); # input annotation/event files
@@ -103,9 +108,10 @@ Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of alle
 
 and its Supplementary Materials
 
-See http://nar.oxfordjournals.org/content/40/13/e104 for more details.
+G<img/Intro.png>
 
-G<img/demo.jpeg>
+See http://nar.oxfordjournals.org/content/40/13/e104 for more details of the paper.
+
 
 =head1 SEE ALSO
 

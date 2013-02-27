@@ -49,6 +49,8 @@ fileParser
 	my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef);</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
 <p>This perl file contains all the sub-routines that handle the input arguments, read configuration files, and parse all the annotations and events that are input to be matched with SNVs to discover ASE/ASARP. SNVs are handled separately in <i><a href='snpParser.html'>snpParser</a></i>.</p>
+<p>After the processing shown above, the alternative processing events are in the form shown in the figure above, where SNVs (the red dot) will be matched and later Normalized Expression Values can be calculated (NEVs derived from the read counts in orange) to filter alternative patterns in <i><a href='snpParser.html'>snpParser</a></i>.</p>
+<p><img src='img/Event.png' border=0></p>
 <a name='Sub-routines (major)'></a><h2>Sub-routines (major)</h2>
 <p>These are the major (interface) sub-routines that will be used in correlation with SNVs in the whole pipeline. Read them one by one as they are quite procedural.</p>
 <ul>
@@ -58,7 +60,9 @@ fileParser
  
  output: ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) 
  --SNV list file path ($snpF), 
- --the (sam.)bed folder path ($bedF), 
+ --the bedgraph folder path and the specified file extension separated by tab ($bedF), 
+   user-specified bedgraph extension can be provided in the configuration file: 
+   e.g. bedext&lt;TAB&gt;sam.bed
  --rna-seq.event file path ($rnaseqF, optional: '' returned if not provided in $configs), 
  --transcript annotation file path ($xiaoF), 
  --annotation.event path ($splicingF), 
