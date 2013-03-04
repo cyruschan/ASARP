@@ -90,9 +90,79 @@ if(defined($outputFile)){
 
 asarp.pl -- The main application script, i.e. the entry program, of the ASARP pipeline.
 
+The methodology is described in detail in the paper: 
+I<Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104> and its Supplementary Materials. Link: http://nar.oxfordjournals.org/content/40/13/e104
+
+G<img/Intro.png>
+
 =head1 SYNOPSIS
 
-Look at the source: F<../asarp.pl> and it is self-explanatory. There are basically 3 steps:
+ perl asarp.pl output_file config_file [optional: parameter_file] 
+
+C<output_file> is where the ASARP result summary is output, and meanwhile there will be 3 addtional detailed result files output:
+
+=over 6
+
+=item C<output_file.ase.prediction> 
+-- the detailed results of (whole-gene-level) ASE patterns (exclusive to other ASARP patterns: AI, AS or AT)
+
+=item C<output_file.gene.prediction> 
+-- the detailed results of ASARP results (ASE patterns excluded) arranged by genes
+
+=item C<output_file.ase.prediction> 
+-- the detailed results of ASARP results (ASE patterns excluded) of each individual SNV
+
+=back
+
+C<config_file> is the input configuration file which contains all the input file keys and their paths. The format is <key>tab<path>. Line starting with # are comments. Example: F<../default.config>
+
+C<parameter_file> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is <parameter>tab<value>. Lines starting with # are comments. It is optional and the default is: F<../default.param>
+
+See below for the terminology and the overview.
+
+=head1 DESCRIPTION
+
+=head2 TERMINOLOGY
+
+Allele-Specific Alternative RNA Processing (B<ASARP>) types:
+
+=over 6
+
+=item B<ASE>: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).
+
+=item B<AS>: Alternative Splicing; 
+
+=item B<AI>: Alternative (5'-end) Initiation; 
+
+=item B<AT>: Alternative (3'-end) Termination, or Alternative Poly-Adenylation
+
+=back
+
+B<NEV>: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as 
+
+=over 6
+
+=item C<NEV_sp = min (NEV_flanking, NEV_gene)>, where
+
+=item C<NEV_flanking = (# event_reads/event_length)/(# flanking_region_total_reads/flanking_region_total_length)>, and
+
+=item C<NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_constitutive_exon_length)>
+
+=back
+
+C<*_length> means the total number of positions within the * region with non-zero reads.
+
+=head2 OVERVIEW
+
+The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:
+
+G<img/ASARP.png>
+
+How to categorize ASARP patterns into specific AI/AS/AT and/or combinations of them can be found in L<snpParser>.
+
+=head2 The ASARP Pipeline
+
+There are basically 3 steps. 
 
 1. parse the input files and compile alternative mRNA processing events. see L<fileParser>
 
@@ -100,18 +170,11 @@ Look at the source: F<../asarp.pl> and it is self-explanatory. There are basical
 
 3. process ASARP (including ASE) patterns and output the formatted results. see source and L<snpParser>
 
-=head1 DESCRIPTION
+Look into the source: F<../asarp.pl> for more details and it is self-explanatory.
 
-The methodology in detail is explained in the paper: 
+=head1 REQUIREMENT
 
-Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104
-
-and its Supplementary Materials
-
-G<img/Intro.png>
-
-See http://nar.oxfordjournals.org/content/40/13/e104 for more details of the paper.
-
+C<Statistics::R>: has to be installed. See http://search.cpan.org/~fangly/Statistics-R/lib/Statistics/R.pm 
 
 =head1 SEE ALSO
 

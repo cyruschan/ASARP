@@ -187,7 +187,8 @@ All parameters are required and have to be set.</p>
   'right': the return location right to the element if matched
 
   output: ($loc, $flag) 
-  --location of $x in the list (NOTE: range is 0 to size of list, 0-base)
+  --location of $x in the list (NOTE: range is [0, size of list], 0-based, 
+  i.e. there can be size of list + 1 possible locations for an element)
   --match flag: 1 means match, 0 means no match</pre>
 <li><a name='Other utility subs'></a>Other utility subs</li>
 <p>Kindly go to have a look at the source: <i><a href='../fileParser.pl' target='_blank'>../fileParser.pl</a></i>. There will be some comments around. Good luck!</p>

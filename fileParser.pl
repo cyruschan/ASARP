@@ -1341,7 +1341,8 @@ binary search for insert (or location), including left, right insert (location) 
   'right': the return location right to the element if matched
 
   output: ($loc, $flag) 
-  --location of $x in the list (NOTE: range is 0 to size of list, 0-base)
+  --location of $x in the list (NOTE: range is [0, size of list], 0-based, 
+  i.e. there can be size of list + 1 possible locations for an element)
   --match flag: 1 means match, 0 means no match
 
 =item Other utility subs

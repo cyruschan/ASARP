@@ -1533,41 +1533,17 @@ sub printSnpEventsResultsByType
 
 =head1 NAME
 
-snpParser.pl -- All the sub-routines for SNV (sometimes termed interchangeably as SNP internally) handling in the ASARP pipeline.
-
-=head1 TERMININOLOGY
-
-The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:
-
-G<img/ASARP.png>
-
-=over 6
-
-=item Allele-Specific Alternative RNA Processing (ASARP) types:
-
-ASE: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (1:1 for Ref:Alt).
-
-AS: Alternative Splicing; AI: Alternative (5'-end) Initiation; AT: Alternative (3'-end) Termination, or Alternative Poly-Adenylation
-
-=item NEV: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as 
-
-NEV_sp = min (NEV_flanking, NEV_gene), where
-
-NEV_flanking = (# event_reads/event_length)/(# flanking_region_total_reads/flanking_region_total_length), and
-
-NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_constitutive_exon_length)
-
-*_length means the total number of positions within the * region with non-zero reads.
-
-=back
+snpParser.pl -- All the sub-routines for SNV (sometimes denoted interchangeably as SNP) handling in the ASARP pipeline.
 
 =head1 SYNOPSIS
 
-
+	use Statistics::R; #interact with R
 	require "fileParser.pl"; #sub's for input annotation files
 	require "snpParser.pl"; #sub's for snps
-	
-	... #get all configs, input files (see L<fileParser>)
+	...
+
+... get all configs, input files (see L<fileParser>)
+
 
 	# read and parse SNVs
 	my $snpRef = initSnp($snpF, $POWCUTOFF);
@@ -1592,6 +1568,10 @@ NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_con
 	outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 	my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
 
+=head1 REQUIREMENT
+
+C<Statistics::R>: has to be installed. See http://search.cpan.org/~fangly/Statistics-R/lib/Statistics/R.pm 
+
 =head1 DESCRIPTION
 
 This perl file contains all the sub-routines for SNV handling and ASARP processing, as well as result formatting. They are quite procedural and one should first get the input files such as annotations and events using the sub-routines in L<fileParser>.
@@ -1604,9 +1584,27 @@ Basically there are 3 steps:
 
 3. process the SNVs with ASE patterns and SNV pairs with other ASARP patterns: AI/AT/AS, and output the formatted results
 
-AI/AT/AS categories are briefly illustrated below (where the red dots represent SNVs):
+AI/AT/AS categories are briefly illustrated below (where the red dots represent SNVs with ASARP patterns):
 
 G<img/Types.png>
+
+=head2 SNV List Format
+
+The SNV list input file contains the list of all SNVs covered by RNA-Seq in 
+the genes of interest, with the read counts of the reference (Ref) and alternative (Alt) alleles.
+
+This file is space delimited with the following fields for
+each SNV:
+	
+	chromosome
+	coordinate
+	alleles (reference allele>alternative allele)
+	dbsnpID
+	RNA-Seq counts 
+	(# reads for 
+	reference allele:alternative allele:wrong nucleotide)
+
+Example file: F<../data/snp.list.fig3>
 
 =head2 Sub-routines (major)
 

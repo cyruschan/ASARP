@@ -10,7 +10,7 @@ genTitleFrame();
 genIndexFrameset();
 
 # all application scripts
-my @apps = qw( asarp );
+my @apps = qw( snp_distri asarp );
 for(@apps){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
@@ -49,12 +49,12 @@ EOMENU
   
   my %hs = (
    "APPS" => $appRef,
-   "SOURCE" => $srcRef,
+   "CODE" => $srcRef,
    "CONST" => $conRef,
   );
   my %hsNames = (
     "APPS" => "Applications",
-    "SOURCE" => "Source",
+    "CODE" => "Core Subs",
     "CONST" => "Constants",
   );
 
@@ -96,7 +96,7 @@ sub genIndexFrameset{
   
   <frameset border="0" frameborder="0" framespacing="0" rows="60px,*">
     <frame src="title.html" noresize scrolling="no">
-    <frameset border="0" frameborder="0" framespacing="0" cols="12%,*">
+    <frameset border="0" frameborder="0" framespacing="0" cols="160px,*">
       <frame name="menu" src="menu.html" scrolling="auto" noresize>
       <frame name="content" src="asarp.html" scrolling="auto" noresize>
     </frameset>
