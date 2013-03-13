@@ -110,7 +110,7 @@ sub getRefFileConfig
   print "Reading file names in config: $config...\n";
   while(<$fh>){ #read each line of the file handle
     chomp;
-    if($_ =~/^(\w+)\t\s*([\w|\.|\\|\/|\*]+)\s*$/){
+    if($_ =~/^(\w+)\t\s*([\w|\.|\\|\/|\+|\-]+)\s*$/){
       #get the file_var ($1) and file_path ($2)
       my $argName = lc $1;
       $filemap{$argName} = $2;
