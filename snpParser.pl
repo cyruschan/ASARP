@@ -375,6 +375,16 @@ sub processASEWithNev
      #basic statistics
      $powGeneCnt += keys %powGenes;
      $powSnvCnt += keys %powSnps;
+     for(keys %powSnps){
+       my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
+       for(@allSnpInfo){
+         my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
+	 if($p <= $snvPValueCutoff){
+	   $aseSnvCnt += 1; #each SNV **location** added once
+	   last;
+	 }
+       }
+     }
      #gene level ASE
 
      # Stage 1: check gene level ASE's\n
@@ -412,7 +422,6 @@ sub processASEWithNev
        }
        # basic statistics
        if($aseCount){
-         $aseSnvCnt += $aseCount;
 	 $non0AseGeneCnt += 1;
        }
 
@@ -650,8 +659,12 @@ sub formatOutputVerNAR{
   #basic statistics
   my ($aseSnvCnt, $powSnvCnt, $non0AseGeneCnt, $powGeneCnt) = 
   ($allAsarpsRef->{'aseSnvCnt'}, $allAsarpsRef->{'powSnvCnt'}, $allAsarpsRef->{'non0AseGeneCnt'}, $allAsarpsRef->{'powGeneCnt'});
-  $summary .= "# ASE SNVs: $aseSnvCnt; # Powerful SNVs: $powSnvCnt\n";
-  $summary .= "# ASE>0 Genes: $non0AseGeneCnt; # Powerful SNVs: $powGeneCnt\n";
+  $summary .= "# ASE SNVs: $aseSnvCnt; # Powerful SNVs: $powSnvCnt; Percentage: ";
+  if($aseSnvCnt){  $summary .= sprintf("%.1f%%", $asSnvCnt*100/$powSnvCnt)."\n"; }
+  else{ $summary .= "0%\n"; }
+  $summary .= "# Genes with ASE SNVs>0: $non0AseGeneCnt; # Genes with Powerful SNVs: $powGeneCnti; Percentage: ";
+  if($non0AseGeneCnt){  $summary .= sprintf("%.1f%%", $non0AseGeneCnt*100/$powGeneCnt)."\n"; }
+  else{ $summary .= "0%\n"; }
   
   my @allGeneAses = @{$allAsarpsRef->{'ASEgene'}};
   my $aseCount = 0;
