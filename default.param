@@ -1,8 +1,12 @@
 # paramter list:
 # powerful SNV count cutoff
 powerful_snv	20
-#p-value cutoffs for the Chi-sequared and Fisher exact tests.
-p_chi_snv	0.014
+#p-value cutoffs for the Chi-sequared 
+#in order for this cutoff to take effect, you should comment out FDR cutoff (i.e. fdr)
+#p_chi_snv	0.014
+#FDR cutoff (if provided, a new p_chi_snv will be calculated and the user specified one ignored)
+fdr	0.05
+#p-value cutoff for the Fisher exact tests.
 p_fisher_pair	0.05
 # NEV upper cutoff for alternatively spliced regions
 nev_lower	0

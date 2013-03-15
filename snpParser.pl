@@ -11,11 +11,14 @@ use MyConstants qw( $CHRNUM $supportedList $supportedTags );
 #	$snpFile	the snp file name (path)
 #	$powCount	the threshold for powerful (frequent) snps
 # output
-#	\@snpList	the hash reference containing both
+#	\%snpList	the hash reference containing both
 #			powerful and non-powerful snps as well as
 #			their indices (_idx).
+#	\@pList		all the p-values for powerful SNVs, used to
+#			get the FDR using R functions
 sub initSnp{
   #snps and powSnps
+  my @pList = ();
   my @snps = (); my @powSnps = ();
   for(my $i=0; $i<=$CHRNUM; $i++){
     push @snps, {};
@@ -56,6 +59,7 @@ sub initSnp{
       $R->set('x', [$refAl, $altAl]);
       $R->run('p = chisq.test(x)$p.value'); #default expected dist is c(0.5, 0.5)
       my $pValue = $R->get('p');
+      push(@pList, $pValue);
 
       #print "Chr $chrID: Ref: $refAl, Alt: $altAl, Total: $totalAl\n";
       #print "Chi-squared test\t$pValue\n";
@@ -98,7 +102,7 @@ sub initSnp{
     'powSnps_idx' => \@powSnps_idx,
   );
 
-  return \%snpList;
+  return (\%snpList, \@pList);
 }
 
 
@@ -654,8 +658,7 @@ sub formatOutputVerNAR{
     }elsif($_ eq 'AT'){
       $snvLevel .= "Alternative Termination\n";
     }else{
-      print "ERROR: unknown SNV event type: $_\n";
-      exit;
+      die "ERROR: unknown SNV event type: $_\n";
     }
     $snvLevel .= $snvHash{$_}."\n";
   }
@@ -1032,7 +1035,7 @@ sub calSplicingEventNev
         $spConstExons{$tag} = getConstitutiveExonsByChr($spEventsList{$_}, $chr);
       }
     }
-    else{ die "Error parsing event: no type available for $_\n"; }
+    else{ die "ERROR parsing event: no type available for $_\n"; }
   }
 
   my %allGeneSpSnps = %$spsRef;
@@ -1454,7 +1457,74 @@ sub matchSnpPoswithSplicingEvents
   return $snpInfoToAdd;
 }
 
+# FDR control using the ASE SNVs (i.e. those powerful SNVs with Chi Square Test issued)
+# The FDR control is a modified version from BH's method
+# The original implementation is in Matlab and now it's done using R and Perl
+# the reference: Controlling the proportion of falsely-rejected hypotheses
+# when conducting multiple tests with climatological data
+#	input:		reference to the p-value list, FDR threshold
+#	output:		the p-value threshold for the FDR threshold
+sub fdrControl{
+  my ($pRef, $fdrCutoff) = @_;
+  my @pList = @$pRef;
+  @pList = sort{$a<=>$b}@pList; #sorted
+  # Create a communication bridge with R and start R
+  my $R = Statistics::R->new();
+  $R->run("plist <- c(".join(",",@pList).")");
+  #the expected proportion of false discoveries amongst the rejected hypotheses
+  #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
+  $R->run('x <- p.adjust(plist, method="BH")');
+  my $pAdjustRef = $R->get('x');
+  $R->stop;
+  my @pAdjust = @$pAdjustRef;
+  if(@pAdjust < @pList){
+    die "ERROR: the adjusted p-value list from R is incomplete! Aborted\n";
+  }
 
+  #estimate a new a, default parameters used
+  my $aHat = 0;
+  my $bigI = 20;
+  my $x0 = 0.8;
+  my $bigFxi = 0;
+  my $start = 0; # because pList is sorted, we can cal a start index for each bin
+  for(my $i=0; $i<$bigI; $i++){
+    my $xi = $x0+(1-$x0)*$i/$bigI;
+    my $end = $start;
+    while($end<@pList){
+      if($pList[$end] > $xi){ #exceed bin end
+        last;
+      }
+      $end++;
+    }
+    #print "Bin $i: $xi: from $start ($pList[$start]) to $end-1 ($pList[$end-1])\n";
+    $bigFxi += ($end-$start)/@pList; #histogram
+    #print "CDF: $bigFxi\n";
+    if($bigFxi>$xi){
+      $aHat += ($bigFxi-$xi)/(1-$xi);
+    }
+    $start = $end;
+  }
+  $aHat /= $bigI;
+
+  #print "a hat is $aHat\n";
+  $fdrCutoff /= (1-$aHat);
+  #print "adjusted fdr: $fdrCutoff\n"; 
+  my $pos = 0;
+  while($pos < @pAdjust){
+    #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
+    if($pAdjust[$pos] > $fdrCutoff){
+      last;
+    }
+    $pos++;
+  }
+  if($pos == 0){ 
+    print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff\n";
+    print "Set a default: 0.01 (without any FDR control!!) instead\n";
+    return 0.01;
+  }
+  #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
+  return $pList[$pos-1];
+}
 
 ################ minor auxiliary (mainly for print outs and debugs) ####
 # print out the gene snps results for certain type (powerful or ordinary snps)
@@ -1546,7 +1616,9 @@ snpParser.pl -- All the sub-routines for SNV (sometimes denoted interchangeably 
 
 
 	# read and parse SNVs
-	my $snpRef = initSnp($snpF, $POWCUTOFF);
+	my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
+        # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
+	$SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
 	# match SNVs with gene transcript annotations
 	my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 	# match gene SNVs with AI/AT and alternative splicing (AS) events
@@ -1615,11 +1687,10 @@ Example file: F<../data/snp.list.fig3>
 read and parse SNVs
   
   input: ($snpF, $POWCUTOFF) --SNV file path, powerful SNV cutoff
-  
-  output $snpRef 
+
+  output ($snpRef, $pRef) 
   --reference to SNVs, categorized into powerful/non-powerful internally
-  
-  p-value cutoff (Chi-Squared)
+  --reference to the p-value list, which will be used to control FDR
 
 =item C<setGeneSnps>
 

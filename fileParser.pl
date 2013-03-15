@@ -52,17 +52,19 @@ sub getParameters
       $filemap{$argName} = $2;
     }else{
       if(!($_ =~ /^\#/ || $_ =~ /^\s*$/)){
-        print "Error: cannot parse the parameter in line: $_\n";
-        exit;
+        die "ERROR: cannot parse the parameter in line: $_\n";
       }
     }
   }
   close($fh);
 
-  my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = (undef, undef, undef, undef, undef, undef);
+  my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = (undef, undef, undef, undef, undef, undef, undef);
   for(keys %filemap){
     my ($name, $val) = ($_, $filemap{$_});
-    if($name eq 'p_chi_snv'){
+    if($name eq 'fdr'){
+      $FDRCUTOFF = $val; #p-value cutoff for the Chi-squared test
+    }
+    elsif($name eq 'p_chi_snv'){
       $SNVPCUTOFF = $val; #p-value cutoff for the Chi-squared test
     }
     elsif($name eq 'p_fisher_pair'){
@@ -80,24 +82,23 @@ sub getParameters
     elsif($name eq 'powerful_snv'){
       $POWCUTOFF = $val;
     }else{
-      print "Error parsing the parameter type: $name with value $val\n";
-      exit;
+      die "ERROR: unknown/unsupported parameter type: $name with value $val\n";
     }
   }
 
   if(!defined($POWCUTOFF)){
-    die "Error: cutoff for powerful SNVs (parameter: powerful_snv) not set\n";
+    die "ERROR: cutoff for powerful SNVs (parameter: powerful_snv) not set\n";
   }
-  if(!defined($SNVPCUTOFF)){
-    die "Error: p-value cutoff for the Chi-Squared Test on alleles of individual SNVs (parameter: p_chi_snv) not set\n";
+  if(!defined($SNVPCUTOFF) && !defined($FDRCUTOFF)){
+    die "ERROR: at least one of p-value cutoff and FDR for the Chi-Squared Test on alleles of individual SNVs (parameters: p_chi_snv, fdr) needs to be set\n";
   }
   if(!defined($ASARPPCUTOFF)){
-    die "Error: p-value cutoff for the Fisher Exact Test on target-control SNV pairs (parameter: p_fisher_pair) not set\n";
+    die "ERROR: p-value cutoff for the Fisher Exact Test on target-control SNV pairs (parameter: p_fisher_pair) not set\n";
   }
   if(!defined($NEVCUTOFFUPPER) || !defined($NEVCUTOFFLOWER) || !defined($ALRATIOCUTOFF)){
-    die "Error: cutoff(s) for the Normalized Expression Value (NEV) lower/upper bound(s) and/or allele-pair ratio difference (parameters: nev_lower, nev_upper and ratio_diff) not set\n";
+    die "ERROR: cutoff(s) for the Normalized Expression Value (NEV) lower/upper bound(s) and/or allele-pair ratio difference (parameters: nev_lower, nev_upper and ratio_diff) not set\n";
   }
-  return ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF);
+  return ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF);
 
 }
 
@@ -296,7 +297,7 @@ sub readDifEvent
        }
        # store the constitutive exon set list to the gene
        if(!defined($constExonList)){
-         die "Error: No const exon info for $geneName EVENT!\n";
+         die "ERROR: No const exon info for $geneName EVENT!\n";
        }
        if(!defined($constExons[$chrID]{$geneName})){
          $constExons[$chrID]{$geneName} = $constExonList;
@@ -1004,7 +1005,7 @@ sub checkSupportedList{
   if($supportedList=~/$keyStub/){
     return 1;
   }else{
-    die "Error using structured data: Unknown/unsupported list key: $key\n";
+    die "ERROR using structured data: Unknown/unsupported list key: $key\n";
   }
 }
 
@@ -1017,7 +1018,7 @@ sub checkSupportedType{
   if($supportedTags =~/$tagStub/){
     return 1;
   }else{
-    die "Error using structured data: Unknown/unsupported type (used to get events/constitutive exon sets): $tag\n";
+    die "ERROR using structured data: Unknown/unsupported type (used to get events/constitutive exon sets): $tag\n";
   }
 }
 
@@ -1113,7 +1114,7 @@ filePaser.pl -- All the sub-routines for getting and parsing input files (NOT in
 	# $configs--input configuration file, $params--parameter file
 	my ($outputFile, $configs, $params) = getArgs(@ARGV); 
 	my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs);
-	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, 
+	my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, 
 	$NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
 
 	# read the transcript annotation file
@@ -1212,9 +1213,13 @@ get all the numeric parameters including p-value cutoffs, NEV lower/upper thresh
 
  input: $params --configuration file for the parameters
 
- output: ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF)
+ output: ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF)
  --read count cutoff for powerful SNVs ($POWCUTOFF),
- --Chi-Squared Test p-value cutoff for individual SNVs ($SNVPCUTOFF),
+ --Chi-Squared Test p-value cutoff for individual SNVs ($SNVPCUTOFF) 
+   NOTE: it will be ignored if $FDRCUTOFF is provided, see below:
+ --FDR cutoff ($FDRCUTOFF, e.g. 0.05 for FDR <= 5%), according to which 
+   a p-value cutoff will be selected using the Benjamini-Hochberg method in R, 
+   and thus any provided $SNVPCUTOFF will be ignored
  --Fisher's Exact Test p-value cutoff for target-control SNV pairs in ASARP ($ASARPPCUTOFF),
  --NEV lower and upper cutoffs (excl.) ($NEVCUTOFFLOWER, $NEVCUTOFFUPPER),
  --allelic ratio difference cutoff for target-control SNV pairs in ASARP ($ALRATIOCUTOFF)

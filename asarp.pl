@@ -5,6 +5,12 @@ require "fileParser.pl"; #sub's for input annotation files
 require "snpParser.pl"; #sub's for snps
 require "bedHandler.pl"; #for bed.sam
 
+# set autoflush for error and output
+select(STDERR);
+$| = 1;
+select(STDOUT);
+$| = 1;
+
 if(@ARGV < 2){
   print "USAGE: perl $0 output_file config_file [optional: parameter_file]\n";
   exit;
@@ -13,7 +19,22 @@ if(@ARGV < 2){
 # input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
 my ($outputFile, $configs, $params) = getArgs(@ARGV); 
 my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); # input annotation/event files
-my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
+my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
+
+my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
+#print "SNV List:\n";
+#printListByKey($snpRef, 'powSnps');
+#printListByKey($snpRef, 'snps');
+
+# suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
+if(defined($FDRCUTOFF)){
+  print "Calculating the Chi-Squared Test p-value cutoff for FDR <= $FDRCUTOFF...\n";
+  if(defined($SNVPCUTOFF)){
+    print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
+  }
+  $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
+  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n";
+}
 
 # read the transcript annotation file
 my $transRef = readTranscriptFile($xiaoF);
@@ -25,11 +46,6 @@ my $altRef = getGeneAltTransEnds($transRef); #get alternative initiation/termina
 # read all annotations, optionally rna-seq and est, splicing events and compile them
 my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef); #compile events from different sources
-
-my $snpRef = initSnp($snpF, $POWCUTOFF);
-#print "SNV List:\n";
-#printListByKey($snpRef, 'powSnps');
-#printListByKey($snpRef, 'snps');
 
 my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 #print "Significant Snvs: \n";
