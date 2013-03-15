@@ -321,6 +321,9 @@ sub processASEWithNev
   my ($snpRef, $geneSnpRef, $snpEventsNevRef, $snvPValueCutoff, $asarpPValueCutoff, $alleleRatioCutoff) = @_;
   my %ss = %$snpEventsNevRef;
 
+  #basic statistics for powerful SNVs and genes
+  my ($aseSnvCnt, $powSnvCnt, $non0AseGeneCnt, $powGeneCnt) = (0, 0, 0, 0);
+
   my ($powAltRef, $snpAltRef, $powSpRef, $snpSpRef) = ($ss{'nevPowSnpAlt'}, $ss{'nevSnpAlt'}, $ss{'nevPowSnpSp'}, $ss{'nevSnpSp'});
   
   my @allPowAlts = @$powAltRef;
@@ -369,6 +372,9 @@ sub processASEWithNev
      if(defined($allSnpSps[$i])){  %snpSps = %{$allSnpSps[$i]};  }
    
      if(keys %powGenes >0){  printChr($i); print"\n";  }
+     #basic statistics
+     $powGeneCnt += keys %powGenes;
+     $powSnvCnt += keys %powSnps;
      #gene level ASE
 
      # Stage 1: check gene level ASE's\n
@@ -404,6 +410,12 @@ sub processASEWithNev
 	   }
 	 }
        }
+       # basic statistics
+       if($aseCount){
+         $aseSnvCnt += $aseCount;
+	 $non0AseGeneCnt += 1;
+       }
+
        # Step 1.2: all powSnps are ASEs and there are >=2 ASEs
        if($aseCount == keys %snpGroup && $aseCount >= 2){
          #print "Gene: $gene is a gene with all $aseCount ASE's: $aseInfo\n";
@@ -566,6 +578,10 @@ sub processASEWithNev
    'ASEgene' => \@aseGenes,
    'ASARPgene' => \@asarpGenes,
    'ASARPsnp' => \@asarpSnps,
+   'aseSnvCnt' => $aseSnvCnt,
+   'powSnvCnt' => $powSnvCnt,
+   'non0AseGeneCnt' => $non0AseGeneCnt,
+   'powGeneCnt' => $powGeneCnt,
   );
 
   return \%allAsarps;
@@ -631,6 +647,12 @@ sub formatOutputVerNAR{
   # init the output string structure
   my ($summary, $geneLevel, $snvLevel) = ("", "GENES\n", "SNVs\n");
 
+  #basic statistics
+  my ($aseSnvCnt, $powSnvCnt, $non0AseGeneCnt, $powGeneCnt) = 
+  ($allAsarpsRef->{'aseSnvCnt'}, $allAsarpsRef->{'powSnvCnt'}, $allAsarpsRef->{'non0AseGeneCnt'}, $allAsarpsRef->{'powGeneCnt'});
+  $summary .= "# ASE SNVs: $aseSnvCnt; # Powerful SNVs: $powSnvCnt\n";
+  $summary .= "# ASE>0 Genes: $non0AseGeneCnt; # Powerful SNVs: $powGeneCnt\n";
+  
   my @allGeneAses = @{$allAsarpsRef->{'ASEgene'}};
   my $aseCount = 0;
   for(my $i=1; $i<=$CHRNUM; $i++){
@@ -646,7 +668,7 @@ sub formatOutputVerNAR{
   }
   if($aseCount>=2){	$summary .= "There are $aseCount genes";
   }else{		$summary .= "There is $aseCount gene"; }
-  $summary .= " whose powerful SNVs are ASEs\n";
+  $summary .= " whose powerful SNVs (>=2) are all ASEs\n";
  
   my ($geneSumRef, $snvSumRef) = formatGeneLevelVerNAR($allAsarpsRef->{'ASARPgene'});
   my %snvHash = %$snvSumRef;
