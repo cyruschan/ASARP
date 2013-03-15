@@ -660,9 +660,9 @@ sub formatOutputVerNAR{
   my ($aseSnvCnt, $powSnvCnt, $non0AseGeneCnt, $powGeneCnt) = 
   ($allAsarpsRef->{'aseSnvCnt'}, $allAsarpsRef->{'powSnvCnt'}, $allAsarpsRef->{'non0AseGeneCnt'}, $allAsarpsRef->{'powGeneCnt'});
   $summary .= "# ASE SNVs: $aseSnvCnt; # Powerful SNVs: $powSnvCnt; Percentage: ";
-  if($aseSnvCnt){  $summary .= sprintf("%.1f%%", $asSnvCnt*100/$powSnvCnt)."\n"; }
+  if($aseSnvCnt){  $summary .= sprintf("%.1f%%", $aseSnvCnt*100/$powSnvCnt)."\n"; }
   else{ $summary .= "0%\n"; }
-  $summary .= "# Genes with ASE SNVs>0: $non0AseGeneCnt; # Genes with Powerful SNVs: $powGeneCnti; Percentage: ";
+  $summary .= "# Genes with ASE SNVs>0: $non0AseGeneCnt; # Genes with Powerful SNVs: $powGeneCnt; Percentage: ";
   if($non0AseGeneCnt){  $summary .= sprintf("%.1f%%", $non0AseGeneCnt*100/$powGeneCnt)."\n"; }
   else{ $summary .= "0%\n"; }
   
