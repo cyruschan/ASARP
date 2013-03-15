@@ -34,7 +34,9 @@ snpParser
 <p>... get all configs, input files (see <i><a href='fileParser.html'>fileParser</a></i>)</p>
 <pre>
 	# read and parse SNVs
-	my $snpRef = initSnp($snpF, $POWCUTOFF);
+	my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
+        # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
+	$SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
 	# match SNVs with gene transcript annotations
 	my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 	# match gene SNVs with AI/AT and alternative splicing (AS) events
@@ -83,11 +85,10 @@ each SNV:</p>
 <li><a name='initSnp'></a><code>initSnp</code></li>
 <p>read and parse SNVs</p>
 <pre>  input: ($snpF, $POWCUTOFF) --SNV file path, powerful SNV cutoff
-  
-  output $snpRef 
+
+  output ($snpRef, $pRef) 
   --reference to SNVs, categorized into powerful/non-powerful internally
-  
-  p-value cutoff (Chi-Squared)</pre>
+  --reference to the p-value list, which will be used to control FDR</pre>
 <li><a name='setGeneSnps'></a><code>setGeneSnps</code></li>
 <p>match SNVs with gene transcript annotations</p>
 <pre>  input: ($snpRef, $transRef);

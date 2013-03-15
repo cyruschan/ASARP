@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<title>
+snp_distri
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>snp_distri.pl -- A simple introductory application script to get familiar with the ASARP pipeline (<i><a href='asarp.html'>asarp</a></i>)</p>
+<p>The application calculates the SNV (position) distribution in exons, introns, etc. according to annotations. A SNV is disarded (not contributing to the total SNV number) if it is covered by &lt; 2 RNA-Seq reads.</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<pre>  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff]</pre>
+<p><code>snv_file</code>: a SNV list, see the format description in <i><a href='snpParser.html'>snpParser</a></i></p>
+<p><code>powerful_snv_cutoff</code>: an optional cutoff to categorize SNVs into powerful (&gt;= <code>powerful_snv_cutoff</code>) and non-powerful types. Default: 20</p>
+<p><code>transcript_file</code>: Transcript and gene annotation file, see the format description in <i><a href='fileParser.html'>fileParser</a></i></p>
+<ul>
+<li><a name='An example file is ../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt, which was created by merging ensembl Refseq, UCSC knowngene, Gencode gene, and Vegagene.'></a>An example file is ../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt,
+which was created by merging ensembl Refseq, UCSC knowngene, Gencode
+gene, and Vegagene.</li>
+</ul>
+<p><code>output_file</code>: Tab dilimited counts of SNV positions in different gene regions. Headers are included as illustrated in the following example:</p>
+<pre>	Type    Exon    Intron  5'UTR   3'UTR   Complex In-gene Intergenic      Total
+	Powerful(&gt;=20)  3788    972     586     4097    1464    7937    342     8279
+	Non-powerful(&lt;20)       3846    32143   1246    3679    1323    39566   6580    46146
+	Overall 7634    33115   1832    7776    2787    47503   6922    54425</pre>
+<a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
+<p>The application is SNV position (ref genome location) oriented. In other words, if (rarely, and not seen in our data) one position contains multiple SNVs, it will be still considered as one SNV (position). A SNV may overalp multiple transcripts of multiple genes. The rule to determine the categories of a SNV is as follows:</p>
+<p>If the SNV overlaps certain transcript exon blocks, it is considered as in (coding) exons, regardless the times it overlaps.</p>
+<p>If the SNV overlaps certain 5'/3' UTRs, it is considered as in 5'/3' UTRs (non-coding), regardless the times it overlaps.</p>
+<p>Only when a SNV never overlaps any exons nor 5'/3' UTRs, and its genome location is within certain transcript span, it is considered as in introns, regardless of the times it overlaps. As a result, intron SNVs are exclusive to exons, 5'/3' UTRs.</p>
+<p>A SNV can be categorized into multiple categories, denoted as complex. Therefore, complex is the union of SNVs with any combinations of Exon and 5'/3' UTR types. In-gene SNVs are the union of all these categories. Therefore, the sum of exon and 5'+3' UTR SNV counts will be larger than the total in-gene SNV count if complex SNVs exist. In-gene and Intergenic SNVs are exclusive to each other.</p>
+<p>For any of the above cases, a SNV is considered in-gene. If a SNV is not in-gene, it is considered in the intergenic regions.</p>
+<p>The application also outputs percentage (over the total SNV positions) sumamries for powerful, non-powerful and overall SNV distributions. Sample output:</p>
+<pre>	Calculating powerful SNV distribution...
+	SNV Position Distribution:
+	Exon: 3788 (45.75%)
+	Intron: 972 (11.74%)
+	5' UTR: 586 (7.08%)
+	3' UTR: 4097 (49.49%)
+	Complex (in-gene): 1464 (17.68%)
+	In-gene total: 7937 (95.87%)
+	Intergenic total: 342 (4.13%)
+	Total SNV Positions: 8279
+
+	Calculating non-powerful SNV distribution...
+	SNV Position Distribution:
+	Exon: 3846 (8.33%)
+	Intron: 32143 (69.66%)
+	5' UTR: 1246 (2.70%)
+	3' UTR: 3679 (7.97%)
+	Complex (in-gene): 1323 (2.87%)
+	In-gene total: 39566 (85.74%)
+	Intergenic total: 6580 (14.26%)
+	Total SNV Positions: 46146
+	...</pre>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='asarp.html'>asarp</a></i>, <i><a href='fileParser.html'>fileParser</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

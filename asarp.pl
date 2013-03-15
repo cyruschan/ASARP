@@ -132,6 +132,8 @@ C<output_file> is where the ASARP result summary is output, and meanwhile there 
 
 C<config_file> is the input configuration file which contains all the input file keys and their paths. The format is <key>tab<path>. Line starting with # are comments. Example: F<../default.config>
 
+For preparation of the input files used in C<config_file>, see the pre-processing section: L<rmDup>, L<mergeSam>, L<procReads>
+
 C<parameter_file> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is <parameter>tab<value>. Lines starting with # are comments. It is optional and the default is: F<../default.param>
 
 See below for the terminology and the overview.

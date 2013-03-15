@@ -9,6 +9,12 @@ my $menuContent = "";
 genTitleFrame();
 genIndexFrameset();
 
+# all pre-processing scripts
+my @pres = qw( rmDup mergeSam procReads );
+for(@pres){
+  system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
+}
+
 # all application scripts
 my @apps = qw( snp_distri asarp );
 for(@apps){
@@ -28,10 +34,10 @@ for(@const){
 }
 
 # menu page
-genMenuPage(\@apps, \@source, \@const);
+genMenuPage(\@pres, \@apps, \@source, \@const);
 
 sub genMenuPage{
-  my ($appRef, $srcRef, $conRef) = @_;
+  my ($preRef, $appRef, $srcRef, $conRef) = @_;
 
   open(FP, ">", "doc/menu.html") or die "Can't write menu.html";
   print FP <<"EOMENU";
@@ -48,11 +54,13 @@ sub genMenuPage{
 EOMENU
   
   my %hs = (
+   "PRES" => $preRef, 
    "APPS" => $appRef,
    "CODE" => $srcRef,
    "CONST" => $conRef,
   );
   my %hsNames = (
+    "PRES" => "Pre-processing",
     "APPS" => "Applications",
     "CODE" => "Core Subs",
     "CONST" => "Constants",

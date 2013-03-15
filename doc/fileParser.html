@@ -32,7 +32,7 @@ fileParser
 	# $configs--input configuration file, $params--parameter file
 	my ($outputFile, $configs, $params) = getArgs(@ARGV); 
 	my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs);
-	my ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, 
+	my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, 
 	$NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params);
 
 	# read the transcript annotation file
@@ -102,9 +102,13 @@ ending_coordinate. (1-based start and end)</p>
 <p>get all the numeric parameters including p-value cutoffs, NEV lower/upper thresholds, and the allelic ratio difference threshold.</p>
 <pre> input: $params --configuration file for the parameters
 
- output: ($POWCUTOFF, $SNVPCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF)
+ output: ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF)
  --read count cutoff for powerful SNVs ($POWCUTOFF),
- --Chi-Squared Test p-value cutoff for individual SNVs ($SNVPCUTOFF),
+ --Chi-Squared Test p-value cutoff for individual SNVs ($SNVPCUTOFF) 
+   NOTE: it will be ignored if $FDRCUTOFF is provided, see below:
+ --FDR cutoff ($FDRCUTOFF, e.g. 0.05 for FDR &lt;= 5%), according to which 
+   a p-value cutoff will be selected using the Benjamini-Hochberg method in R, 
+   and thus any provided $SNVPCUTOFF will be ignored
  --Fisher's Exact Test p-value cutoff for target-control SNV pairs in ASARP ($ASARPPCUTOFF),
  --NEV lower and upper cutoffs (excl.) ($NEVCUTOFFLOWER, $NEVCUTOFFUPPER),
  --allelic ratio difference cutoff for target-control SNV pairs in ASARP ($ALRATIOCUTOFF)</pre>

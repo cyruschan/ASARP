@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<title>
+mergeSam
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>mergeSam.pl -- Merging corresponding SAM files (e.g. all chr1 SAM files) from different independent replicates. Each replicate is indicated by its folder. The SAM files should have been subject to duplicate removal (<i><a href='rmDup.html'>rmDup</a></i>)</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<p>This is part of the full pre-processing:</p>
+<ul>
+<p>1. rmDup (removing PCR duplicates for SAM files in Dr. JH Lee's format)</p>
+<p>2. <b>mergeSam</b> (merging SAM files if there are independent duplicates)</p>
+<p>3. procReads (processing SAM files to get SNV read counts and generate bedgraph files)</p>
+</ul>
+<p>USAGE:
+perl mergeSam.pl folder_list prefix suffix output_folder</p>
+<p>ARGUMENTS:</p>
+<pre> folder_list 	a file containing a line-separated list of folders 
+          	representing mutilple biological replicates
+		e.g. data/rep1
+		     data/rep2
+		     data/rep3
+		     ...
+ prefix		the common chromosome file prefix in these folders
+		e.g. proc_chr for proc_chr1.sam, proc_chr2.sam, etc.
+ suffix		the common file suffix in these folders
+		e.g. rmdup.sam for chr1.rmdup.sam, chr2.rmdup.sam, etc.
+ output_folder	all the merged prefix*.suffix files will be put to that 
+		specified folder (assume it exists)</pre>
+<p>NOTE:</p>
+<p>files matching folder/prefix*.suffix will be
+enumerated for merging, where &quot;folder&quot; is one element
+in the folder_list. Note the added / and *. in between
+The files are simply merged and not sorted.</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='rmDup.html'>rmDup</a></i>, <i><a href='procReads.html'>procReads</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

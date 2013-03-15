@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<title>
+rmDup
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>rmDup.pl -- Removing duplicates in a SAM file of a chromosome (Dr. JH Lee's format), where the extra 12th attribute (mapped read blocks) are used to identify distinct reads (read pairs). Reads (read pairs) are considered as duplicates only if all of their mapped read blocks have the same coordinates. Only the read (pair) with the highest read quality will be kept. The output SAM file can be used as the input file for merging of multiple independent replicates (<i><a href='mergeSam.html'>mergeSam</a></i>), or read processing to generate SNV and bedgraph files (<i><a href='procReads.html'>procReads</a></i>).</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<p>This is part of the full pre-processing:</p>
+<ul>
+<p>1. <b>rmDup</b> (removing PCR duplicates for SAM files in Dr. JH Lee's format)</p>
+<p>2. mergeSam (merging SAM files if there are independent duplicates)</p>
+<p>3. procReads (processing SAM files to get SNV read counts and generate bedgraph files)</p>
+</ul>
+<p>USAGE:</p>
+<pre> perl rmDup.pl input_sam_file output_sam_file is_paired_end [discarded_read_pos]</pre>
+<p>NOTE:</p>
+<p>the duplicate removal script is for Dr. Jae-Hyung Lee's
+20-attribute SAM file output format, used in RNA-editing
+or allele specific expression (ASE) studies</p>
+<p>ARGUMENTS:</p>
+<pre> is_paired_end		0: single-end; 1: paired-end
+			For paired-end reads, all reads should be paired up, 
+			where pair-1 should be always followed by pair-2 in the next line.</pre>
+<p>OPTIONAL:</p>
+<pre> discarded_read_pos	masked-out (low-quality) read positions in calculating 
+			the max read quality scores, 
+			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
+			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
+			NOTE: the remaining reads will still contain the positions.</pre>
+<a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
+<p><code>input_sam_file</code> should contain only 1 chromosome, and it should be in Dr. Jae-Hyung Lee's SAM format (check out <a href='http://www.ncbi.nlm.nih.gov/pubmed/21960545' target='_blank'>www.ncbi.nlm.nih.gov</a> for more details)</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='procReads.html'>procReads</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>
