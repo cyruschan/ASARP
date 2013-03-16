@@ -477,29 +477,39 @@ sub processASEWithNev
 	   }
 
 	   #for Splicing the format is different
-	   my $stubSplicing = ";".$trgtPos.";";
-	   
+	   my $stubSplicing = ";".$trgtPos;
+	   my %hasType = ();
 	   if(defined($powSps{$gene})){
 	     #print "sp: $powSps{$gene}\n";
-	     if($powSps{$gene} =~ /$stubSplicing/){
+	     while($powSps{$gene} =~ /$stubSplicing;[\d|\-|\+|;|:]+(ASS|SE|RI|UN)/g){
 	       $targetFlag = 1;
+	       print "$gene: $trgtPos $1\n";
+	       $hasType{$1} = 1;
 	       #need to get more information from the gene
 	       $altSpInfo = 'Yes'; #just a dummy
 	       # have not got the exact AS type yet, e.g. SE, RI, ASS, UN
 	       #print "$trgtPos matched powSps in $gene\n";
 	       #print "$powSps{$gene}\n";
 	     }
+	     if($altSpInfo ne ''){
+	       $altSpInfo = join('^', keys %hasType);
+	     }
 	   }
 	   # the first $altSpInfo ne '' is imposed to save unnecessary time as the snp
 	   # is either in %powSps or %snpSps
 	   if($altSpInfo eq '' && defined($snpSps{$gene})){
 	     #print "ord sp: $snpSps{$gene}\n";
-	     if($snpSps{$gene} =~ /$stubSplicing/){
+	     while($snpSps{$gene} =~ /$stubSplicing;[\d|\-|\+|;|:]+(ASS|SE|RI|UN)/g){
 	       $targetFlag = 1;
+	       #print "$gene: $trgtPos $1\n";
+	       $hasType{$1} = 1;
 	       $altSpInfo = 'Yes'; #just a dummy
 	       #print "$trgtPos matched snpSps in $gene\n";
 	       #print "$snpSps{$gene}\n";
              }
+	     if($altSpInfo ne ''){
+	       $altSpInfo = join('^', keys %hasType);
+	     }
 	   }
            
 	   if($targetFlag){
@@ -558,7 +568,7 @@ sub processASEWithNev
 			 my $type ='';
 			 if($altInit ne ''){  $type .= "AI:$altInit,"; } #alternative 5' initiation
 			 if($altTerm ne ''){  $type .= "AT:$altTerm,"; } #alternative 3' termination
-			 if($altSpInfo){ $type .= "AS:,"; } #alternative splicing
+			 if($altSpInfo){ $type .= "AS:$altSpInfo,"; } #alternative splicing
 			 $asarpGeneHash{$gene} .= "$type;$pValue;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1:$cAllel2;$tRatio $cRatio\t"; 
 			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
@@ -1122,10 +1132,10 @@ sub calSplicingEventNev
          #print "Warning: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
          last;
        }
-       my $nev = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
-       if($nev>$nevCutoffLower && $nev < $nevCutoffUpper){
+       my ($nev, $flankUsed) = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
+       if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
          #print "We want this NEV: $nev, $_\n";
-	 $spHash{$gene} .= join(";", $nev, $snpPos, $eRegion, $lRegion, $rRegion, $strand, $tag)."\t";
+	 $spHash{$gene} .= join(";", $nev, $flankUsed, $snpPos, $eRegion, $lRegion, $rRegion, $strand, $additional, $tag)."\t";
        }else{
          #print "We dont want this NEV: $nev, $_\n";
        }
@@ -1166,7 +1176,7 @@ sub calSpNev
   my ($ls, $le) = split(':', $lRegion);
   my ($rs, $re) = split(':', $rRegion);
   my ($nev, $nev2, $altReads, $altLen) = (-1, -1, 0, 0);
-    
+  my $isFlanking = 0; #check if flanking region is used  
   # possible alt regions
   ($altReads, $altLen) = getEffReadSumLength($bedRef, $es, $ee);
 
@@ -1190,9 +1200,10 @@ sub calSpNev
  
   #get the smaller one (but has to >0)
   if($nev2 > 0 && $nev2 < $nev){
+   $isFlanking = 1; # flanking used
    $nev = $nev2;
   }
-  return $nev;
+  return ($nev, $isFlanking);
 }
 
 sub calAltEventNev
