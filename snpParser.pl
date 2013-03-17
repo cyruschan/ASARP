@@ -483,7 +483,7 @@ sub processASEWithNev
 	     #print "sp: $powSps{$gene}\n";
 	     while($powSps{$gene} =~ /$stubSplicing;[\d|\-|\+|;|:]+(ASS|SE|RI|UN)/g){
 	       $targetFlag = 1;
-	       print "$gene: $trgtPos $1\n";
+	       #print "$gene: $trgtPos $1\n";
 	       $hasType{$1} = 1;
 	       #need to get more information from the gene
 	       $altSpInfo = 'Yes'; #just a dummy
