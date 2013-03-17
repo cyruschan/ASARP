@@ -830,11 +830,10 @@ sub readEstEvent{
 		 }
 
 	         if(!$isInJunction && $isNonFlankingEventKept){
-	           #there may be multiple events
-		   #add this into the gene: 'F' means the original est.event 'F'ile information is used.
+	           #there may be multiple events: the original 'F:' tag to distinguish file information is removed 
 	           #print $gene." ".$splice[$i]{$gene}."\n";
 	           if(!$checkStrandConsist || $txStrand eq $strand){
-		     $chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";F:".$type."\t";
+		     $chrs[$i]{$eStart}.=$eEnd.";".$gene.";-1:-1;-1:-1;".$txStrand.";".$type."\t";
 		   }
 	         }
 	       } #end of foreach(@evntSet)
