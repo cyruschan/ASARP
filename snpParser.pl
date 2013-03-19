@@ -335,10 +335,12 @@ sub processASEWithNev
   my @aseGenes = ();
   my @asarpGenes = ();
   my @asarpSnps = ();
+  my @asarpControls = ();
   for(my $i=0; $i<=$CHRNUM; $i++){
     push @aseGenes, {};
     push @asarpGenes, {};
     push @asarpSnps, {};
+    push @asarpControls, {};
   }
 
   # Create a communication bridge with R and start R
@@ -348,6 +350,8 @@ sub processASEWithNev
      #init
      my %aseGeneHash = ();
      my %asarpGeneHash = ();
+     my %asarpGeneControls = (); # just used to store all the control SNVs we have
+     my %outTabu = (); #not double-outputing the target SNVs
      my %asarpSnpHash = ();
 
      my ($powGeneSnpChrRef) = getListByKeyChr($geneSnpRef, 'gPowSnps', $i);
@@ -437,6 +441,8 @@ sub processASEWithNev
          #stage 2: ASARP: including Alternative splicing and 5'/3' Alt init/term
          #Step 2.1 get target (all snps passing NEV filter, incl. non-powerful snps) and control (non-ASE powerful snps) SNPs
 	 #besids %snpGroup, we also need %ordSnpGroup
+	 my $targetNev = 0; #need to get NEV to double check results
+
 	 my %ordSnpGroup = ();
 	 if(defined($snpGenes{$gene})){
            my $ordSnpGroupRef = groupGeneSnps($snpGenes{$gene});
@@ -445,74 +451,31 @@ sub processASEWithNev
 	 my %allSnpGroup = (%snpGroup, %ordSnpGroup); #merge all the snp groups
 	 
 	 for my $trgtPos (keys %allSnpGroup){ #each key is a snp
-	   my $targetFlag = 0; #set if it satisfies the target SNV condition
+	   my ($targetFlagIT, $targetFlagS) = (0, 0); #set if it satisfies the target SNV condition
 	   my ($altInit, $altTerm, $altSpInfo) = ('', '', '');
-	   
+	  
 	   # Step 2.1.1. check if this snp is with any events, i.e. in any alternatively spliced regions (5'/3' or AS)
-	   
-	   my $stubEnd = ",".$trgtPos.",";
+	   # check if it is a target for AI/AT: 
 	   if(defined($powAlts{$gene})){
-	     if($powAlts{$gene} =~ /([5|3][+|-])$stubEnd/){
-	       $targetFlag = 1;
-	       my $endType = $1; #the matched parenthesis
-	       if($endType eq '5+' || $endType eq '5-'){
-	         $altInit = $endType;
-	       }else{
-	         $altTerm = $endType;
-	       }
-	     }
+	     ($altInit, $altTerm, $targetFlagIT) = getTargetInitTermInfo($powAlts{$gene}, $trgtPos);
 	   }
 	   # the first $altInit ne '' is imposed to save unnecessary time as the snp
 	   # is either in %powAlts or %snpAlts
 	   if($altInit eq '' && $altTerm eq '' && defined($snpAlts{$gene})){
-	     if($snpAlts{$gene} =~ /([5|3][+|-])$stubEnd/){
-	       $targetFlag = 1;
-	       my $endType = $1; #the matched parenthesis
-	       if($endType eq '5+' || $endType eq '5-'){
-	         $altInit = $endType;
-	       }else{
-	         $altTerm = $endType;
-	       }
-	     }
+	     ($altInit, $altTerm, $targetFlagIT) = getTargetInitTermInfo($snpAlts{$gene}, $trgtPos);
 	   }
 
-	   #for Splicing the format is different
-	   my $stubSplicing = ";".$trgtPos;
-	   my %hasType = ();
+	   # check if it is a target for AS: for Splicing the format is different
 	   if(defined($powSps{$gene})){
-	     #print "sp: $powSps{$gene}\n";
-	     while($powSps{$gene} =~ /$stubSplicing;[\d|\-|\+|;|:]+(ASS|SE|RI|UN)/g){
-	       $targetFlag = 1;
-	       #print "$gene: $trgtPos $1\n";
-	       $hasType{$1} = 1;
-	       #need to get more information from the gene
-	       $altSpInfo = 'Yes'; #just a dummy
-	       # have not got the exact AS type yet, e.g. SE, RI, ASS, UN
-	       #print "$trgtPos matched powSps in $gene\n";
-	       #print "$powSps{$gene}\n";
-	     }
-	     if($altSpInfo ne ''){
-	       $altSpInfo = join('^', keys %hasType);
-	     }
+	     ($altSpInfo, $targetFlagS) = getTargetSplicingInfo($powSps{$gene}, $trgtPos); 
 	   }
 	   # the first $altSpInfo ne '' is imposed to save unnecessary time as the snp
 	   # is either in %powSps or %snpSps
 	   if($altSpInfo eq '' && defined($snpSps{$gene})){
-	     #print "ord sp: $snpSps{$gene}\n";
-	     while($snpSps{$gene} =~ /$stubSplicing;[\d|\-|\+|;|:]+(ASS|SE|RI|UN)/g){
-	       $targetFlag = 1;
-	       #print "$gene: $trgtPos $1\n";
-	       $hasType{$1} = 1;
-	       $altSpInfo = 'Yes'; #just a dummy
-	       #print "$trgtPos matched snpSps in $gene\n";
-	       #print "$snpSps{$gene}\n";
-             }
-	     if($altSpInfo ne ''){
-	       $altSpInfo = join('^', keys %hasType);
-	     }
+	     ($altSpInfo, $targetFlagS) = getTargetSplicingInfo($snpSps{$gene}, $trgtPos);
 	   }
            
-	   if($targetFlag){
+	   if($targetFlagIT || $targetFlagS){
 	     #Step 2.1.2 try to locate the control reference SNV (only from non-ASE powerful SNVs)
              for my $ctrlPos (keys %snpGroup){ #have to be powerful
 	       if($ctrlPos == $trgtPos || defined($aseList{$ctrlPos})){ 
@@ -568,9 +531,15 @@ sub processASEWithNev
 			 my $type ='';
 			 if($altInit ne ''){  $type .= "AI:$altInit,"; } #alternative 5' initiation
 			 if($altTerm ne ''){  $type .= "AT:$altTerm,"; } #alternative 3' termination
-			 if($altSpInfo){ $type .= "AS:$altSpInfo,"; } #alternative splicing
-			 $asarpGeneHash{$gene} .= "$type;$pValue;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1:$cAllel2;$tRatio $cRatio\t"; 
-			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
+			 if($altSpInfo){ $type .= "AS:$altSpInfo"; } #alternative splicing
+			 $asarpGeneControls{$gene} .= "$type;$pValue;$trgtPos;$ctrlPos\t";
+			 #$asarpGeneControls{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1:$cAllel2;$tRatio $cRatio\t"; 
+			 my $snpStub = $gene.",".$tSnpId;
+			 if(!defined($outTabu{$snpStub})){
+			   $asarpGeneHash{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2\t"; 
+			   $outTabu{$snpStub} = 1;
+			 }
+			 my $snpStub .= ",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
 			   $asarpSnpHash{$trgtPos} .= $type.$snpStub;
 			 }
@@ -587,6 +556,7 @@ sub processASEWithNev
      }
      $aseGenes[$i] = \%aseGeneHash;
      $asarpGenes[$i] = \%asarpGeneHash;
+     $asarpControls[$i] = \%asarpGeneControls;
      $asarpSnps[$i] = \%asarpSnpHash;
 
   }
@@ -597,6 +567,7 @@ sub processASEWithNev
    'ASEgene' => \@aseGenes,
    'ASARPgene' => \@asarpGenes,
    'ASARPsnp' => \@asarpSnps,
+   'ASARPcontrol' => \@asarpControls,
    'aseSnvCnt' => $aseSnvCnt,
    'powSnvCnt' => $powSnvCnt,
    'non0AseGeneCnt' => $non0AseGeneCnt,
@@ -604,6 +575,75 @@ sub processASEWithNev
   );
 
   return \%allAsarps;
+}
+
+
+# sub-routine to get the detailed NEV and Alt Init/Term type information 
+# from a potential target SNV position
+#	input		Init and Term information (a string) and SNV position
+#	output		the strings with detailed info of Init, Term respectively and the target flag
+# if the target flag is non-zero (1) here, it means the SNV is a target
+
+# reference for the format
+  #$updatedEvents .= "$type,$pos,$nev,$altRegion,$constRegion\t";
+  #print "$gene\t$type,$pos,$nev,$altRegion,$constRegion\n";
+sub getTargetInitTermInfo{
+  my ($geneInfo, $trgtPos) = @_;
+
+  my ($altInit, $altTerm) = ('', '');
+  my $targetFlag = 0;
+  if($geneInfo =~ /([5|3][+|-]),$trgtPos,([\d|\.]+),/){
+       $targetFlag = 1;
+       my $endType = $1; #the matched parenthesis
+       my $nev = $2;
+       #print "nev is: $nev\n";
+       if($endType eq '5+' || $endType eq '5-'){
+	 $altInit = "$endType($nev)";
+       }else{
+	 $altTerm = "$endType($nev)";
+       }
+  }
+  return ($altInit, $altTerm, $targetFlag);
+}
+
+
+
+# sub-routine to get the detailed NEV and (Splicing) type information 
+# from a potential target SNV position
+#	input		splicing information (a string) and SNV position
+#	output		the string with detailed info and the target flag
+# if the target flag is non-zero (1) here, it means the SNV is a target
+         
+# reference for the format:	 
+ #print "We want this NEV: $nev, $_\n";
+ #$spHash{$gene} .= join(";", $nev, $flankUsed, $snpPos, $eRegion, $lRegion, $rRegion, $strand, $additional, $tag)."\t";
+sub getTargetSplicingInfo
+{
+  my ($geneInfo, $trgtPos) = @_;
+
+  my $altSpInfo = '';
+  my %hasType = ();
+  my $targetFlag = 0; #false
+  #print "sp: $powSps{$gene}\n";
+  while($geneInfo =~ /([\d|\.]+);([0|1]);$trgtPos;[\d|\-|\+|;|:]+(ASS|SE|RI|UN)/g){
+       $targetFlag = 1;
+       my $nev = $1;
+       my $isFlanking = $2;
+       #print "nev is: $nev ($isFlanking)\n";
+       #print "$gene: $trgtPos $1\n";
+       if(!defined($hasType{$3}) || $hasType{$3} > $nev){ # just get the smallest one
+         $hasType{$3} = $nev; #$isFlanking";
+       }
+       #print "$trgtPos matched powSps in $gene\n";
+       #print "$powSps{$gene}\n";
+  }
+  if($targetFlag){
+    for(keys %hasType){
+      $altSpInfo .= "^$_($hasType{$_})";
+    }
+  }
+
+  return ($altSpInfo, $targetFlag);
 }
 
 sub outputRawASARP{
@@ -626,6 +666,8 @@ sub outputRawASARP{
     $header = "ASARP gene level";
   }elsif($key eq 'ASARPsnp'){
     $header = "ASARP snp level";
+  }elsif($key eq 'ASARPcontrol'){
+    $header = "ASARP control SNVs";
   }else{
     die "ERROR: Unsupported key for ASE/ASARP\n";
   }
@@ -637,7 +679,7 @@ sub outputRawASARP{
     if(defined($allAsarps[$i])){
       my %chrRes = %{$allAsarps[$i]};
       for(keys %chrRes){
-         print "$_\n";
+         print formatChr($i)."\t$_\n";
 	 my @info = split('\t', $chrRes{$_});
 	 foreach(@info){
 	   print "$_\n";
@@ -780,7 +822,8 @@ sub formatGeneLevelVerNAR{
 	
 	my @info = split('\t', $chrRes{$gene});
 	foreach(@info){
-	 my ($event, $pAsarp, $target, $control) = split(';', $_);
+	 #my ($event, $pAsarp, $target, $control) = split(';', $_);
+	 my ($event, $target) = split(';', $_);
 	 my @allEvents = split(',', $event);
 	 for(@allEvents){
 	   my ($alt, $detail) = split(':', $_);
@@ -1133,6 +1176,7 @@ sub calSplicingEventNev
          last;
        }
        my ($nev, $flankUsed) = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
+       $nev = sprintf("%.4f", $nev);
        if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
          #print "We want this NEV: $nev, $_\n";
 	 $spHash{$gene} .= join(";", $nev, $flankUsed, $snpPos, $eRegion, $lRegion, $rRegion, $strand, $additional, $tag)."\t";
@@ -1231,6 +1275,7 @@ sub calAltEventNev
        if($constRatio>0){
          $nev = $altRatio/$constRatio;
        }
+       $nev = sprintf("%.4f", $nev);
        #print "$gene $pos NEV $nev\n";
        if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
           $updatedEvents .= "$type,$pos,$nev,$altRegion,$constRegion\t";
@@ -1526,7 +1571,6 @@ sub fdrControl{
   if(@pAdjust < @pList){
     die "ERROR: the adjusted p-value list from R is incomplete! Aborted\n";
   }
-
   #estimate a new a, default parameters used
   my $aHat = 0;
   my $bigI = 20;
@@ -1542,19 +1586,27 @@ sub fdrControl{
       }
       $end++;
     }
-    #print "Bin $i: $xi: from $start ($pList[$start]) to $end-1 ($pList[$end-1])\n";
-    $bigFxi += ($end-$start)/@pList; #histogram
-    #print "CDF: $bigFxi\n";
+    if($start <= $end-1){
+     #print "Bin $i: $xi: from $start+1 ($pList[$start]) to $end ($pList[$end-1])\n";
+     $bigFxi += ($end-$start)/@pList; #histogram
+     #print "CDF: $bigFxi\n";
+    }
     if($bigFxi>$xi){
       $aHat += ($bigFxi-$xi)/(1-$xi);
+    }
+    if($end >= @pList){ # boundary case
+      last;
     }
     $start = $end;
   }
   $aHat /= $bigI;
 
-  #print "a hat is $aHat\n";
+  print "Estimated alternative percentage (a): $aHat\n";
+  if($aHat >= 1){
+    return $pList[-1]; # all cases are estimated to be from the alternative
+  }
   $fdrCutoff /= (1-$aHat);
-  #print "adjusted fdr: $fdrCutoff\n"; 
+  print "Adjusted FDR (BH): $fdrCutoff\n"; 
   my $pos = 0;
   while($pos < @pAdjust){
     #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
