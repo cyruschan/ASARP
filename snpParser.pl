@@ -528,10 +528,11 @@ sub processASEWithNev
 		       my $cRatio = $cAllel1/($cAllel1+$cAllel2);
 		       if(abs($tRatio-$cRatio) >= $alleleRatioCutoff or abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){
 		         #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP found!\n";
-			 my $type ='';
-			 if($altInit ne ''){  $type .= "AI:$altInit,"; } #alternative 5' initiation
-			 if($altTerm ne ''){  $type .= "AT:$altTerm,"; } #alternative 3' termination
-			 if($altSpInfo){ $type .= "AS:$altSpInfo"; } #alternative splicing
+			 my @types = ();
+			 if($altInit ne ''){ push @types, "AI:$altInit"; } #alternative 5' initiation
+			 if($altTerm ne ''){  push @types, "AT:$altTerm"; } #alternative 3' termination
+			 if($altSpInfo){ push @types, "AS:$altSpInfo"; } #alternative splicing
+			 my $type = join(',', @types);
 			 $asarpGeneControls{$gene} .= "$type;$pValue;$trgtPos;$ctrlPos\t";
 			 #$asarpGeneControls{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1:$cAllel2;$tRatio $cRatio\t"; 
 			 my $snpStub = $gene.",".$tSnpId;
@@ -539,9 +540,9 @@ sub processASEWithNev
 			   $asarpGeneHash{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2\t"; 
 			   $outTabu{$snpStub} = 1;
 			 }
-			 my $snpStub .= ",".$tAlleles."\t";
+			 $snpStub .= ",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
-			   $asarpSnpHash{$trgtPos} .= $type.$snpStub;
+			   $asarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 			 }
 			 #last; #just need one control that's enough
 		       }
