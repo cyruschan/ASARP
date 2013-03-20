@@ -535,12 +535,12 @@ sub processASEWithNev
 			 my $type = join(',', @types);
 			 $asarpGeneControls{$gene} .= "$type;$pValue;$trgtPos;$ctrlPos\t";
 			 #$asarpGeneControls{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2;$ctrlPos $cSnpId $cAlleles $cAllel1:$cAllel2;$tRatio $cRatio\t"; 
-			 my $snpStub = $gene.",".$tSnpId;
-			 if(!defined($outTabu{$snpStub})){
+			 my $snpCheck = $gene.",".$trgtPos;
+			 if(!defined($outTabu{$snpCheck})){
 			   $asarpGeneHash{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2\t"; 
-			   $outTabu{$snpStub} = 1;
+			   $outTabu{$snpCheck} = 1;
 			 }
-			 $snpStub .= ",".$tAlleles."\t";
+			 my $snpStub .= $gene.",".$tSnpId.",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
 			   $asarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 			 }
