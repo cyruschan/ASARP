@@ -540,7 +540,7 @@ sub processASEWithNev
 			   $asarpGeneHash{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2\t"; 
 			   $outTabu{$snpCheck} = 1;
 			 }
-			 my $snpStub .= $gene.",".$tSnpId.",".$tAlleles."\t";
+			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
 			   $asarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 			 }
