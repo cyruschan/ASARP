@@ -88,7 +88,7 @@ my $outputControl = $outputFile.'.controlSNV.prediction'; # for detailed informa
 outputRawASARP($allAsarpsRef, 'ASEgene', $outputASE);
 outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
-#outputRawASARP($allAsarpsRef, 'ASARPcontrol', $outputControl); # can be commented out if one wants concise results
+outputRawASARP($allAsarpsRef, 'ASARPcontrol', $outputControl); # can be commented out if one wants concise results
 
 my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
 if(defined($outputFile)){
