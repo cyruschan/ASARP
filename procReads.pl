@@ -217,7 +217,7 @@ for my $chr (keys %blocks){
   # get the track opt first
   my ($dummyChr, $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
   my $trackRange = "$chr:".($bedgraph_idx[0]+1).":".$bedLastPos; #start converted back to 1-based for chr range in UCSC
-  my $trackOpt = "track type=bedGraph name=\"reads:distinct in $trackRange\" description=\"nbt.editing reads: distinct after dup removal in $trackRange\" visibility=full autoScale=on gridDefault=on graphType=points yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
+  my $trackOpt = "track type=bedGraph name=\"reads_$chr\" description=\"nbt.editing reads: distinct after dup removal in $trackRange\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
   print BP $trackOpt;
   my $bedCnt = 0;
   for(@bedgraph){

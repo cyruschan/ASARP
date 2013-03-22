@@ -643,15 +643,18 @@ sub getGeneIndex{
 
   # this is the init for gene indices
   my @geneIndices = ();
+  my @geneEnds = ();
   my @geneNames = ();
 
 
   for(my $i=0; $i<=$CHRNUM; $i++){
     push @geneIndices, (); #array of arrays of strings
     push @geneNames, ();
+    push @geneEnds, ();
   }
   for(my $i=1; $i<=$CHRNUM; $i++){
     my %genes = ();
+    my %ends = ();
     my @genesArray = (); # the locations
     my $g = 0; #gene counter
 
@@ -668,20 +671,24 @@ sub getGeneIndex{
 	######################### for gene indices
 	if(!defined($genes{$gene})){
           $genes{$gene} = $txStart; #initial minimal
-	  $genesArray[$g] = $gene.';'.$txStart.';'.$txEnd;
+	  $ends{$gene} = $txEnd; #initial maximal
+	  $genesArray[$g] = $gene.';'.$txStart.';'.$txEnd; #$txEnd is useless
 	  $g++;
         }elsif($genes{$gene}> $txStart){
           die "This is not possible for $gene at $genes{$gene} as $txStart is sorted\n";
-        }
+        }elsif($genes{$gene}<$txEnd){
+	  $ends{$gene} = $txEnd;
+	}
 
       }
     }
     ######################### for gene indices
     $geneIndices[$i] = \@genesArray;
     $geneNames[$i] = \%genes;
+    $geneEnds[$i] = \%ends;
   }
 
-  return (\@geneIndices, \@geneNames);
+  return (\@geneIndices, \@geneNames, \@geneEnds);
 }
 
 # sub routine to read the est event file (est.event)
@@ -891,6 +898,7 @@ sub deriveSpliceType{
 
 sub getAlt5Or3Events
 {
+  die "this sub is not used anywhere\n";
   my ($transListRef, $geneRef) = @_;
   my @alt5Int = ();
   my @alt5Int_idx = ();
@@ -1239,13 +1247,15 @@ The results can be printed out using utility sub using key 'trans': C<printListB
 
 =item C<getGeneIndex>
 
-intermediate sub to get indices of gene transcript starts and gene names
+intermediate sub to get indices of gene transcript starts and gene names and gene ends
 
  input: $transRef (see above)
 
  output: $genesRef --reference to the index for every gene's minimal transcript start
 
  	 $geneNamesRef --reference to the gene names
+
+	 $geneEndsRef --reference to the gene ends (optionally used)
 	
 =item C<getGeneAltTransEnds>
 
@@ -1347,7 +1357,7 @@ binary search for insert (or location), including left, right insert (location) 
   output: ($loc, $flag) 
   --location of $x in the list (NOTE: range is [0, size of list], 0-based, 
   i.e. there can be size of list + 1 possible locations for an element)
-  --match flag: 1 means match, 0 means no match
+  --unmatch flag: 1 means **unmatch**, 0 means **match**
 
 =item Other utility subs
 

@@ -697,6 +697,74 @@ sub outputRawASARP{
 
 }
 
+
+sub outputSnvTracks{
+  my ($allAsarpsRef, $outputPrefix, $db, $extraFlag) = (undef, undef, undef, undef);
+  ($allAsarpsRef, $outputPrefix, $db, $extraFlag) = @_;
+
+  if(!defined($db)){ die "ERROR: UCSC db name has to be set, e.g. hg19\n"; }
+  if(!defined($extraFlag)){ $extraFlag = 0; }
+ 
+  if(defined($outputPrefix)){
+   print "Output SNV tracks to files with prefix $outputPrefix\n";
+  }else{
+    $outputPrefix = "snv.track";
+  }
+  
+  my @allAsarps = @{$allAsarpsRef->{'ASARPgene'}}; #use gene.prediction
+  my %catalog = (); # AS, AI, AT
+  for(my $i=1; $i<=$CHRNUM; $i++){
+    if(defined($allAsarps[$i])){
+      my %chrRes = %{$allAsarps[$i]};
+      if(keys %chrRes == 0){ next; } #skip this chromosome
+      my $chr = formatChr($i);
+      # determine the snp track file to write
+      my $file ='';
+      if(substr($outputPrefix,-1,1) eq '/'){
+        $file = $outputPrefix.$chr.".pgSnp"; #no dot in between
+      }else{
+        $file = "$outputPrefix.$chr.pgSnp";
+      }	
+      my $content = '';
+      my $extraCont = ''; #extra content to use
+      my ($startPos, $endPos) = (0, 0); #init
+      for(keys %chrRes){
+	 my $gene = $_;
+	 my @info = split('\t', $chrRes{$gene});
+	 foreach(@info){
+	   my ($catInfo, $snpInfo) = split(';', $_);
+	   # chr	start		end		all	2	reads	qual
+	   #chr21	31812007	31812008	T/G	2	21,70	90,70
+	   my($pos, $id, $al, $reads) = split(' ', $snpInfo);
+	   my ($al1, $al2) = split('>', $al);
+	   my ($r1, $r2) = split(':', $reads);
+	   my $snpTrack = join("\t", $chr, $pos-1, $pos, "$al1/$al2", 2, "$r1,$r2", "0,0"); #extra #, $gene, $catInfo);
+	   $content .= $snpTrack."\n";
+	   if($extraFlag){	$extraCont .= join("\t", $chr, $pos, $gene, $catInfo)."\n";  }
+
+	   if($startPos ==0 || $startPos > $pos){	$startPos = $pos;	}
+	   if($endPos < $pos){	$endPos = $pos;	}
+	 }
+      }
+      if($endPos ==0 || $startPos > $endPos){
+        die "Error getting $chr positions: $startPos-$endPos\n";
+      }
+      my $header = "track type=pgSnp visibility=3 db=$db name=\"SNV_$chr\" description=\"ASARP SNVs in $chr\"\nbrowser position $chr:$startPos-$endPos\n";
+      open(FP, ">", $file) or die "ERROR: cannot open $file to output pgSnp tracks\n";
+      print FP $header;
+      print FP $content;
+      close(FP);
+      if($extraFlag){
+        open(EP, ">", "$file.aux") or die "ERROR: cannot open $file.aux to output pgSnp auxiluary information\n";
+	print EP $extraCont;
+	close(EP);
+      }
+    }
+  }
+
+}
+
+
 sub formatOutputVerNAR{
 
   my ($allAsarpsRef, $outputFile) = (undef, undef, undef);

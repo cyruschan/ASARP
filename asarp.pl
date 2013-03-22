@@ -84,11 +84,11 @@ print "\n";
 my $outputASE = $outputFile.'.ase.prediction';
 my $outputSnv = $outputFile.'.snv.prediction';
 my $outputGene = $outputFile.'.gene.prediction';
-my $outputControl = $outputFile.'.controlSNV.prediction';
+my $outputControl = $outputFile.'.controlSNV.prediction'; # for detailed information if one would like
 outputRawASARP($allAsarpsRef, 'ASEgene', $outputASE);
 outputRawASARP($allAsarpsRef, 'ASARPgene', $outputGene);
 outputRawASARP($allAsarpsRef, 'ASARPsnp', $outputSnv);
-outputRawASARP($allAsarpsRef, 'ASARPcontrol', $outputControl);
+#outputRawASARP($allAsarpsRef, 'ASARPcontrol', $outputControl); # can be commented out if one wants concise results
 
 my $allNarOutput = formatOutputVerNAR($allAsarpsRef);
 if(defined($outputFile)){
