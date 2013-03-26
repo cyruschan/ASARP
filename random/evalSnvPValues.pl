@@ -6,7 +6,7 @@ require "randUtilities.pl";
 if(@ARGV < 4){
   print <<EOT;
   
-USAGE: perl $0 asarp_result rand_results indices output_p
+USAGE: perl $0 asarp_result rand_results indices output_p [p_cutoff]
 
 NOTE: evaluation of p-values for the individual ASARP SNV results based on randomization for certain indices
 
@@ -26,13 +26,17 @@ indices			The number of randomized SNV files, or the index range
 			for p-value resolution ~1/N (e.g. N=1000 for p~0.001)
 output_p		output ASARP SNV results with p-values associated
 
+OPTIONAL:
+p_cutoff		p-value cutoff (<=) for the output results output_p, 
+			if not input, all p values are output
 EOT
   exit;
 }
 
 
-my ($input, $randF, $freq, $outputF) = @ARGV;
+my ($input, $randF, $freq, $outputF, $pCutoff) = @ARGV;
 
+if(!defined($pCutoff)){ $pCutoff = 1; }
 my ($from, $to) = getIndex($freq);
 my $N = $to-$from+1; #the total number for simulations
 
@@ -66,17 +70,23 @@ for(qw(AI AS AT COMP)){
   $pCnt{$_} = 0;
 }
 my %pHash = %$pRef;
+my $toOutputP = "";
 for(keys %pHash){
-  #print "$_:\n";
+  my $geneToOut = "$_:\n";
+  my $pFlag = 0;
   my @info = split('\t', $pHash{$_});
   for(@info){ 
     my ($p, $chr, $pos, $al, $id, $type) = split(' ', $_);
     $sumP{$type} += $p;
     $pCnt{$type} += 1;
-    #print "$_\n"; 
+    if($p <= $pCutoff){
+      $pFlag = 1;
+      $geneToOut .= "$_\n";
+    }
   }
-  #print "\n";
+  if($pFlag){ $toOutputP .= "$geneToOut\n";  }
 }
+print $toOutputP;
 
 print "Overall ASARP FDR estimated:\n";
 for(keys %pCnt){
@@ -89,14 +99,7 @@ print "\n";
 # result printed to file
 print "Output P-values of ASARP SNVs to $outputF\n";
 open(OP, ">", $outputF) or die "ERROR: cannot open output: $outputF\n";
-for(keys %pHash){
-  print OP "$_:\n";
-  my @info = split('\t', $pHash{$_});
-  for(@info){ 
-    print OP "$_\n"; 
-  }
-  print OP "\n";
-}
+print OP $toOutputP;
 close(OP);
 print "Finished\n";
 
