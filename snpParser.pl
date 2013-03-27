@@ -453,7 +453,7 @@ sub processASEWithNev
 	 for my $trgtPos (keys %allSnpGroup){ #each key is a snp
 	   my ($targetFlagIT, $targetFlagS) = (0, 0); #set if it satisfies the target SNV condition
 	   my ($altInit, $altTerm, $altSpInfo) = ('', '', '');
-	  
+	   print "SNV: $trgtPos\n"; 
 	   # Step 2.1.1. check if this snp is with any events, i.e. in any alternatively spliced regions (5'/3' or AS)
 	   # check if it is a target for AI/AT: 
 	   if(defined($powAlts{$gene})){
@@ -527,7 +527,7 @@ sub processASEWithNev
 		       my $tRatio = $tAllel1/($tAllel1+$tAllel2);
 		       my $cRatio = $cAllel1/($cAllel1+$cAllel2);
 		       if(abs($tRatio-$cRatio) >= $alleleRatioCutoff or abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){
-		         #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP found!\n";
+		         print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
 			 my @types = ();
 			 if($altInit ne ''){ push @types, "AI:$altInit"; } #alternative 5' initiation
 			 if($altTerm ne ''){  push @types, "AT:$altTerm"; } #alternative 3' termination
@@ -630,7 +630,7 @@ sub getTargetSplicingInfo
        $targetFlag = 1;
        my $nev = $1;
        my $isFlanking = $2;
-       #print "nev is: $nev ($isFlanking)\n";
+       print "nev is: $nev ($isFlanking)\n";
        #print "$gene: $trgtPos $1\n";
        if(!defined($hasType{$3}) || $hasType{$3} > $nev){ # just get the smallest one
          $hasType{$3} = $nev; #$isFlanking";
