@@ -453,7 +453,7 @@ sub processASEWithNev
 	 for my $trgtPos (keys %allSnpGroup){ #each key is a snp
 	   my ($targetFlagIT, $targetFlagS) = (0, 0); #set if it satisfies the target SNV condition
 	   my ($altInit, $altTerm, $altSpInfo) = ('', '', '');
-	   print "SNV: $trgtPos\n"; 
+	   #print "SNV: $trgtPos\n"; 
 	   # Step 2.1.1. check if this snp is with any events, i.e. in any alternatively spliced regions (5'/3' or AS)
 	   # check if it is a target for AI/AT: 
 	   if(defined($powAlts{$gene})){
@@ -520,14 +520,18 @@ sub processASEWithNev
 		     my $pValue2 = $R->get('p2');
 		     #print "fisher test result 2: $pValue2\n";
 		     
-		     if($pValue2 < $pValue){ $pValue = $pValue2; } #get smaller p-value
-		     if($pValue <= $asarpPValueCutoff) { #significant
+		     #if($pValue2 < $pValue){ $pValue = $pValue2; } #get smaller p-value
+		     if($pValue <= $asarpPValueCutoff || $pValue2 <= $asarpPValueCutoff) { #significant
 		       #print "significant ratio differences found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
 		       #Step 2.4 Check if the allelic ratio difference is larger than the threshold
 		       my $tRatio = $tAllel1/($tAllel1+$tAllel2);
 		       my $cRatio = $cAllel1/($cAllel1+$cAllel2);
-		       if(abs($tRatio-$cRatio) >= $alleleRatioCutoff or abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){
-		         print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
+		       if((abs($tRatio-$cRatio) >= $alleleRatioCutoff && $pValue <= $asarpPValueCutoff) || (abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff && $pValue2 <= $asarpPValueCutoff)){ #associated p-value and allelic difference filter
+		       #if(abs($tRatio-$cRatio) >= $alleleRatioCutoff or abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){
+		         #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
+			 if(!(abs($tRatio-$cRatio) >= $alleleRatioCutoff && $pValue <= $asarpPValueCutoff)){
+			   $pValue = $pValue2; # use the 2nd half things (also ratio diff, but it is not output)
+			 }
 			 my @types = ();
 			 if($altInit ne ''){ push @types, "AI:$altInit"; } #alternative 5' initiation
 			 if($altTerm ne ''){  push @types, "AT:$altTerm"; } #alternative 3' termination
@@ -630,7 +634,7 @@ sub getTargetSplicingInfo
        $targetFlag = 1;
        my $nev = $1;
        my $isFlanking = $2;
-       print "nev is: $nev ($isFlanking)\n";
+       #print "nev is: $nev ($isFlanking)\n";
        #print "$gene: $trgtPos $1\n";
        if(!defined($hasType{$3}) || $hasType{$3} > $nev){ # just get the smallest one
          $hasType{$3} = $nev; #$isFlanking";
