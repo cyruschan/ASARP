@@ -63,7 +63,6 @@ close(FP);
 
 my $snvNo = keys %snvs;
 print "There are $snvNo for the ASARP target and control SNVs\n";
-exit;
 
 # get all rand_inFolder SNVs
 # assume all the rand_inFolder SNV lists are the same (differ only in the allele reads)
@@ -95,8 +94,8 @@ for(my $i=$from; $i<=$to; $i++){
       if($j == $filters[$fi]){ #filters is an ordered subset of the SNV lines
         # we can actually double-check if this line is correct
 	my ($chr, $pos, $al, $id, $read) = split(' ', $line);
-	if(!defined($snvs{$pos})){
-	  die "ERROR: in line $fi+1 SNV: $pos is not included in the target/control ASARP SNV list (probably input random files are not consistent in their SNV lists)\n";
+	if(!defined($snvs{"$chr\t$pos"})){
+	  die "ERROR: in line $fi+1 SNV: $chr $pos is not included in the target/control ASARP SNV list (probably input random files are not consistent in their SNV lists)\n";
 	}
 	$toOutput .= $line; 
 	$fi++;
