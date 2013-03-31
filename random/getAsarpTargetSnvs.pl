@@ -47,19 +47,23 @@ my ($from, $to) = getIndex($freq);
 # get the SNV list of input snvs
 my %snvs = ();
 open(FP, $ctrlSnvs) or die "ERROR: cannot open controlSNV.prediction file: $ctrlSnvs\n";
+my $chr='';
 while(<FP>){
   chomp;
   if($_ =~/;/){
     my ($types, $p, $trgt, $ctrl) = split(';', $_);
     #print "$trgt $ctrl\n";
-    $snvs{$trgt} = 1;
-    $snvs{$ctrl} = 1;
+    $snvs{"$chr\t$trgt"} = 1;
+    $snvs{"$chr\t$ctrl"} = 1;
+  }elsif($_ =~ /^(chr\w+)\t/){
+    $chr = $1;
   }
 }
 close(FP);
 
 my $snvNo = keys %snvs;
 print "There are $snvNo for the ASARP target and control SNVs\n";
+exit;
 
 # get all rand_inFolder SNVs
 # assume all the rand_inFolder SNV lists are the same (differ only in the allele reads)
@@ -75,14 +79,15 @@ for(my $i=$from; $i<=$to; $i++){
       # no need to chomp because we don't care the last $read
       # in this case, we need to parse the input file
       my ($chr, $pos, $al, $id, $read) = split(' ', $_);
-      if(defined($snvs{$pos})){
+      if(defined($snvs{"$chr\t$pos"})){
         $toOutput .= $_; 
         push @filters, $j; #filters has only the line number
       }
       $j++;
     }
     $ff = 1; #the filters list has been done
-
+    my $size = @filters;
+    print "There are $size SNVs in filter\n";
   }else{
     my ($j, $fi) = (0, 0);
     while($fi<@filters){
