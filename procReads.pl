@@ -251,24 +251,25 @@ for my $chr (keys %blocks){
   my ($bi, $si) = (0, 0);#b for bedgraph_idx, s for dnaSnv_idx, 
   my $dCnt = 0; #$dCnt for matched dnaSnvs_idx
   while($bi<@bedgraph_idx && $si<@dnaSnvs_idx){
-    # print "bed idx $bi: $bedgraph_idx[$bi]\nsnv idx: $si: $dnaSnvs_idx[$si]\n";
-    if($bedgraph_idx[$bi]+1 <= $dnaSnvs_idx[$si]){
-      $bi++;
-      if($bi<@bedgraph_idx){
-        next;
-      } #if $bi is the last of bedgraph, must match
-    }
-    
-    # no match for this dna snv
-    if($bi-1 < 0 || $bedgraph_idx[$bi-1]+1 > $dnaSnvs_idx[$si]){
-      print "DISCARD: $chr:$dnaSnvs_idx[$si] matches no RNA-Seq reads\n";
+    #print "bed idx $bi: ".($bedgraph_idx[$bi]+1)."\nsnv idx: $si: $dnaSnvs_idx[$si]\n";
+    if($bedgraph_idx[$bi]+1 > $dnaSnvs_idx[$si]){ # the current SNV is smaller, need to check next one
       $si++;
       next;
     }
-    
+    # now the SNV potentially overlaps with the bedgraph range
+    # i.e. $bedgraph_idx[$bi]+1 <= $dnaSnvs_idx[$si]
+    my ($chrBed, $startBed, $endBed, $cntBed) = split(' ', $bedgraph[$bi]);
+    if($endBed < $dnaSnvs_idx[$si]){ # the SNV is larger than the whole area
+      $bi++;
+      next;
+    }
+    # now $bedgraph_idx[$bi]+1 <= $dnaSnvs_idx[$si] and $endBed >= $dnaSnvs_idx[$si] so it is a match
     # a match
-    my ($chrBed, $startBed, $endBed, $cntBed) = split(' ', $bedgraph[$bi-1]);
-    #print "SNV $si ($dnaSnvs_idx[$si]) matches bedgraph $bi-1: $bedgraph[$bi-1]\n";
+    #print "SNV $si ($dnaSnvs_idx[$si]) matches bedgraph $bi: $bedgraph[$bi]+1 = $startBed to $endBed\n";
+    #if(!($dnaSnvs_idx[$si] > $startBed && $dnaSnvs_idx[$si] <= $endBed)){
+    #  print "Wrong: !($dnaSnvs_idx[$si] > $startBed && $dnaSnvs_idx[$si] < $endBed)\n";
+    #  exit;
+    #}
     # further filter with RNA SNVs (mismatch counts)
     if(defined($snvs{$dnaSnvs_idx[$si]})){
       my ($dAls, $dId) = split(' ', $dnaSnvs{$dnaSnvs_idx[$si]});
