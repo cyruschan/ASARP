@@ -11,6 +11,8 @@ our $TENKB = 10000; #10KB as the bin size, only used in the bed handler only
 ## e.g.getReadSlice, getEffReadSumLength 
 ## to retrieve certain read counts and their sum of interest
 
+## The new bed handler also accepts strand sepcific bedgraph (the 5th attribut is assumed to be the strand +/-
+## The implementation tries to be backward compatible, i.e. no difference can be sensed if one is using non-strand specific bedgraph and asarp
 
 ##################################################################################
 ### the following sub's are about bed reading and processing
@@ -33,6 +35,10 @@ sub readBedByChr
   my @reads = ();
   my @reads_idx = ();
 
+  my @bedsrc = (); #the reverse complement version
+  my @readsrc = ();
+  my @readsrc_idx = ();
+  
   if(!($bedFolder =~ /[\\|\/]$/)){
     $bedFolder .= "/";
   }
@@ -49,7 +55,7 @@ sub readBedByChr
     chomp;
     $count++;
     #if($count%($TENKB*100)==0){ print $count." ";  }
-    my ($ch, $start, $end, $n) = split(' ', $_);
+    my ($ch, $start, $end, $n, $strand) = split(' ', $_); # add a strand field
     
     #IMPORTANT: bedgraph file standard: 0-based start and 1-based end
     # http://genome.ucsc.edu/goldenPath/help/bedgraph.html 
@@ -76,7 +82,13 @@ sub readBedByChr
       if($i>$sBin){ $startIn = 0; }
       my $endIn = $eOff;
       if($i<$eBin){ $endIn = $TENKB-1; }
-      $beds[$i] .= "$startIn,$endIn,$n\t";
+      if(!defined($strand) || $strand eq '+'){
+        $beds[$i] .= "$startIn,$endIn,$n\t";
+      }elsif($strand eq '-'){ # minus strand handled
+        $bedsrc[$i] .= "$startIn,$endIn,$n\t";
+      }else{
+        die "ERROR: unknown strand (5th attr) information: $strand\n";
+      }
     }
   }
   close($bFh);
@@ -120,9 +132,33 @@ sub readBedByChr
       $reads_idx[$i] = [sort {$a<=>$b} keys %posHash];
     }
   }
+  
+  ## strand-specific version
+  my $binRcSize = @bedsrc;
+  for(my $i=0; $i<$binRcSize; $i++){ #not good, code duplication, but just for the RC
+    if(defined($bedsrc[$i])){
+      my %posHash = ();
+      my @pos = split('\t', $bedsrc[$i]);
+      foreach(@pos){
+        my ($sOff, $eOff, $n) = split(',', $_);
+	if(defined($posHash{$sOff})){
+	  die "ERROR: no reverse complement beds are assumed to have the same starting position:\n$posHash{$sOff} and $_\n";
+	}
+	$posHash{$sOff} = "$eOff,$n";
+      }
+      $bedsrc[$i] = ''; #clear all first to save memory
+
+      $readsrc[$i] = \%posHash;
+      $readsrc_idx[$i] = [sort {$a<=>$b} keys %posHash];
+    }
+  }
+
+
   my %allReads = (
     'reads'=>\@reads,
     'reads_idx' => \@reads_idx,
+    'readsrc'=>\@readsrc,
+    'readsrc_idx' => \@readsrc_idx,
   );
 
   print "done\n";
@@ -258,11 +294,27 @@ sub getReadLengthInBin{
 
   return ($c, $l);
 }
+# the new wrapper of getEffReadSumLength with strand-specific handling
+# if no strand info is provided, it should behave the same way in the past
 sub getEffReadSumLength
 {
-  my ($bedRef, $from, $to) = @_;
-  my @beds = @{$bedRef->{'reads'}};
-  my @bedsIdx = @{$bedRef->{'reads_idx'}};
+  my ($bedRef, $from, $to, $strand) = @_;
+  my $key ="";
+  if(!defined($strand) || $strand eq '+'){
+    $key = 'reads'; 
+  }elsif($strand eq '-'){
+    $key = 'readsrc';
+  }else{
+    die "Error: unknown key for accessing reads\n"; 
+  }
+  return getEffReadSumLengthKey($bedRef, $from, $to, $key);
+}
+
+sub getEffReadSumLengthKey
+{
+  my ($bedRef, $from, $to, $key) = @_;
+  my @beds = @{$bedRef->{$key}};
+  my @bedsIdx = @{$bedRef->{$key."_idx"}};
   
   #print "from: $from to $to\n";
   if($from > $to){ die "ERROR: wrong slice range: [$from, $to]\n"; }
