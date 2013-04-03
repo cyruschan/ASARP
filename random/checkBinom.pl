@@ -19,11 +19,13 @@ rand_file_prefix	the file prefix, e.g. "test/rand.snv." for
 rand_times		the largest index of the rand_file suffix, e.g. 1000 means the randomized snvs will
 			have 1, 2, 3, ..., 1000 as the suffixes
 EOT
+
+exit;
 }
 
 
 my ($files, $FREQ) = @ARGV;
-my $files = "test/rand.snv.";
+#my $files = "test/rand.snv.";
 #my $N = 1000000; #just check the first 10
 my @ratios = ();
 #my $FREQ = 1000;

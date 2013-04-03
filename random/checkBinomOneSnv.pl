@@ -16,6 +16,8 @@ rand_file_prefix	the file prefix, e.g. "test/rand.snv." for
 rand_times		the largest index of the rand_file suffix, e.g. 1000 means the randomized snvs will
 			have 1, 2, 3, ..., 1000 as the suffixes
 EOT
+
+  exit;
 }
 
 
