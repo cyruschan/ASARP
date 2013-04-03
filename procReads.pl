@@ -229,7 +229,10 @@ for my $chr (keys %blocks){
   ####################################################################
   
   print "Processing $chr genomic SNVs...";
-  my @dnaSnvVals = split('\t', $snvList{$chr});
+  my @dnaSnvVals = ();
+  if(defined($snvList{$chr})){
+    @dnaSnvVals = split('\t', $snvList{$chr});
+  }
   my %dnaSnvs = ();
   for(@dnaSnvVals){
     my ($pos, $als, $id) = split(' ', $_);
@@ -241,6 +244,11 @@ for my $chr (keys %blocks){
   ####################################################################
   
   print "Processing $chr candidate SNVs (mismatches)...";
+  if(@dnaSnvs_idx == 0){
+    #speed up as no need to check the others
+    print "Skipped the rest as no matched SNVs. Done\n";
+    next;
+  }
   # here we can forget about the blocks and focus on the pileups (bedgraph)
   my ($snvRef) = procSnv($snv{$chr}, \@discard); 
   my %snvs = %$snvRef;
@@ -408,7 +416,6 @@ sub maskBlock{
 #   column 20: all mismatch positions in the read (relative to the read sequence which is already converted to + strand of genome sequence), seprated by space " "
 sub procSnv{
   my ($allSnvs, $maskRef) = @_;
-
   my @SnvArray = split('\n', $allSnvs);
   my %hs = ();
   my @mask = @$maskRef;
@@ -444,7 +451,10 @@ sub procSnv{
         $hs{$loc} = \%snv; 
       }else{
         my %snv = %{$hs{$loc}};
-     
+        if(!defined($snv{"ref"})){
+	  print "WARNING: no ref allele for $loc; check sam line containing: $coord\t$refAl\t$misAl\t$qual\t$pos\n";
+	  next; 
+	}
         if($snv{"ref"} ne $refAls[$i]){
           print "ERROR: different reference allele at $loc: ".$snv{"ref"}."VS $refAls[$i]\n"; exit;
         }
