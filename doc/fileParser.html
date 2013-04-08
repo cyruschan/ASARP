@@ -121,12 +121,14 @@ All parameters are required and have to be set.</p>
  output: $transRef --reference to an array of the parsed transcripts. </pre>
 <p>The results can be printed out using utility sub using key 'trans': <code>printListByKey($transRef, 'trans');</code></p>
 <li><a name='getGeneIndex'></a><code>getGeneIndex</code></li>
-<p>intermediate sub to get indices of gene transcript starts and gene names</p>
+<p>intermediate sub to get indices of gene transcript starts and gene names and gene ends</p>
 <pre> input: $transRef (see above)
 
  output: $genesRef --reference to the index for every gene's minimal transcript start
 
  	 $geneNamesRef --reference to the gene names
+
+	 $geneEndsRef --reference to the gene ends (optionally used)
 	</pre>
 <li><a name='getGeneAltTransEnds'></a><code>getGeneAltTransEnds</code></li>
 <p>get alternative initiation/termination (AI/AT) events from transcripts</p>
@@ -193,7 +195,7 @@ All parameters are required and have to be set.</p>
   output: ($loc, $flag) 
   --location of $x in the list (NOTE: range is [0, size of list], 0-based, 
   i.e. there can be size of list + 1 possible locations for an element)
-  --match flag: 1 means match, 0 means no match</pre>
+  --unmatch flag: 1 means **unmatch**, 0 means **match**</pre>
 <li><a name='Other utility subs'></a>Other utility subs</li>
 <p>Kindly go to have a look at the source: <i><a href='../fileParser.pl' target='_blank'>../fileParser.pl</a></i>. There will be some comments around. Good luck!</p>
 </ul>
