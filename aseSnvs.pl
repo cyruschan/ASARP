@@ -94,12 +94,12 @@ aseSnvs.pl -- To get the ASE and Powerful SNVs from the input SNV file (in confi
 
   perl aseSnvs.pl output_file config_file [optional: parameter_file]
 
-The config_file (same for the ASARP pipeline) is used to obtain the input SNV file path. Other files/paths are read through and ignored.
-The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in the parameter_file (same for the ASARP pipelien). Other parameters are read through and ignored.
+The C<config_file> (same in the ASARP pipeline) is used to obtain the input SNV file path. Other files/paths are read through and ignored.
+The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in the C<parameter_file> (same in the ASARP pipelien). Other parameters are read through and ignored.
 
 =head2 INPUTS
 
-The application counts the powerful SNVs and ASE SNVs. It accepts the same configuration and parameter file formats as the full ASARP pipeline. See L<asarp> for more details.
+The application counts the powerful SNVs and ASE SNVs. It accepts the same configuration and parameter file formats as the full ASARP pipeline. See below and L<asarp> for more details.
 
 C<config_file> is the input configuration file which contains all the input file keys and their paths. The format is <key>tab<path>. Line starting with # are comments. Example: F<../default.config>
 
