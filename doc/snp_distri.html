@@ -20,8 +20,8 @@ snp_distri
 </div>
 <div class='pod'>
 <a name='NAME'></a><h1>NAME</h1>
-<p>snp_distri.pl -- A simple introductory application script to get familiar with the ASARP pipeline (<i><a href='asarp.html'>asarp</a></i>)</p>
-<p>The application calculates the SNV (position) distribution in exons, introns, etc. according to annotations. A SNV is disarded (not contributing to the total SNV number) if it is covered by &lt; 2 RNA-Seq reads.</p>
+<p>snp_distri.pl -- To calculate the SNV (position) distribution in exons, UTRs, introns, etc., according to transcript annotations. A SNV is disarded (not contributing to the total SNV number) if it is covered by &lt; 2 RNA-Seq reads.</p>
+<p>It also serves as an introductory application script to get familiar with the ASARP pipeline (<i><a href='asarp.html'>asarp</a></i>)</p>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
 <pre>  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff]</pre>
 <p><code>snv_file</code>: a SNV list, see the format description in <i><a href='snpParser.html'>snpParser</a></i></p>
@@ -41,8 +41,8 @@ gene, and Vegagene.</li>
 <p>The application is SNV position (ref genome location) oriented. In other words, if (rarely, and not seen in our data) one position contains multiple SNVs, it will be still considered as one SNV (position). A SNV may overalp multiple transcripts of multiple genes. The rule to determine the categories of a SNV is as follows:</p>
 <p>If the SNV overlaps certain transcript exon blocks, it is considered as in (coding) exons, regardless the times it overlaps.</p>
 <p>If the SNV overlaps certain 5'/3' UTRs, it is considered as in 5'/3' UTRs (non-coding), regardless the times it overlaps.</p>
-<p>Only when a SNV never overlaps any exons nor 5'/3' UTRs, and its genome location is within certain transcript span, it is considered as in introns, regardless of the times it overlaps. As a result, intron SNVs are exclusive to exons, 5'/3' UTRs.</p>
-<p>A SNV can be categorized into multiple categories, denoted as complex. Therefore, complex is the union of SNVs with any combinations of Exon and 5'/3' UTR types. In-gene SNVs are the union of all these categories. Therefore, the sum of exon and 5'+3' UTR SNV counts will be larger than the total in-gene SNV count if complex SNVs exist. In-gene and Intergenic SNVs are exclusive to each other.</p>
+<p>Only when a SNV never overlaps any exons nor 5'/3' UTRs, and its genome location is within certain transcript span, it is considered as in introns, regardless of the times it overlaps. As a result, intron SNVs are exclusive to exons and 5'/3' UTRs.</p>
+<p>A SNV can be categorized into multiple categories, denoted as complex. Therefore, complex is the union of SNVs with any combinations of Exon and 5'/3' UTR types. In-gene SNVs are the union of all the categories: exon, 5' UTR, 3' UTR, intron. Therefore, the sum of intron, exon, 5' and 3' UTR SNV counts will be larger than the total in-gene SNV count if complex SNVs exist. In-gene and Intergenic SNVs are exclusive to each other.</p>
 <p>For any of the above cases, a SNV is considered in-gene. If a SNV is not in-gene, it is considered in the intergenic regions.</p>
 <p>The application also outputs percentage (over the total SNV positions) sumamries for powerful, non-powerful and overall SNV distributions. Sample output:</p>
 <pre>	Calculating powerful SNV distribution...

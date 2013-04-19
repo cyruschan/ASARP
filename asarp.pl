@@ -139,6 +139,14 @@ For preparation of the input files used in C<config_file>, see the pre-processin
 
 C<parameter_file> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is <parameter>tab<value>. Lines starting with # are comments. It is optional and the default is: F<../default.param>
 
+=head2 -I USAGE
+
+Because asarp.pl requires other perl files in the same folder to run, C<-I path> can be used if one would like to run ASARP in C<path>. 
+
+ perl -I path path/asarp.pl output_file config_file parameter_file
+
+Note that in such a case, one should be careful of the locations of the config and parameter files. Abosulute paths are suggested for the files in C<config_file>.
+
 See below for the terminology and the overview.
 
 =head1 DESCRIPTION

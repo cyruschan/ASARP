@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<title>
+aseSnvs
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<ul>
+<li><a href='#INPUTS'>INPUTS</a></li>
+<li><a href='#OUTPUTS'>OUTPUTS</a></li>
+</ul>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>aseSnvs.pl -- To get the ASE and Powerful SNVs from the input SNV file (in config_file) along with their Chi-Squared Goodness of Fit Test p-values. It is an introductory application script to get familiar with the ASARP pipeline (<i><a href='asarp.html'>asarp</a></i>).</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<pre>  perl aseSnvs.pl output_file config_file [optional: parameter_file]</pre>
+<p>The <code>config_file</code> (same in the ASARP pipeline) is used to obtain the input SNV file path. Other files/paths are read through and ignored.
+The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in the <code>parameter_file</code> (same in the ASARP pipelien). Other parameters are read through and ignored.</p>
+<a name='INPUTS'></a><h2>INPUTS</h2>
+<p>The application counts the powerful SNVs and ASE SNVs. It accepts the same configuration and parameter file formats as the full ASARP pipeline. See below and <i><a href='asarp.html'>asarp</a></i> for more details.</p>
+<p><code>config_file</code> is the input configuration file which contains all the input file keys and their paths. The format is &lt;key&gt;tab&lt;path&gt;. Line starting with # are comments. Example: <i><a href='../default.config' target='_blank'>../default.config</a></i></p>
+<p><code>parameter_file</code> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is &lt;parameter&gt;tab&lt;value&gt;. Lines starting with # are comments. It is optional and the default is: <i><a href='../default.param' target='_blank'>../default.param</a></i></p>
+<p>See the format descriptions in <i><a href='snpParser.html'>snpParser</a></i> for more details about the input SNV list content.</p>
+<a name='OUTPUTS'></a><h2>OUTPUTS</h2>
+<p>There will be two result files:
+&quot;output_file.ase&quot; with the ASE SNVs (a subset of the powerful SNVs), and
+&quot;output_file.pwr&quot; with the powerful SNVs</p>
+<p>Format (space dilimited): chromosome position ref&gt;alt dbSNP_ID allelic_ratio ref#:alt#:0 p-value
+ref indicates the reference allele, and alt the alternative allele. ref# and alt# are their respective counts (wrong nucleotides are not used so 0 is output in ref#:alt#:0). allelic_ratio = ref#/(ref#+alt#). p-value is the Chi-Squared Test p-value. Examples:</p>
+<pre> chr1 68591173 A&gt;G rs1046835 0.651898734177215 103:55:0 0.0001341704
+ chr5 96111371 G&gt;A rs13160562 0.640350877192982 73:41:0 0.00272584
+ chr5 96215303 C&gt;T na 0.96969696969697 96:3:0 9.029544e-21</pre>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='asarp.html'>asarp</a></i>, <i><a href='snp_distri.html'>snp_distri</a></i>, <i><a href='fileParser.html'>fileParser</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

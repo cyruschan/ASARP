@@ -16,7 +16,7 @@ for(@pres){
 }
 
 # all application scripts
-my @apps = qw( snp_distri asarp );
+my @apps = qw( aseSnvs snp_distri asarp );
 for(@apps){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
