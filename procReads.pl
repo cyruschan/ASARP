@@ -11,7 +11,7 @@ $| = 1;
 
 if(@ARGV < 5){
   print <<EOT;
-USAGE: perl $0 input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]
+USAGE: perl $0 input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp discarded_read_pos]
 
 NOTE: 	the read processing script is for Dr. Jae-Hyung Lee's
 	20-attribute SAM file output format, used in RNA-editing
@@ -25,6 +25,8 @@ output_bedgraph		output bedgraph file, see below for the details:
 is_paired_end		0: single-end; 1: paired-end
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.
+
+OPTIONAL [strongly recommended to be input]:
 is_strand_sp		0: non-strand specific; 1: strand-specific
 			The strand-specific option is used for strand-specific RNA-Seq data.
 			When set, specialized bedgraph files will be output (output_bedgraph)
@@ -32,7 +34,7 @@ is_strand_sp		0: non-strand specific; 1: strand-specific
 			besides the standard ones: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
 			One can use grep and cut to get +/- strand only bedgraphs.
 
-OPTIONAL:
+OPTIONAL [if input, must follow is_strand_sp]:
 discarded_read_pos	masked-out (low-quality) read positions in calculating 
 			the max read quality scores, 
 			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
@@ -619,6 +621,8 @@ __END__
 
 procReads.pl -- Processing a duplicate-removed SAM file (L<rmDup>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.
 
+The new procReads.pl supports strand-specific RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.
+
 =head1 SYNOPSIS
 
 This is part of the full pre-processing:
@@ -654,7 +658,17 @@ ARGUMENTS:
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.
 
-OPTIONAL:
+
+OPTIONAL [strongly recommended to be input]:
+
+ is_strand_sp		0: non-strand specific; 1: strand-specific
+			The strand-specific option is used for strand-specific RNA-Seq data.
+			When set, specialized bedgraph files will be output (output_bedgraph)
+			where there is a 5th extra attribute specifying the strand: + or -
+			besides the standard ones: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
+			One can use grep and cut to get +/- strand only bedgraphs.
+
+OPTIONAL [if input, must follow is_strand_sp]:
 
  discarded_read_pos	masked-out (low-quality) read positions in calculating 
 			the max read quality scores, 
@@ -663,6 +677,8 @@ OPTIONAL:
 			NOTE: the remaining reads will still contain the positions.
 
 =head1 DESCRIPTION
+
+=head2 INPUT
 
 C<input_sam_file> should contain only 1 chromosome, and it should be in Dr. Jae-Hyung Lee's SAM format (check out http://www.ncbi.nlm.nih.gov/pubmed/21960545 for more details)
 
@@ -685,6 +701,64 @@ Only the first 4 fields will be parsed so
 C<read_counts> are not needed and ignored which are from DNA genomic sequencing.
 
 To avoid unnecessary computational time to read SNVs of other chrosomes than the one in C<inptu_sam_file>, it is suggested to keep SNVs of the same chromosome in one seperate file.
+
+=head2 OUTPUT
+
+By default, the strand specific flag C<is_strand_sp> is unset, and the C<inptu_sam_file> strand information is considered unreliable and not used. The output files are standard bedgraph files http://genome.ucsc.edu/goldenPath/help/bedgraph.html with space as the dilimiter, and SNV files with the following format:
+
+Each line is space separated, with
+
+ chromosome
+ location 
+ ref_allele>alt_allele 
+ dbSnp_id 
+ read_counts ref:alt:wrnt
+
+Note that C<read_counts> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. C<ref> indicates the read count of the reference allele, C<alt> the alternative allele, C<wrnt> (wrong nt) indicates other alleles neither ref nor alt. It is required that C<alt> > C<wrnt>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples would look like:
+
+ chr10 1046712 G>A rs2306409 50:39:0
+ chr10 1054444 A>G rs11253567 2:0:0
+ chr10 1055866 A>T rs4880751 1:2:1
+ chr10 1055949 G>A rs12355506 7:2:0
+ chr10 1055968 G>A rs72478237 6:5:0
+ chr10 1060218 G>A rs3207775 42:37:0
+
+When C<is_strand_sp> is set, the program outputs bedgraph and SNV files with the extra last strand attributes. Output SNV examples would look like:
+
+ chr10 1046712 G>A rs2306409 30:23:0 +
+ chr10 1055866 A>T rs4880751 1:2:0 +
+ chr10 1055949 G>A rs12355506 2:0:0 +
+ chr10 1055968 G>A rs72478237 2:2:0 +
+ chr10 1060218 G>A rs3207775 27:22:0 +
+ ...
+ chr10 1046712 G>A rs2306409 20:16:0 -
+ chr10 1054444 A>G rs11253567 2:0:0 -
+ chr10 1055949 G>A rs12355506 5:2:0 -
+ chr10 1055968 G>A rs72478237 4:3:0 -
+ chr10 1060218 G>A rs3207775 15:15:0 -
+
+As a result, one SNV may appear twice if it has valid ref:alt:wrnt read counts on both + and - strands. In the example above, one can have more accurate information for the RNA read counts, especially when there are genes on the opposite strands.
+
+The output bedgraph lines would look like:
+
+ chr10 181481 181482 7 +
+ chr10 181482 181483 9 +
+ chr10 181483 181499 10 +
+ ...
+ chr10 181479 181482 5 -
+ chr10 181482 181483 8 -
+ chr10 181483 181499 9 -
+ ...
+
+Note that all + lines are output before any - lines output. The 5th strand attribute is not specified in the bedgraph standard. One can use the following Unix commands to get the + and - only bedgraph files respectively (suppose the SNV file is C<test.chr10.bed>):
+
+ cat test.chr10.bed | grep "track type=" >chr10.plus.bed
+ cat test.chr10.bed | grep '+$' | cut -d ' ' -f 1,2,3,4 >>chr10.plus.bed
+
+ cat test.chr10.bed | grep "track type=" >chr10.minus.bed
+ cat test.chr10.bed | grep '\-$' | cut -d ' ' -f 1,2,3,4 >>chr10.minus.bed
+
+The first greps with track get the track lines. The second greps get + or - lines and keep the 4 standard attributes, leaving the last one.
 
 =head1 SEE ALSO
 
