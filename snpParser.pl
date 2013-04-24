@@ -10,6 +10,10 @@ use MyConstants qw( $CHRNUM $supportedList $supportedTags );
 # input
 #	$snpFile	the snp file name (path)
 #	$powCount	the threshold for powerful (frequent) snps
+# optional input
+#	$strandType	'+' or '-' if strand-specific flag is set
+#			when input, only SNVs ending with the 
+#			specified $strandType are handled.
 # output
 #	\%snpList	the hash reference containing both
 #			powerful and non-powerful snps as well as
@@ -26,7 +30,7 @@ sub initSnp{
   }
   
   
-  my ($snpFile, $powCount) = @_;
+  my ($snpFile, $powCount, $strandType) = @_;
   open(my $fh, "<", $snpFile) or die "Cannot open snp file: $snpFile for reading.\n";
   print "Reading from $snpFile\n";
 
@@ -40,7 +44,21 @@ sub initSnp{
       #print $count." ";
     }
     chomp;
-    my ($chrRaw, $pos, $alleles, $snpName, $reads)=split(/ /, $_);
+    my ($chrRaw, $pos, $alleles, $snpName, $reads, $strandInLine)=split(/ /, $_);
+    #strand-specific handling
+    if(defined($strandType)){
+      if(!defined($strandInLine)){
+        die "ERROR: SNV data must contain strand (+/-) at the end when strand-specific flag is set\n";
+      }else{
+        if($strandType ne $strandInLine){ #handle only SNVs with the specified $strandType
+	  next;
+	}
+      }
+    }else{ #setting is non-strand specific
+      if(defined($strandInline)){ # there will be errors if strand specific data are handled in a non-strand specific way
+        die "ERROR: strand-specific SNV data are not handled when strand=specific flag is unset\n";
+      }
+    }
     my ($refAl, $altAl, $wrngAl) = split(/:/, $reads);
 
     my $chrID = getChrID($chrRaw); #auxiliary from fileparser.pl

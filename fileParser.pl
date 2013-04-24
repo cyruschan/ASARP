@@ -120,11 +120,11 @@ sub getRefFileConfig
   close($fh);
 
   #get all file names, F means file name/path
-  my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = ('', '', '', '', '', ''); #$genomeF
+  my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = ('', '', '', '', '', '', undef); #$genomeF
   my $bedExt = ''; # optional bedgraph file extension, e.g. chr10.sam.bedgraph has extension "sam.bedgraph" (no leading dot)
   # match and output all files
   for(keys %filemap){
-    my $k = $_;
+    my $k = lc $_; #all lowercase
     #print $k."\n";
     my $curFile = $filemap{$k};
     if($k eq 'snpfile'){
@@ -144,6 +144,9 @@ sub getRefFileConfig
     }
     elsif($k eq 'estfile'){
       $estF=$curFile;
+    }
+    elsif($k eq 'strandflag'){
+      $STRANDFLAG=$curFile;
     }
     elsif($k eq 'bedext'){ #optional: bed folder extension
       $bedExt=$curFile;
@@ -173,9 +176,17 @@ sub getRefFileConfig
   #for(keys %filemap){
   #  print $_, " = \t\t", $filemap{$_}, "\n";
   #}
+  if(!defined($STRANDFLAG)){
+    $STRANDFLAG = 0;
+  }
+  if($STRANDFLAG){
+    print "NOTE: strand-specific: *SET*\n";
+  }else{
+    print "NOTE: strand-specific: NOT SET\n";
+  }
 
   #return
-  return ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF);
+  return ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG);
 
 }
 

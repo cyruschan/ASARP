@@ -18,13 +18,30 @@ if(@ARGV < 2){
 
 # input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
 my ($outputFile, $configs, $params) = getArgs(@ARGV); 
-my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); # input annotation/event files
+#strand-specific setting is more related to file configs (data dependent)
+my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
 my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
 
-my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
-#print "SNV List:\n";
-#printListByKey($snpRef, 'powSnps');
-#printListByKey($snpRef, 'snps');
+
+# if strand-specific flag is set, need to get two separate SNV lists (+ and - respectively)
+# the extra Rc (reference complement) references are for - strand if $STRANDFLAG is set
+my ($snpRef, $snpRcRef, $pRef, $pRcRef) = (undef, undef, undef, undef);
+
+if($STRANDFLAG){
+  ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF, '+');
+  ($snpRcRef, $pRcRef) = initSnp($snpF, $POWCUTOFF, '-');
+
+  my @pList = @$pRef;
+  my @pRcList = @$pRcRef;
+  #merge two lists
+  my @joinList = (@pList, @pRcList);
+  $pRef = \@joinList; # renew the reference to be the full list
+}else{
+  ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
+  #print "SNV List:\n";
+  #printListByKey($snpRef, 'powSnps');
+  #printListByKey($snpRef, 'snps');
+}
 
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
 if(defined($FDRCUTOFF)){
@@ -47,12 +64,13 @@ my $altRef = getGeneAltTransEnds($transRef); #get alternative initiation/termina
 my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef); #compile events from different sources
 
+# the following are involved in strand-specific handling if flag is set
+
 my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 #print "Significant Snvs: \n";
 #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
 #print "Ordinary Snvs: \n";
 #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
-
 
 my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
 #print "Pow Alt Init/Term: \n";
@@ -64,7 +82,6 @@ my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match sn
 #printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
 #print "Ord Splicing: \n";
 #printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
-
 
 print "\n\nCalculating NEV\n";
 my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
@@ -80,6 +97,19 @@ my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $
 
 print "processing ASE's\n";
 my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+
+
+# the following requires strand-specific handling if flag is set
+if($STRANDFLAG){
+  print "\nAdditional handling for the - SNVs as strand-specific flag is set\n";
+  my $geneSnpRcRef = setGeneSnps($snpRcRef, $transRef);
+  my ($snpEventsRcRef) = setSnpEvents($geneSnpRcRef, $altRef, $splicingRef); #match snps with events
+  print "\n\nCalculating NEV\n";
+  my ($snpsNevRcRef) = filterSnpEventsWithNev($snpRcRef, $geneSnpRcRef, $snpEventsRcRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
+  print "processing ASE's\n";
+  my ($allAsarpsRcRef) = processASEWithNev($snpRcRef, $geneSnpRcRef, $snpsNevRcRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+}
+
 
 #print "\n";
 my $outputASE = $outputFile.'.ase.prediction';
