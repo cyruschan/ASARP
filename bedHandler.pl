@@ -61,8 +61,8 @@ sub readBedByChr
     # http://genome.ucsc.edu/goldenPath/help/bedgraph.html 
 
     #debug modification, to reproduce Gang's results
-    $start -= 1; # falsely assume it's one-based
-    $end -= 1; #one-based and shifted one position to mimic overwriting..
+    #$start -= 1; # falsely assume it's one-based
+    #$end -= 1; #one-based and shifted one position to mimic overwriting..
     #need to comment out after the debug to reproduce Gang's results
 
     #all converted to 1-based
