@@ -55,7 +55,7 @@ sub initSnp{
 	}
       }
     }else{ #setting is non-strand specific
-      if(defined($strandInline)){ # there will be errors if strand specific data are handled in a non-strand specific way
+      if(defined($strandInLine)){ # there will be errors if strand specific data are handled in a non-strand specific way
         die "ERROR: strand-specific SNV data are not handled when strand=specific flag is unset\n";
       }
     }
