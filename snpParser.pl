@@ -130,14 +130,20 @@ sub initSnp{
 # input
 #	$snpRef		reference to the SNP list
 #	$transRef	reference to the trasncript list
+# optional:
+#	$STRAND		the strand information: +/- or undef
 # output
 #	reference to the integrated gene snp list with snp info and gene locations
 sub setGeneSnps{
-  my ($snpRef, $transRef) = @_;
-
-  my ($powSnps, $powSnps_idx) = snpVsTrans($snpRef, $transRef, 'powSnps'); #powerful snps
-  my ($ordSnps, $ordSnps_idx) = snpVsTrans($snpRef, $transRef, 'snps'); #non-trivial snps
-
+  my ($snpRef, $transRef, $STRAND) = @_;
+  my ($powSnps, $powSnps_idx, $ordSnps, $ordSnps_idx) = (undef, undef, undef, undef);
+  if(!defined($STRAND)){ #non-strand specific, as usual
+    ($powSnps, $powSnps_idx) = snpVsTrans($snpRef, $transRef, 'powSnps'); #powerful snps
+    ($ordSnps, $ordSnps_idx) = snpVsTrans($snpRef, $transRef, 'snps'); #non-trivial snps
+  }else{
+    ($powSnps, $powSnps_idx) = snpVsTrans($snpRef, $transRef, 'powSnps', $STRAND); #powerful snps
+    ($ordSnps, $ordSnps_idx) = snpVsTrans($snpRef, $transRef, 'snps', $STRAND); #non-trivial snps
+  }
   my %geneSnps = (
    'gSnps' => $ordSnps,
    'gSnps_idx' => $ordSnps_idx,
@@ -157,11 +163,13 @@ sub setGeneSnps{
 #	$snpRef		reference to the SNP list
 #	$transRef	reference to the trasncript list
 #	$snpTypeKey	SNP type to be tested from the SNP list ('snps' or 'powSnps')
+# optional
+#	$setStrand	the strand specified for the SNV input
 # output
 #	references to the gene snp info and gene locations
 
 sub snpVsTrans{
-  my ($snpRef, $transRef, $snpTypeKey) = @_;
+  my ($snpRef, $transRef, $snpTypeKey, $setStrand) = @_;
 
   my @geneSnps = ();
   my @geneLocations = ();
@@ -204,6 +212,13 @@ sub snpVsTrans{
 	  my $maxTxEnd = -1; #to store the largest transcript end of @tSet
 	  foreach(@tSet){
 	    my ($txEnd, $cdsStart, $cdsEnd, $exonStarts, $exonEnds, $id, $gene, $isCoding, $txStrand) = split(';', $_);
+	    #strand-specific handling
+	    if(defined($setStrand) && $setStrand ne $txStrand){
+	      print "snv: $setStrand ne trx: $txStrand\n";
+	      exit; #debug exit
+	      next;
+	    
+	    }
 	    if($txEnd > $maxTxEnd){	$maxTxEnd = $txEnd;	}#always store the max transcript end
 	    if($sPos<=$txEnd){ # there is a hit
 	       #$sPos<= $txEnd means the next $sPos may still match txEnd in @tSet, can't increase $ti.
