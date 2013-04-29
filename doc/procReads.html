@@ -13,6 +13,10 @@ procReads
 <li><a href='#NAME'>NAME</a></li>
 <li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
 <li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
+<ul>
+<li><a href='#INPUT'>INPUT</a></li>
+<li><a href='#OUTPUT'>OUTPUT</a></li>
+</ul>
 <li><a href='#SEE ALSO'>SEE ALSO</a></li>
 <li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
 <li><a href='#AUTHOR'>AUTHOR</a></li>
@@ -21,6 +25,7 @@ procReads
 <div class='pod'>
 <a name='NAME'></a><h1>NAME</h1>
 <p>procReads.pl -- Processing a duplicate-removed SAM file (<i><a href='rmDup.html'>rmDup</a></i>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.</p>
+<p>The new procReads.pl supports strand-specific RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.</p>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
 <p>This is part of the full pre-processing:</p>
 <ul>
@@ -43,13 +48,21 @@ or allele specific expression (ASE) studies</p>
  is_paired_end		0: single-end; 1: paired-end
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.</pre>
-<p>OPTIONAL:</p>
+<p>OPTIONAL [strongly recommended to be input]:</p>
+<pre> is_strand_sp		0: non-strand specific; 1: strand-specific
+			The strand-specific option is used for strand-specific RNA-Seq data.
+			When set, specialized bedgraph files will be output (output_bedgraph)
+			where there is a 5th extra attribute specifying the strand: + or -
+			besides the standard ones: <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a>
+			One can use grep and cut to get +/- strand only bedgraphs.</pre>
+<p>OPTIONAL [if input, must follow is_strand_sp]:</p>
 <pre> discarded_read_pos	masked-out (low-quality) read positions in calculating 
 			the max read quality scores, 
 			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
 			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
 			NOTE: the remaining reads will still contain the positions.</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
+<a name='INPUT'></a><h2>INPUT</h2>
 <p><code>input_sam_file</code> should contain only 1 chromosome, and it should be in Dr. Jae-Hyung Lee's SAM format (check out <a href='http://www.ncbi.nlm.nih.gov/pubmed/21960545' target='_blank'>www.ncbi.nlm.nih.gov</a> for more details)</p>
 <p>The SNP list should be in a format like this:</p>
 <pre> chr1 20129 C&gt;T rs12354148 2:0:0
@@ -65,6 +78,50 @@ or allele specific expression (ASE) studies</p>
 <p>Only the first 4 fields will be parsed so
 <code>read_counts</code> are not needed and ignored which are from DNA genomic sequencing.</p>
 <p>To avoid unnecessary computational time to read SNVs of other chrosomes than the one in <code>inptu_sam_file</code>, it is suggested to keep SNVs of the same chromosome in one seperate file.</p>
+<a name='OUTPUT'></a><h2>OUTPUT</h2>
+<p>By default, the strand specific flag <code>is_strand_sp</code> is unset, and the <code>inptu_sam_file</code> strand information is considered unreliable and not used. The output files are standard bedgraph files <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a> with space as the dilimiter, and SNV files with the following format:</p>
+<p>Each line is space separated, with</p>
+<pre> chromosome
+ location 
+ ref_allele&gt;alt_allele 
+ dbSnp_id 
+ read_counts ref:alt:wrnt</pre>
+<p>Note that <code>read_counts</code> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. <code>ref</code> indicates the read count of the reference allele, <code>alt</code> the alternative allele, <code>wrnt</code> (wrong nt) indicates other alleles neither ref nor alt. It is required that <code>alt</code> &gt; <code>wrnt</code>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples would look like:</p>
+<pre> chr10 1046712 G&gt;A rs2306409 50:39:0
+ chr10 1054444 A&gt;G rs11253567 2:0:0
+ chr10 1055866 A&gt;T rs4880751 1:2:1
+ chr10 1055949 G&gt;A rs12355506 7:2:0
+ chr10 1055968 G&gt;A rs72478237 6:5:0
+ chr10 1060218 G&gt;A rs3207775 42:37:0</pre>
+<p>When <code>is_strand_sp</code> is set, the program outputs bedgraph and SNV files with the extra last strand attributes. Output SNV examples would look like:</p>
+<pre> chr10 1046712 G&gt;A rs2306409 30:23:0 +
+ chr10 1055866 A&gt;T rs4880751 1:2:0 +
+ chr10 1055949 G&gt;A rs12355506 2:0:0 +
+ chr10 1055968 G&gt;A rs72478237 2:2:0 +
+ chr10 1060218 G&gt;A rs3207775 27:22:0 +
+ ...
+ chr10 1046712 G&gt;A rs2306409 20:16:0 -
+ chr10 1054444 A&gt;G rs11253567 2:0:0 -
+ chr10 1055949 G&gt;A rs12355506 5:2:0 -
+ chr10 1055968 G&gt;A rs72478237 4:3:0 -
+ chr10 1060218 G&gt;A rs3207775 15:15:0 -</pre>
+<p>As a result, one SNV may appear twice if it has valid ref:alt:wrnt read counts on both + and - strands. In the example above, one can have more accurate information for the RNA read counts, especially when there are genes on the opposite strands.</p>
+<p>The output bedgraph lines would look like:</p>
+<pre> chr10 181481 181482 7 +
+ chr10 181482 181483 9 +
+ chr10 181483 181499 10 +
+ ...
+ chr10 181479 181482 5 -
+ chr10 181482 181483 8 -
+ chr10 181483 181499 9 -
+ ...</pre>
+<p>Note that all + lines are output before any - lines output. The 5th strand attribute is not specified in the bedgraph standard. One can use the following Unix commands to get the + and - only bedgraph files respectively (suppose the SNV file is <code>test.chr10.bed</code>):</p>
+<pre> cat test.chr10.bed | grep &quot;track type=&quot; &gt;chr10.plus.bed
+ cat test.chr10.bed | grep '+$' | cut -d ' ' -f 1,2,3,4 &gt;&gt;chr10.plus.bed
+
+ cat test.chr10.bed | grep &quot;track type=&quot; &gt;chr10.minus.bed
+ cat test.chr10.bed | grep '\-$' | cut -d ' ' -f 1,2,3,4 &gt;&gt;chr10.minus.bed</pre>
+<p>The first greps with track get the track lines. The second greps get + or - lines and keep the 4 standard attributes, leaving the last one.</p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>

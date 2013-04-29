@@ -10,6 +10,10 @@ use MyConstants qw( $CHRNUM $supportedList $supportedTags );
 # input
 #	$snpFile	the snp file name (path)
 #	$powCount	the threshold for powerful (frequent) snps
+# optional input
+#	$strandType	'+' or '-' if strand-specific flag is set
+#			when input, only SNVs ending with the 
+#			specified $strandType are handled.
 # output
 #	\%snpList	the hash reference containing both
 #			powerful and non-powerful snps as well as
@@ -26,7 +30,7 @@ sub initSnp{
   }
   
   
-  my ($snpFile, $powCount) = @_;
+  my ($snpFile, $powCount, $strandType) = @_;
   open(my $fh, "<", $snpFile) or die "Cannot open snp file: $snpFile for reading.\n";
   print "Reading from $snpFile\n";
 
@@ -40,7 +44,21 @@ sub initSnp{
       #print $count." ";
     }
     chomp;
-    my ($chrRaw, $pos, $alleles, $snpName, $reads)=split(/ /, $_);
+    my ($chrRaw, $pos, $alleles, $snpName, $reads, $strandInLine)=split(/ /, $_);
+    #strand-specific handling
+    if(defined($strandType)){
+      if(!defined($strandInLine)){
+        die "ERROR: SNV data must contain strand (+/-) at the end when strand-specific flag is set\n";
+      }else{
+        if($strandType ne $strandInLine){ #handle only SNVs with the specified $strandType
+	  next;
+	}
+      }
+    }else{ #setting is non-strand specific
+      if(defined($strandInLine)){ # there will be errors if strand specific data are handled in a non-strand specific way
+        die "ERROR: strand-specific SNV data are not handled when strand=specific flag is unset\n";
+      }
+    }
     my ($refAl, $altAl, $wrngAl) = split(/:/, $reads);
 
     my $chrID = getChrID($chrRaw); #auxiliary from fileparser.pl
@@ -112,14 +130,20 @@ sub initSnp{
 # input
 #	$snpRef		reference to the SNP list
 #	$transRef	reference to the trasncript list
+# optional:
+#	$STRAND		the strand information: +/- or undef
 # output
 #	reference to the integrated gene snp list with snp info and gene locations
 sub setGeneSnps{
-  my ($snpRef, $transRef) = @_;
-
-  my ($powSnps, $powSnps_idx) = snpVsTrans($snpRef, $transRef, 'powSnps'); #powerful snps
-  my ($ordSnps, $ordSnps_idx) = snpVsTrans($snpRef, $transRef, 'snps'); #non-trivial snps
-
+  my ($snpRef, $transRef, $STRAND) = @_;
+  my ($powSnps, $powSnps_idx, $ordSnps, $ordSnps_idx) = (undef, undef, undef, undef);
+  if(!defined($STRAND)){ #non-strand specific, as usual
+    ($powSnps, $powSnps_idx) = snpVsTrans($snpRef, $transRef, 'powSnps'); #powerful snps
+    ($ordSnps, $ordSnps_idx) = snpVsTrans($snpRef, $transRef, 'snps'); #non-trivial snps
+  }else{
+    ($powSnps, $powSnps_idx) = snpVsTrans($snpRef, $transRef, 'powSnps', $STRAND); #powerful snps
+    ($ordSnps, $ordSnps_idx) = snpVsTrans($snpRef, $transRef, 'snps', $STRAND); #non-trivial snps
+  }
   my %geneSnps = (
    'gSnps' => $ordSnps,
    'gSnps_idx' => $ordSnps_idx,
@@ -139,11 +163,13 @@ sub setGeneSnps{
 #	$snpRef		reference to the SNP list
 #	$transRef	reference to the trasncript list
 #	$snpTypeKey	SNP type to be tested from the SNP list ('snps' or 'powSnps')
+# optional
+#	$setStrand	the strand specified for the SNV input
 # output
 #	references to the gene snp info and gene locations
 
 sub snpVsTrans{
-  my ($snpRef, $transRef, $snpTypeKey) = @_;
+  my ($snpRef, $transRef, $snpTypeKey, $setStrand) = @_;
 
   my @geneSnps = ();
   my @geneLocations = ();
@@ -186,6 +212,13 @@ sub snpVsTrans{
 	  my $maxTxEnd = -1; #to store the largest transcript end of @tSet
 	  foreach(@tSet){
 	    my ($txEnd, $cdsStart, $cdsEnd, $exonStarts, $exonEnds, $id, $gene, $isCoding, $txStrand) = split(';', $_);
+	    #strand-specific handling
+	    if(defined($setStrand) && $setStrand ne $txStrand){
+	      print "snv: $setStrand ne trx: $txStrand\n";
+	      exit; #debug exit
+	      next;
+	    
+	    }
 	    if($txEnd > $maxTxEnd){	$maxTxEnd = $txEnd;	}#always store the max transcript end
 	    if($sPos<=$txEnd){ # there is a hit
 	       #$sPos<= $txEnd means the next $sPos may still match txEnd in @tSet, can't increase $ti.

@@ -18,13 +18,30 @@ if(@ARGV < 2){
 
 # input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
 my ($outputFile, $configs, $params) = getArgs(@ARGV); 
-my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); # input annotation/event files
+#strand-specific setting is more related to file configs (data dependent)
+my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
 my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
 
-my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
-#print "SNV List:\n";
-#printListByKey($snpRef, 'powSnps');
-#printListByKey($snpRef, 'snps');
+
+# if strand-specific flag is set, need to get two separate SNV lists (+ and - respectively)
+# the extra Rc (reference complement) references are for - strand if $STRANDFLAG is set
+my ($snpRef, $snpRcRef, $pRef, $pRcRef) = (undef, undef, undef, undef);
+
+if($STRANDFLAG){
+  ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF, '+');
+  ($snpRcRef, $pRcRef) = initSnp($snpF, $POWCUTOFF, '-');
+
+  my @pList = @$pRef;
+  my @pRcList = @$pRcRef;
+  #merge two lists
+  my @joinList = (@pList, @pRcList);
+  $pRef = \@joinList; # renew the reference to be the full list
+}else{
+  ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
+  #print "SNV List:\n";
+  #printListByKey($snpRef, 'powSnps');
+  #printListByKey($snpRef, 'snps');
+}
 
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
 if(defined($FDRCUTOFF)){
@@ -47,39 +64,71 @@ my $altRef = getGeneAltTransEnds($transRef); #get alternative initiation/termina
 my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef); #compile events from different sources
 
-my $geneSnpRef = setGeneSnps($snpRef, $transRef);
-#print "Significant Snvs: \n";
-#printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
-#print "Ordinary Snvs: \n";
-#printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+################################# strand specific ############################################
+# uniform init vars: Rc version means the - strand
+my ($geneSnpRef, $geneSnpRcRef, $snpEventsRef, $snpEventsRcRef) = (undef, undef, undef, undef);
 
+my ($snpsNevRef, $snpsNevRcRef, $allAsarpsRef, $allAsarpsRcRef) = (undef, undef, undef, undef);
 
-my ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
-#print "Pow Alt Init/Term: \n";
-#printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
-#print "Snp Alt Init/Term: \n";
-#printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
+# the following are involved in strand-specific handling if flag is set
+if(!$STRANDFLAG){
+  ($geneSnpRef) = setGeneSnps($snpRef, $transRef);
+  #print "Significant Snvs: \n";
+  #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
+  #print "Ordinary Snvs: \n";
+  #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+  
+  ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
+  #print "Pow Alt Init/Term: \n";
+  #printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
+  #print "Snp Alt Init/Term: \n";
+  #printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
 
-#print "\nPow Splicing: \n";
-#printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
-#print "Ord Splicing: \n";
-#printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
+  #print "\nPow Splicing: \n";
+  #printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
+  #print "Ord Splicing: \n";
+  #printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
 
+  print "\n\nCalculating NEV\n";
+  ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
+  #print "Pow NEV Alt Init/Term: \n";
+  #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
+  #print "NEV Alt Init/Term: \n";
+  #printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
+  #print "\n\n";
+  #print "Pow NEV Splicing: \n";
+  #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
+  #print "NEV Splicing: \n";
+  #printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
 
-print "\n\nCalculating NEV\n";
-my ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
-#print "Pow NEV Alt Init/Term: \n";
-#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
-#print "NEV Alt Init/Term: \n";
-#printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
-#print "\n\n";
-#print "Pow NEV Splicing: \n";
-#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
-#print "NEV Splicing: \n";
-#printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
+  print "processing ASE's\n";
+  ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
 
-print "processing ASE's\n";
-my ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+}else{
+  # the following requires strand-specific handling if flag is set
+  print "\nAdditional handling for the - SNVs as strand-specific flag is set\n";
+  ($geneSnpRef) = setGeneSnps($snpRef, $transRef, '+');
+  ($geneSnpRcRef) = setGeneSnps($snpRcRef, $transRef, '-');
+  #print "Significant Snvs: \n";
+  #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
+  #print "Ordinary Snvs: \n";
+  #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+  
+  ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
+  ($snpEventsRcRef) = setSnpEvents($geneSnpRcRef, $altRef, $splicingRef); #match snps with events
+  #print "Pow Alt Init/Term: \n";
+  #printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
+  #print "Snp Alt Init/Term: \n";
+  #printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
+
+  print "\n\nCalculating NEV\n";
+  ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
+  ($snpsNevRcRef) = filterSnpEventsWithNev($snpRcRef, $geneSnpRcRef, $snpEventsRcRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
+  print "processing ASE's\n";
+  ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+  ($allAsarpsRcRef) = processASEWithNev($snpRcRef, $geneSnpRcRef, $snpsNevRcRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+}
+
 
 #print "\n";
 my $outputASE = $outputFile.'.ase.prediction';
