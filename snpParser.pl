@@ -1017,7 +1017,7 @@ sub areNotInSameExon
 #################################################
 sub filterSnpEventsWithNev
 {
-  my ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $spEventsListRef, $nevCutoffLower, $nevCutoffUpper) = @_;
+  my ($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $spEventsListRef, $nevCutoffLower, $nevCutoffUpper, $STRAND) = @_;
   
   # Preparation of all the splicing and 5'/3' alt init/term events from $snpEventsRef
   my %ss = %$snpEventsRef;
@@ -1057,12 +1057,12 @@ sub filterSnpEventsWithNev
 
      #print "# for 5'/3' alt init/term events\n";
      #update (shortlist) the alt events with NEV values calculated from bed information
-     if($powAltCnt  > 0){	$nevPowAlts[$i] = calAltEventNev(\%powAlts, $bedRef, $i, $nevCutoffLower, $nevCutoffUpper);	}
-     if($snpAltCnt  > 0){ 	$nevSnpAlts[$i] = calAltEventNev(\%snpAlts, $bedRef, $i, $nevCutoffLower, $nevCutoffUpper);	}
+     if($powAltCnt  > 0){	$nevPowAlts[$i] = calAltEventNev(\%powAlts, $bedRef, $i, $nevCutoffLower, $nevCutoffUpper, $STRAND);	}
+     if($snpAltCnt  > 0){ 	$nevSnpAlts[$i] = calAltEventNev(\%snpAlts, $bedRef, $i, $nevCutoffLower, $nevCutoffUpper, $STRAND);	}
 
      #print "#for splicing events NEV calculation\n";
-     if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoffLower, $nevCutoffUpper);	} 
-     if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps', $nevCutoffLower, $nevCutoffUpper); 	}
+     if($powSpCnt  > 0){       $nevPowSps[$i] = calSplicingEventNev(\%powSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gPowSnps', $nevCutoffLower, $nevCutoffUpper, $STRAND);	} 
+     if($snpSpCnt  > 0){       $nevSnpSps[$i] = calSplicingEventNev(\%snpSps, $bedRef, $i, $spEventsListRef, $geneSnpRef, 'gSnps', $nevCutoffLower, $nevCutoffUpper, $STRAND); 	}
   }
 
   my %snpEventsNev = (
@@ -1211,7 +1211,7 @@ sub getGroupedSnpInfoByType{
 sub calSplicingEventNev
 {
   #print "Splicing\n";
-  my ($spsRef, $bedRef, $chr, $spEventsListRef, $gSnpRef, $gSnpKey, $nevCutoffLower, $nevCutoffUpper) = @_;
+  my ($spsRef, $bedRef, $chr, $spEventsListRef, $gSnpRef, $gSnpKey, $nevCutoffLower, $nevCutoffUpper, $setStrand) = @_;
   
   # gene level Snps information for splicing NEV calculation 
   my ($geneSnpChrRef) = getListByKeyChr($gSnpRef, $gSnpKey, $chr);
@@ -1249,7 +1249,7 @@ sub calSplicingEventNev
         if(defined($chrCE{$gene})){
           my $constExonSet = $chrCE{$gene};   
           #print "$gene ";
-	  $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef);
+	  $geneConstRatio{$t} = calConstRatio($constExonSet, $bedRef, $setStrand);
 	  #print "$t: $gene const ratio: $geneConstRatio{$t}\n";
 
         } #get the constitutive ratio if there is event evidence for this gene
@@ -1281,7 +1281,7 @@ sub calSplicingEventNev
          #print "Warning: no const ratio for $tag for $gene\n $allGeneSpSnps{$gene}\n";
          last;
        }
-       my ($nev, $flankUsed) = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}); 
+       my ($nev, $flankUsed) = calSpNev($eStart, $eEnd, $lRegion, $rRegion, $bedRef, $geneConstRatio{$tag}, $setStrand); 
        $nev = sprintf("%.4f", $nev);
        if($nev > $nevCutoffLower && $nev < $nevCutoffUpper){
          #print "We want this NEV: $nev, $_\n";
@@ -1300,12 +1300,12 @@ sub calSplicingEventNev
 
 sub calConstRatio
 {
-  my ($constExonSet, $bedRef) = @_;
+  my ($constExonSet, $bedRef, $setStrand) = @_;
   my @allConstExons = split(';', $constExonSet);
   my ($readCount, $effLen) = (0, 0);
   foreach(@allConstExons){
     my ($s, $e) = split('-', $_);
-    my ($r, $l) = getEffReadSumLength($bedRef, $s, $e);
+    my ($r, $l) = getEffReadSumLength($bedRef, $s, $e, $setStrand);
     #print "$_: reads: $r, length: $l\n";
     $readCount += $r;
     $effLen += $l;
@@ -1322,13 +1322,13 @@ sub calConstRatio
 
 sub calSpNev
 {
-  my ($es, $ee, $lRegion, $rRegion, $bedRef, $constExonRatio) = @_;
+  my ($es, $ee, $lRegion, $rRegion, $bedRef, $constExonRatio, $setStrand) = @_;
   my ($ls, $le) = split(':', $lRegion);
   my ($rs, $re) = split(':', $rRegion);
   my ($nev, $nev2, $altReads, $altLen) = (-1, -1, 0, 0);
   my $isFlanking = 0; #check if flanking region is used  
   # possible alt regions
-  ($altReads, $altLen) = getEffReadSumLength($bedRef, $es, $ee);
+  ($altReads, $altLen) = getEffReadSumLength($bedRef, $es, $ee, $setStrand);
 
   #use the event only to calculate Nev
   #cal psi based on consituent exon  
@@ -1339,8 +1339,8 @@ sub calSpNev
   #calculate the ratio based on the flanking regions
   if($ls != -1 && $rs !=-1){
     # flanking regions
-    my ($c, $l) = getEffReadSumLength($bedRef, $ls, $le); 
-    my ($c2, $l2) = getEffReadSumLength($bedRef, $rs, $re); 
+    my ($c, $l) = getEffReadSumLength($bedRef, $ls, $le, $setStrand); 
+    my ($c2, $l2) = getEffReadSumLength($bedRef, $rs, $re, $setStrand); 
     $c += $c2; $l += $l2;
     if($l > 0 && $altLen >0){
       $nev2 = ($altReads/$altLen)/($c/$l);
@@ -1358,7 +1358,7 @@ sub calSpNev
 
 sub calAltEventNev
 {
-  my ($powAltsRef, $bedRef, $chr, $nevCutoffLower, $nevCutoffUpper) = @_;
+  my ($powAltsRef, $bedRef, $chr, $nevCutoffLower, $nevCutoffUpper, $setStrand) = @_;
   my %allGeneSnps = %$powAltsRef;
   for(keys %allGeneSnps){
      my $gene = $_;
@@ -1368,8 +1368,8 @@ sub calAltEventNev
        my ($type,$pos,$altRegion,$constRegion) = split(',', $_);
        my ($altL, $altR) = split('-', $altRegion);
        my ($constL, $constR) = split('-', $constRegion);
-       my ($altRead, $altLen) = getEffReadSumLength($bedRef, $altL, $altR);
-       my ($constRead, $constLen) = getEffReadSumLength($bedRef, $constL, $constR);
+       my ($altRead, $altLen) = getEffReadSumLength($bedRef, $altL, $altR, $setStrand);
+       my ($constRead, $constLen) = getEffReadSumLength($bedRef, $constL, $constR, $setStrand);
        my ($altRatio, $constRatio) = (0, 0);
        if($altLen >0){
          $altRatio = $altRead/$altLen;
