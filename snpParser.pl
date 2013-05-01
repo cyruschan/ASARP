@@ -356,6 +356,7 @@ sub processASEWithNev
 
   #basic statistics for powerful SNVs and genes
   my ($aseSnvCnt, $powSnvCnt, $non0AseGeneCnt, $powGeneCnt) = (0, 0, 0, 0);
+  my ($aseSnvStr, $powSnvStr) = ('', '');
 
   my ($powAltRef, $snpAltRef, $powSpRef, $snpSpRef) = ($ss{'nevPowSnpAlt'}, $ss{'nevSnpAlt'}, $ss{'nevPowSnpSp'}, $ss{'nevSnpSp'});
   
@@ -413,11 +414,13 @@ sub processASEWithNev
      $powGeneCnt += keys %powGenes;
      $powSnvCnt += keys %powSnps;
      for(keys %powSnps){
+       $powSnvStr .= "$i^$_\t"; #use the internal chr id to lable it to save space
        my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
        for(@allSnpInfo){
          my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
 	 if($p <= $snvPValueCutoff){
 	   $aseSnvCnt += 1; #each SNV **location** added once
+	   $aseSnvStr .="$i^$_\t";
 	   last;
 	 }
        }
@@ -581,7 +584,6 @@ sub processASEWithNev
 			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
 			   $asarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 			 }
-			 #last; #just need one control that's enough
 		       }
 		     }
 		   }
@@ -610,9 +612,158 @@ sub processASEWithNev
    'powSnvCnt' => $powSnvCnt,
    'non0AseGeneCnt' => $non0AseGeneCnt,
    'powGeneCnt' => $powGeneCnt,
+   'aseSnvStr' => $aseSnvStr,
+   'powSnvStr' => $powSnvStr,
   );
 
   return \%allAsarps;
+}
+
+# sub-routine to merge the +/- ase, asarp results for the strand-specific version
+
+sub mergeAsarpByKey{
+  my ($aRef, $aRcRef, $keyword) = @_;
+
+  my $resRef = $aRef->{$keyword};
+  my $resRcRef = $aRcRef->{$keyword};
+
+  #init the results
+  my @chrs = ();
+  for(my $i=0; $i<=$CHRNUM; $i++){
+    push @chrs, {};
+  }
+  my @resChrs = ();
+  my @resRcChrs = ();
+  if(defined($resRef)){
+    @resChrs = @$resRef; 
+  }
+  if(defined($resRcRef)){
+    @resRcChrs = @$resRcRef; 
+  }
+  for(my $i=1; $i<=$CHRNUM; $i++){
+     #init
+     my %asarp = ();
+     my %hs = ();
+     my %hsRc = ();
+     if(defined($resChrs[$i])){
+       %hs = %{$resChrs[$i]};
+     }
+     if(defined($resRcChrs[$i])){
+       %hsRc = %{$resRcChrs[$i]};
+     }
+     # first it's empty
+     for(keys %hs){
+       $asarp{$_} = $hs{$_};
+     }
+     # then it's cautious
+     for(keys %hsRc){
+       if($keyword ne 'ASARPsnp'){ #only this uses the SNV position as the key
+         if(!defined($asarp{$_})){
+           $asarp{$_} = $hsRc{$_}; 
+         }else{ # on gene level the result should be strand specific and therefore they shouldn't overlap
+	   die "ERROR: \n+: $asarp{$_} \nexisting when \n-: $hsRc{$_} \n is to be added\n";
+         }
+       }else{
+         # have to split them to add the strand information (which can in fact be determined by the gene)?
+	 my @snps = ();
+	 if(defined($asarp{$_})){
+	   @snps = split(/\t/, $asarp{$_});
+	   for(my $j = 0; $j < @snps; $j++){
+	     $snps[$j] .= ',+'; 
+	   }
+	 }
+	 my @snpsRc = split(/\t/, $hsRc{$_});
+	 for(my $j = 0; $j < @snpsRc; $j++){
+	   $snpsRc[$j] .= ',-'; 
+	 }
+         $asarp{$_} = join("\t", @snps, @snpsRc);
+       }
+     }
+
+     $chrs[$i] = \%asarp;
+  }
+  return \@chrs;
+}
+
+
+sub mergeASARP
+{
+  my ($aRef, $aRcRef) = @_;
+  my %as = %$aRef;
+  my %rc = %$aRcRef;
+
+  # to store merged results
+  my %merged = ();
+  # merge all the basic statistics (genes should be exclusive on the two strands)
+  my %stats = (
+   'aseSnvCnt' => 0,
+   'powSnvCnt' => 0,
+   'non0AseGeneCnt' => 0,
+   'powGeneCnt' => 0,
+  );
+#   'aseSnvStr' => $aseSnvStr,
+#   'powSnvStr' => $pwSnvStr,
+  for(keys %stats){
+    if(defined($as{$_})){
+      $stats{$_} += $as{$_};
+    }
+    if(defined($rc{$_})){
+      $stats{$_} += $rc{$_};
+    }
+  }
+
+  my %ase = (); #SNVs
+  my %pow = (); #SNVs
+  my @allAseSnvs = ();
+  if(defined($as{'aseSnvStr'})){
+    push @allAseSnvs, split(/\t/, $as{'aseSnvStr'}); #+
+  }
+  if(defined($rc{'aseSnvStr'})){
+    push @allAseSnvs, split(/\t/, $rc{'aseSnvStr'}); #-
+  }
+  my @allPowSnvs = ();
+  if(defined($as{'powSnvStr'})){
+    push @allPowSnvs, split(/\t/, $as{'powSnvStr'}); #+
+  }
+  if(defined($rc{'powSnvStr'})){
+    push @allPowSnvs, split(/\t/, $rc{'powSnvStr'}); #-
+  }
+  my $overlapAse = 0;
+  for(@allAseSnvs){
+    if(defined($ase{$_})){
+      $overlapAse += 1;
+    }
+    $ase{$_} = 1; 
+  }
+  my $overlapPow = 0;
+  for(@allPowSnvs){
+    if(defined($pow{$_})){
+      $overlapPow += 1;
+    }
+    $pow{$_} = 1; 
+  }
+
+  my $aseCnt = keys %ase;
+  my $powCnt = keys %pow;
+  if($stats{'aseSnvCnt'} - $overlapAse != $aseCnt || $stats{'powSnvCnt'}-$overlapPow != $powCnt){
+    die "ERROR: ".$stats{'aseSnvCnt'}." - $overlapAse != $aseCnt\n   Or: ".$stats{'powSnvCnt'}." - $overlapPow != $powCnt\n";
+  }
+  $stats{'aseSnvCnt'} = $aseCnt;
+  $stats{'powSnvCnt'} = $powCnt;
+  for(keys %stats){ #all basic stats have been merged now
+    $merged{$_} = $stats{$_};
+  }
+
+  # merge the ASE and ASARP results
+  for(qw (ASEgene ASARPgene ASARPsnp ASARPcontrol)){
+    my $asarpRef = $as{$_};
+    my $asarpRcRef = $rc{$_};
+    
+    $merged{$_} =  mergeAsarpByKey($asarpRef, $asarpRcRef);
+  
+  }
+
+  return \%merged;
 }
 
 

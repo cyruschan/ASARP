@@ -89,7 +89,7 @@ if(!$STRANDFLAG){
   #print "Pow NEV Splicing: \n";  #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
   #print "NEV Splicing: \n";  #printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
 
-  print "processing ASE's\n";
+  print "Processing ASE and ASARP SNVs\n";
   ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
 
 }else{
@@ -107,9 +107,13 @@ if(!$STRANDFLAG){
   print "\n\nCalculating NEV\n";
   ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, '+'); 
   ($snpsNevRcRef) = filterSnpEventsWithNev($snpRcRef, $geneSnpRcRef, $snpEventsRcRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, '-'); 
-  print "processing ASE's\n";
+  print "Processing ASE and ASARP SNVs\n";
   ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
   ($allAsarpsRcRef) = processASEWithNev($snpRcRef, $geneSnpRcRef, $snpsNevRcRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+  #merge + and - SNV results
+  print "Merging +/- SNV results\n";
+  my $mergedAsarpsRef = mergeASARP($allAsarpsRef, $allAsarpsRcRef);
+  $allAsarpsRef = $mergedAsarpsRef; # finally only the ref is used
 }
 
 
