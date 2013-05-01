@@ -29,26 +29,29 @@ asarp
 </div>
 <div class='pod'>
 <a name='NAME'></a><h1>NAME</h1>
-<p>asarp.pl -- The main application script, i.e. the entry program, of the ASARP pipeline.</p>
-<p>The methodology is described in detail in the paper:
+<p>asarp.pl -- The new and improved ASARP pipeline to discover ASE/ASARP genes/SNVs, wchih now supports strand-specific RNA-Seq data.</p>
+<p>For details of the older version, refer to the paper:
 <i>Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104</i> and its Supplementary Materials. Link: <a href='http://nar.oxfordjournals.org/content/40/13/e104' target='_blank'>nar.oxfordjournals.org</a></p>
 <p><img src='img/Intro.png' border=0></p>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
 <pre> perl asarp.pl output_file config_file [optional: parameter_file] </pre>
-<p><code>output_file</code> is where the ASARP result summary is output, and meanwhile there will be 3 addtional detailed result files output:</p>
+<p><b>NEW</b>: the ASARP pipeline now supports strand-specific RNA-Seq data (which can be processed by the new pre-processing script: <i><a href='procReads.html'>procReads</a></i>. One can set the optional strand-specific flag in the cnofig file. IMPORTANT: the strand-specific option does not work correctly on non-strand-specific data.</p>
+<p><code>output_file</code> is where the ASARP result summary is output, and meanwhile there will be 4 addtional detailed result files output:</p>
 <ul>
 <li><a name='output_file.ase.prediction -- the detailed results of (whole-gene-level) ASE patterns (exclusive to other ASARP patterns: AI, AS or AT)'></a><code>output_file.ase.prediction</code>
 -- the detailed results of (whole-gene-level) ASE patterns (exclusive to other ASARP patterns: AI, AS or AT)</li>
 <li><a name='output_file.gene.prediction -- the detailed results of ASARP results (ASE patterns excluded) arranged by genes'></a><code>output_file.gene.prediction</code>
 -- the detailed results of ASARP results (ASE patterns excluded) arranged by genes</li>
-<li><a name='output_file.ase.prediction -- the detailed results of ASARP results (ASE patterns excluded) of each individual SNV'></a><code>output_file.ase.prediction</code>
+<li><a name='output_file.snv.prediction -- the detailed results of ASARP results (ASE patterns excluded) of each individual SNV'></a><code>output_file.snv.prediction</code>
 -- the detailed results of ASARP results (ASE patterns excluded) of each individual SNV</li>
+<li><a name='output_file.controlSNV.prediction -- the control SNV information of each individual ASARP SNV'></a><code>output_file.controlSNV.prediction</code>
+-- the control SNV information of each individual ASARP SNV</li>
 </ul>
 <p><code>config_file</code> is the input configuration file which contains all the input file keys and their paths. The format is &lt;key&gt;tab&lt;path&gt;. Line starting with # are comments. Example: <i><a href='../default.config' target='_blank'>../default.config</a></i></p>
 <p>For preparation of the input files used in <code>config_file</code>, see the pre-processing section: <i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='procReads.html'>procReads</a></i></p>
 <p><code>parameter_file</code> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is &lt;parameter&gt;tab&lt;value&gt;. Lines starting with # are comments. It is optional and the default is: <i><a href='../default.param' target='_blank'>../default.param</a></i></p>
 <a name='-I USAGE'></a><h2>-I USAGE</h2>
-<p>Because asarp.pl requires other perl files in the same folder to run, <code>-I path</code> can be used if one would like to run ASARP in <code>path</code>.</p>
+<p>Because asarp.pl requires other perl files in the same folder to run, <code>-I path</code> can be used if one would like to run ASARP elsewhere by adding its <code>path</code>.</p>
 <pre> perl -I path path/asarp.pl output_file config_file parameter_file</pre>
 <p>Note that in such a case, one should be careful of the locations of the config and parameter files. Abosulute paths are suggested for the files in <code>config_file</code>.</p>
 <p>See below for the terminology and the overview.</p>
