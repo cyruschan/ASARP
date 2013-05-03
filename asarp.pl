@@ -30,7 +30,9 @@ my ($snpRef, $snpRcRef, $pRef, $pRcRef) = (undef, undef, undef, undef);
 if($STRANDFLAG){
   ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF, '+');
   ($snpRcRef, $pRcRef) = initSnp($snpF, $POWCUTOFF, '-');
-
+  #print "SNV List: +\n";  printListByKey($snpRef, 'powSnps');  printListByKey($snpRef, 'snps');
+  #print "SNV List: -\n";  printListByKey($snpRcRef, 'powSnps');  printListByKey($snpRcRef, 'snps');
+  
   my @pList = @$pRef;
   my @pRcList = @$pRcRef;
   #merge two lists
@@ -39,8 +41,7 @@ if($STRANDFLAG){
 }else{
   ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
   #print "SNV List:\n";
-  #printListByKey($snpRef, 'powSnps');
-  #printListByKey($snpRef, 'snps');
+  #printListByKey($snpRef, 'powSnps');  #printListByKey($snpRef, 'snps');
 }
 
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
@@ -50,66 +51,81 @@ if(defined($FDRCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
   }
   $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
-  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n";
+  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n\n";
 }
 
-# read the transcript annotation file
+print "Reading annotations and event-related files\n";
+# read the transcript annotation file: same whether strand-specific flag is set or now
 my $transRef = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans'); #utility sub: show transcripts (key: trans)
 my ($genesRef, $geneNamesRef) = getGeneIndex($transRef); #get indices of gene transcript starts and gene names
 my $altRef = getGeneAltTransEnds($transRef); #get alternative initiation/termination (AI/AT) events from transcripts
 #printAltEnds($altRef); #utility sub: show AI/AT events derived from transcripts
-
 # read all annotations, optionally rna-seq and est, splicing events and compile them
 my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef); #compile events from different sources
 
+print "\nProcessing SNVs\n";
 ################################# strand specific ############################################
 # uniform init vars: Rc version means the - strand
 my ($geneSnpRef, $geneSnpRcRef, $snpEventsRef, $snpEventsRcRef) = (undef, undef, undef, undef);
-
 my ($snpsNevRef, $snpsNevRcRef, $allAsarpsRef, $allAsarpsRcRef) = (undef, undef, undef, undef);
 
 # the following are involved in strand-specific handling if flag is set
 if(!$STRANDFLAG){
   ($geneSnpRef) = setGeneSnps($snpRef, $transRef);
-  #print "Significant Snvs: \n"; printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
+  #print "Powerful Snvs: \n"; printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
   #print "Ordinary Snvs: \n"; printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
   
   ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
-  #print "Pow Alt Init/Term: \n";  #printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
-  #print "Snp Alt Init/Term: \n";  #printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
-  #print "\nPow Splicing: \n";  #printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
-  #print "Ord Splicing: \n";  #printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
+  #print "Pow Alt Init/Term: \n";  	#printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
+  #print "Snp Alt Init/Term: \n";  	#printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
+  #print "\nPow Splicing: \n";  	#printSnpEventsResultsByType($snpEventsRef,'powSnpSp'); 
+  #print "Ord Splicing: \n";  		#printSnpEventsResultsByType($snpEventsRef,'snpSp'); 
 
   print "\n\nCalculating NEV\n";
   ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER); 
-  #print "Pow NEV Alt Init/Term: \n";  #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
-  #print "NEV Alt Init/Term: \n";  #printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
-  #print "Pow NEV Splicing: \n";  #printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
-  #print "NEV Splicing: \n";  #printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
+  #print "Pow NEV Alt Init/Term: \n";  	#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
+  #print "NEV Alt Init/Term: \n";  	#printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
+  #print "Pow NEV Splicing: \n";  	#printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
+  #print "NEV Splicing: \n";  		#printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
 
   print "Processing ASE and ASARP SNVs\n";
   ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
 
 }else{
   # the following requires strand-specific handling if flag is set
-  print "\nAdditional handling for the +/- SNVs as strand-specific flag is set\n";
-  ($geneSnpRef) = setGeneSnps($snpRef, $transRef, '+');
+  print "Additional handling for the +/- SNVs for strand-specific setting\n";
+  ($geneSnpRef) = setGeneSnps($snpRef, $transRef, '+');  #print "SNVs of the - strand:\n";
   ($geneSnpRcRef) = setGeneSnps($snpRcRef, $transRef, '-');
-  #print "Significant Snvs: \n";  #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
-  #print "Ordinary Snvs: \n";  #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+  #print "Powerful Snvs (+): \n";  printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
+  #print "Powerful Snvs (-): \n";  printGetGeneSnpsResults($geneSnpRcRef,'gPowSnps', $snpRcRef,'powSnps', 1); #$SNVPCUTOFF);
   
   # The setSnpEvents should only work on $geneSnpRef/$geneSnpRcRef which should be already strand specific so there is no change (need to confirm)
-  ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef); #match snps with events
+  ($snpEventsRef) = setSnpEvents($geneSnpRef, $altRef, $splicingRef);    
   ($snpEventsRcRef) = setSnpEvents($geneSnpRcRef, $altRef, $splicingRef); #match snps with events
+  #print "Pow Alt Init/Term: \n";  printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
+  #print "Snp Alt Init/Term: \n";  printSnpEventsResultsByType($snpEventsRef,'snpAlt');   print "Alt Init/Term of the - strand:\n"; 
+  #print "Pow Alt Init/Term: \n";  printSnpEventsResultsByType($snpEventsRef,'powSnpAlt'); 
+  #print "Snp Alt Init/Term: \n";  printSnpEventsResultsByType($snpEventsRef,'snpAlt'); 
 
-  print "\n\nCalculating NEV\n";
+  print "\n\nCalculating NEV (+ and - strands)\n";
   ($snpsNevRef) = filterSnpEventsWithNev($snpRef, $geneSnpRef, $snpEventsRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, '+'); 
   ($snpsNevRcRef) = filterSnpEventsWithNev($snpRcRef, $geneSnpRcRef, $snpEventsRcRef, $bedF, $allEventsListRef, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, '-'); 
-  print "Processing ASE and ASARP SNVs\n";
+  #print "Pow NEV Alt Init/Term: \n";  	printSnpEventsResultsByType($snpsNevRef,'nevPowSnpAlt'); 
+  #print "NEV Alt Init/Term: \n";  	printSnpEventsResultsByType($snpsNevRef,'nevSnpAlt'); 
+  #print "Pow NEV Splicing: \n";  	printSnpEventsResultsByType($snpsNevRef,'nevPowSnpSp'); 
+  #print "NEV Splicing: \n";  		printSnpEventsResultsByType($snpsNevRef,'nevSnpSp'); 
+  #print "- results\n";
+  #print "Pow NEV Alt Init/Term: \n";  	printSnpEventsResultsByType($snpsNevRcRef,'nevPowSnpAlt'); 
+  #print "NEV Alt Init/Term: \n";  	printSnpEventsResultsByType($snpsNevRcRef,'nevSnpAlt'); 
+  #print "Pow NEV Splicing: \n";  	printSnpEventsResultsByType($snpsNevRcRef,'nevPowSnpSp'); 
+  #print "NEV Splicing: \n";  		printSnpEventsResultsByType($snpsNevRcRef,'nevSnpSp'); 
+  
+  print "Processing ASE and ASARP SNVs (+ and - strands)\n";
   ($allAsarpsRef) = processASEWithNev($snpRef, $geneSnpRef, $snpsNevRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
   ($allAsarpsRcRef) = processASEWithNev($snpRcRef, $geneSnpRcRef, $snpsNevRcRef, $SNVPCUTOFF, $ASARPPCUTOFF, $ALRATIOCUTOFF);
+  
   #merge + and - SNV results
   print "Merging +/- SNV results\n";
   my $mergedAsarpsRef = mergeASARP($allAsarpsRef, $allAsarpsRcRef);
@@ -143,9 +159,9 @@ if(defined($outputFile)){
 
 =head1 NAME
 
-asarp.pl -- The main application script, i.e. the entry program, of the ASARP pipeline.
+asarp.pl -- The new and improved ASARP pipeline to discover ASE/ASARP genes/SNVs, wchih now supports strand-specific RNA-Seq data. 
 
-The methodology is described in detail in the paper: 
+For details of the older version, refer to the paper: 
 I<Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104> and its Supplementary Materials. Link: http://nar.oxfordjournals.org/content/40/13/e104
 
 G<img/Intro.png>
@@ -154,7 +170,9 @@ G<img/Intro.png>
 
  perl asarp.pl output_file config_file [optional: parameter_file] 
 
-C<output_file> is where the ASARP result summary is output, and meanwhile there will be 3 addtional detailed result files output:
+B<NEW>: the ASARP pipeline now supports strand-specific RNA-Seq data (which can be processed by the new pre-processing script: L<procReads>. One can set the optional strand-specific flag in the cnofig file. IMPORTANT: the strand-specific option does not work correctly on non-strand-specific data.
+
+C<output_file> is where the ASARP result summary is output, and meanwhile there will be 4 addtional detailed result files output:
 
 =over 6
 
@@ -164,8 +182,11 @@ C<output_file> is where the ASARP result summary is output, and meanwhile there 
 =item C<output_file.gene.prediction> 
 -- the detailed results of ASARP results (ASE patterns excluded) arranged by genes
 
-=item C<output_file.ase.prediction> 
+=item C<output_file.snv.prediction> 
 -- the detailed results of ASARP results (ASE patterns excluded) of each individual SNV
+
+=item C<output_file.controlSNV.prediction> 
+-- the control SNV information of each individual ASARP SNV
 
 =back
 
@@ -177,7 +198,7 @@ C<parameter_file> is the parameter configuration file which contains all the thr
 
 =head2 -I USAGE
 
-Because asarp.pl requires other perl files in the same folder to run, C<-I path> can be used if one would like to run ASARP in C<path>. 
+Because asarp.pl requires other perl files in the same folder to run, C<-I path> can be used if one would like to run ASARP elsewhere by adding its C<path>. 
 
  perl -I path path/asarp.pl output_file config_file parameter_file
 

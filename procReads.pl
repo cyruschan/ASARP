@@ -126,7 +126,7 @@ while(<FP>){
   }
 
   # get all the (masked) blocks
-  if(!$strandFlag || $strand eq '+'){ #non-strand specific or +
+  if(!$strandFlag || $strand eq '+'){ #non-strand specific or +; following pair1
     $snv{$chr} .= $snvToAdd;
     if(!defined($blocks{$chr})){
       $blocks{$chr} = $block;
@@ -135,7 +135,7 @@ while(<FP>){
       $blocks{$chr} .= ",".$block;
     }
   }else{ # - strand
-    $snvRc{$chr} .= $snvToAdd; #strand-specific: -
+    $snvRc{$chr} .= $snvToAdd; #strand-specific: -; following pair1!
     if(!defined($blocksRc{$chr})){
       $blocksRc{$chr} = $block;
     }
@@ -158,12 +158,15 @@ print "Processing input SNV list file: $snvFile...";
 my %snvList = ();
 my $dSnvCnt = 0;
 my $dSnvChrCnt = 0;
-open(SNP, "<", $snvFile) or die "ERROR: Can't open $samFile";
+open(SNP, "<", $snvFile) or die "ERROR: Can't open $snvFile\n";
 while(<SNP>){
   chomp;
   $dSnvCnt++;
   if($dSnvCnt%$INTRVL == 0){ print "$dSnvCnt...";  }
   my ($chr, $pos, $alleles, $id) = split(' ', $_);
+  if(@allChrsInSam == 0){ # no sam file
+    last; # go to the last step
+  }
   if($chr ne $allChrsInSam[0]){
     next; #ignore all other chromosomes to save time
   }
@@ -176,7 +179,12 @@ while(<SNP>){
   $dSnvChrCnt++;
 }
 close(SNP);
-print " $dSnvCnt SNVs ($dSnvChrCnt kept for $allChrsInSam[0]). Done.\n";
+if(@allChrsInSam>0){
+  print " $dSnvCnt SNVs ($dSnvChrCnt kept for $allChrsInSam[0]). Done.\n";
+}else{
+  print "WARNING: no data in the SAM file: $samFile\n";
+}
+
 #print "SNVs in chromosomes\n";
 #for(keys %snvList){
 #  my @chrSnvs = split('\t', $snvList{$_});
@@ -750,15 +758,19 @@ The output bedgraph lines would look like:
  chr10 181483 181499 9 -
  ...
 
-Note that all + lines are output before any - lines output. The 5th strand attribute is not specified in the bedgraph standard. One can use the following Unix commands to get the + and - only bedgraph files respectively (suppose the SNV file is C<test.chr10.bed>):
+Note that all + lines are output before any - lines output. While the 5th strand attribute is not specified in the bedgraph standard, one can use the following Unix commands to get the + and - only bedgraph files respectively (suppose the SNV file is C<input.bedgraph>):
 
- cat test.chr10.bed | grep "track type=" >chr10.plus.bed
- cat test.chr10.bed | grep '+$' | cut -d ' ' -f 1,2,3,4 >>chr10.plus.bed
+To generate + only bed (note that no explicit + attributes in the file content)
 
- cat test.chr10.bed | grep "track type=" >chr10.minus.bed
- cat test.chr10.bed | grep '\-$' | cut -d ' ' -f 1,2,3,4 >>chr10.minus.bed
+ cat input.bedgraph | grep "track type=" >output.plus.bedgraph
+ cat input.bedgraph | grep '+$' | cut -d ' ' -f 1,2,3,4 >>output.plus.bedgraph
 
-The first greps with track get the track lines. The second greps get + or - lines and keep the 4 standard attributes, leaving the last one.
+To generate - only bed (note that no explicit - attributes in the file content)
+
+ cat input.bedgraph | grep "track type=" >output.minus.bedgraph
+ cat input.bedgraph | grep '\-$' | cut -d ' ' -f 1,2,3,4 >>output.minus.bedgraph
+
+The first grep gets the track line. The second grep gets + or - lines and keeps the 4 standard attributes, skipping the last strand attribute.
 
 =head1 SEE ALSO
 

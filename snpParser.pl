@@ -214,8 +214,6 @@ sub snpVsTrans{
 	    my ($txEnd, $cdsStart, $cdsEnd, $exonStarts, $exonEnds, $id, $gene, $isCoding, $txStrand) = split(';', $_);
 	    #strand-specific handling
 	    if(defined($setStrand) && $setStrand ne $txStrand){
-	      print "snv: $setStrand ne trx: $txStrand\n";
-	      exit; #debug exit
 	      next;
 	    
 	    }
@@ -414,13 +412,14 @@ sub processASEWithNev
      $powGeneCnt += keys %powGenes;
      $powSnvCnt += keys %powSnps;
      for(keys %powSnps){
-       $powSnvStr .= "$i^$_\t"; #use the internal chr id to lable it to save space
+       my $snpPos = $_;
+       $powSnvStr .= "$i^$snpPos\t"; #use the internal chr id to lable it to save space
        my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
        for(@allSnpInfo){
          my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
 	 if($p <= $snvPValueCutoff){
 	   $aseSnvCnt += 1; #each SNV **location** added once
-	   $aseSnvStr .="$i^$_\t";
+	   $aseSnvStr .="$i^$snpPos\t";
 	   last;
 	 }
        }
@@ -452,10 +451,10 @@ sub processASEWithNev
        for(keys %snpGroup){
          my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
 	 foreach(@allSnpInfo){
-	   my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
+	   my ($p, $pos, $alleles, $snpId, $refCnt, $altCnt) = getSnpInfo($_);
            if($p <= $snvPValueCutoff){
 	      $aseList{$pos} = 1; 
-	      $aseInfo .= "$snpId,$p,$alleles,$pos\t";
+	      $aseInfo .= "$snpId,$p,$alleles,$pos,$refCnt:$altCnt\t";
 	      $aseCount += 1;
 	   }
 	 }
@@ -623,6 +622,7 @@ sub processASEWithNev
 
 sub mergeAsarpByKey{
   my ($aRef, $aRcRef, $keyword) = @_;
+  #print "keyword: $keyword\n";
 
   my $resRef = $aRef->{$keyword};
   my $resRcRef = $aRcRef->{$keyword};
@@ -653,24 +653,31 @@ sub mergeAsarpByKey{
      }
      # first it's empty
      for(keys %hs){
-       $asarp{$_} = $hs{$_};
+       if($keyword ne 'ASARPsnp'){
+         $asarp{$_} = $hs{$_};
+       }else{
+         # need to add the strand info
+	 my @snps = split(/\t/, $hs{$_});
+	 for(my $j = 0; $j < @snps; $j++){
+	   $snps[$j] .= ',+'; 
+	 }
+	 $asarp{$_} = join("\t", @snps);
+       }
+       
      }
      # then it's cautious
      for(keys %hsRc){
-       if($keyword ne 'ASARPsnp'){ #only this uses the SNV position as the key
+       if($keyword ne 'ASARPsnp'){ #only this uses the SNV position as the key, and thus $_ may appear in both strands
          if(!defined($asarp{$_})){
            $asarp{$_} = $hsRc{$_}; 
-         }else{ # on gene level the result should be strand specific and therefore they shouldn't overlap
+         }else{ # on gene level ($_) the result should be strand specific and therefore they should be exclusive
 	   die "ERROR: \n+: $asarp{$_} \nexisting when \n-: $hsRc{$_} \n is to be added\n";
          }
-       }else{
+       }else{ #ASARPsnp # need to merge +/-
          # have to split them to add the strand information (which can in fact be determined by the gene)?
 	 my @snps = ();
 	 if(defined($asarp{$_})){
 	   @snps = split(/\t/, $asarp{$_});
-	   for(my $j = 0; $j < @snps; $j++){
-	     $snps[$j] .= ',+'; 
-	   }
 	 }
 	 my @snpsRc = split(/\t/, $hsRc{$_});
 	 for(my $j = 0; $j < @snpsRc; $j++){
@@ -704,12 +711,16 @@ sub mergeASARP
 #   'aseSnvStr' => $aseSnvStr,
 #   'powSnvStr' => $pwSnvStr,
   for(keys %stats){
+    #print "$_: ";
     if(defined($as{$_})){
       $stats{$_} += $as{$_};
+      #print "+: $as{$_}\t";
     }
     if(defined($rc{$_})){
       $stats{$_} += $rc{$_};
+      #print "-: $rc{$_}\t";
     }
+    #print "total: $stats{$_}\n";
   }
 
   my %ase = (); #SNVs
@@ -729,12 +740,15 @@ sub mergeASARP
     push @allPowSnvs, split(/\t/, $rc{'powSnvStr'}); #-
   }
   my $overlapAse = 0;
+  print "allAseSnvs\n";
   for(@allAseSnvs){
     if(defined($ase{$_})){
       $overlapAse += 1;
     }
     $ase{$_} = 1; 
+    #print "$_\n";
   }
+  #print "done\n";
   my $overlapPow = 0;
   for(@allPowSnvs){
     if(defined($pow{$_})){
@@ -756,11 +770,8 @@ sub mergeASARP
 
   # merge the ASE and ASARP results
   for(qw (ASEgene ASARPgene ASARPsnp ASARPcontrol)){
-    my $asarpRef = $as{$_};
-    my $asarpRcRef = $rc{$_};
-    
-    $merged{$_} =  mergeAsarpByKey($asarpRef, $asarpRcRef);
-  
+    $merged{$_} =  mergeAsarpByKey($aRef, $aRcRef, $_);
+    #print "merged: $merged{$_}\n";
   }
 
   return \%merged;
@@ -1815,6 +1826,7 @@ sub matchSnpPoswithSplicingEvents
 sub fdrControl{
   my ($pRef, $fdrCutoff) = @_;
   my @pList = @$pRef;
+  my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
   # Create a communication bridge with R and start R
   my $R = Statistics::R->new();
@@ -1858,7 +1870,7 @@ sub fdrControl{
   }
   $aHat /= $bigI;
 
-  print "Estimated alternative percentage (a): $aHat\n";
+  print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n";
   if($aHat >= 1){
     return $pList[-1]; # all cases are estimated to be from the alternative
   }
@@ -1873,8 +1885,8 @@ sub fdrControl{
     $pos++;
   }
   if($pos == 0){ 
-    print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff\n";
-    print "Set a default: 0.01 (without any FDR control!!) instead\n";
+    print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
+    print "Set a default: 0.01 (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
     return 0.01;
   }
   #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
