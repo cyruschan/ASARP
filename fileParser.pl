@@ -1078,6 +1078,7 @@ sub getChrID
   }
   if($chrID eq 'X'){ $chrID = 23; }
   elsif($chrID eq 'Y'){ $chrID = 24; }
+  elsif($chrID eq 'M'){ $chrID = 25; }
   
   return $chrID;
 }
@@ -1090,6 +1091,7 @@ sub printChr
    if($i>0 && $i<23){  print "$i";  }
    elsif($i==23){  print "X"; }
    elsif($i==24){  print "Y"; }
+   elsif($i==25){  print "M"; }
    else{ die "Unknown Chr $i\n"; }
 }
 
@@ -1102,6 +1104,7 @@ sub formatChr
    if($i>0 && $i<23){  $chrX = $i;  }
    elsif($i==23){  $chrX = "X"; }
    elsif($i==24){  $chrX = "Y"; }
+   elsif($i==25){  $chrX = "M"; }
    else{ die "Unknown Chr $i\n"; }
 
    return $str.$chrX;

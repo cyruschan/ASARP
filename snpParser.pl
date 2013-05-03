@@ -385,6 +385,8 @@ sub processASEWithNev
      my %asarpGeneControls = (); # just used to store all the control SNVs we have
      my %outTabu = (); #not double-outputing the target SNVs
      my %asarpSnpHash = ();
+     # new p-value scheme
+     my %pValueSnpHash = (); # to store the counts (BF Correction) or the p-value lists (FDR control)
 
      my ($powGeneSnpChrRef) = getListByKeyChr($geneSnpRef, 'gPowSnps', $i);
      my %powGenes = %$powGeneSnpChrRef;
@@ -555,18 +557,24 @@ sub processASEWithNev
 		     my $pValue2 = $R->get('p2');
 		     #print "fisher test result 2: $pValue2\n";
 		     
-		     #if($pValue2 < $pValue){ $pValue = $pValue2; } #get smaller p-value
-		     if($pValue <= $asarpPValueCutoff || $pValue2 <= $asarpPValueCutoff) { #significant
-		       #print "significant ratio differences found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
-		       #Step 2.4 Check if the allelic ratio difference is larger than the threshold
-		       my $tRatio = $tAllel1/($tAllel1+$tAllel2);
-		       my $cRatio = $cAllel1/($cAllel1+$cAllel2);
-		       if((abs($tRatio-$cRatio) >= $alleleRatioCutoff && $pValue <= $asarpPValueCutoff) || (abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff && $pValue2 <= $asarpPValueCutoff)){ #associated p-value and allelic difference filter
-		       #if(abs($tRatio-$cRatio) >= $alleleRatioCutoff or abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){
-		         #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
-			 if(!(abs($tRatio-$cRatio) >= $alleleRatioCutoff && $pValue <= $asarpPValueCutoff)){
-			   $pValue = $pValue2; # use the 2nd half things (also ratio diff, but it is not output)
-			 }
+		     # new p-value scheme: assume each haplotype is equally probable:
+		     $pValue = ($pValue+$pValue2)/2; # 1/2*$pValue + 1/2*$pValue2
+		     my $tRatio = $tAllel1/($tAllel1+$tAllel2);
+		     my $cRatio = $cAllel1/($cAllel1+$cAllel2);
+		     #Step 2.3 Check if the allelic ratio difference is larger than the threshold
+		     if(abs($tRatio-$cRatio) >= $alleleRatioCutoff || abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){ #allelic difference filter
+		       # record the number (if Bonferroni Correction is used) or all the p-values (if FDR control is used)
+		       if(!defined($pValueSnpHash{$trgtPos})){
+		         $pValueSnpHash{$trgtPos} = 1; # counts for BF correction
+		         #$pValueSnpHash{$trgtPos} = $pValue; # counts for BF correction
+		       }else{
+		         $pValueSnpHash{$trgtPos} += 1; # counts for BF correction
+		         #$pValueSnpHash{$trgtPos} .= ",$pValue"; # counts for BF correction
+		       }
+		       
+		       #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
+		       if($pValue <= $asarpPValueCutoff) { #significant
+		         #print "significant ($pValue) pair found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
 			 my @types = ();
 			 if($altInit ne ''){ push @types, "AI:$altInit"; } #alternative 5' initiation
 			 if($altTerm ne ''){  push @types, "AT:$altTerm"; } #alternative 3' termination
@@ -593,6 +601,38 @@ sub processASEWithNev
 	 }
        }
      }
+     
+     # new p-value scheme: 
+     # first to keep necessary information only: for Bonferroni correction, this step can be skipped 
+     for(keys %pValueSnpHash){
+       if(!defined($asarpSnpHash{$_})){ #only keep those in the final target list
+         delete $pValueSnpHash{$_};
+       }else{
+         #my @pList = split(',', $pValueSnpHash{$_});
+	 #my $pValueSnpHash{$_} = fdrControl(\@pList, $asarpPValueCutoff, 0); #0/undef--not verbose
+       }
+     }
+     # new p-value scheme: correction
+     for(keys %asarpGeneControls){
+       $asarpGeneControls{$_} = pValueCorrection($asarpGeneControls{$_}, \%pValueSnpHash, $asarpPValueCutoff);
+     }
+     #refine the other results:
+     my %newGeneHash = ();
+     my %newSnpHash = ();
+     for(keys %asarpGeneControls){
+       if($asarpGeneControls{$_} eq ''){ #all the candidates have been removed
+         delete $asarpGeneControls{$_}; #delete the key as well
+	 print "control SNVs for gene $_ deleted\n";
+	 next; #nothing to be added 
+       }
+       #non-empty, get things:
+       my @snps = split(/\t/, $asarpGeneControls{$_});
+       my @targetGeneSnps = split(/\t/, $asarpGeneHash{$_};
+       for(@snps){
+         my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
+       }
+     }
+
      $aseGenes[$i] = \%aseGeneHash;
      $asarpGenes[$i] = \%asarpGeneHash;
      $asarpControls[$i] = \%asarpGeneControls;
@@ -617,6 +657,37 @@ sub processASEWithNev
 
   return \%allAsarps;
 }
+
+# sub-routine to do p-value correction
+sub pValueCorrection{
+  my ($snpPairs, $pControlRef, $threshold) = @_;
+
+  my %pContrl = %$pControlRef;
+  #what the format is:
+  #$asarpGeneControls{$gene} .= "$type;$pValue;$trgtPos;$ctrlPos\t";
+  my $correctedPairs = "";
+
+  my @snps = split(/\t/, $snpPairs);
+  for(@snps){
+    my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
+    #Bonferroni correction:
+    print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
+    $pValue =$pValue*$pControl{$trgtPos}; # correction done
+    print "$pValue\n";
+    if($pValue <= $threshold){
+      $correctedPairs .= "$type;$pValue;$trgtPos;$ctrlPos\t"; # filtering
+    }
+    
+    #FDR control correction
+    #if($pValue <= $pControl{$trgtPos}){ # FDR: pControl now is the FDR corrected thresholds
+    #  $correctedPairs .= "$type;$pValue;$trgtPos;$ctrlPos\t"; # filtering
+    #  print "WARNING: FDR threshold $pControl{$trgtPos} < p-value $threshold\n";
+    #}
+
+  }
+  return $correctedPairs;
+}
+
 
 # sub-routine to merge the +/- ase, asarp results for the strand-specific version
 
@@ -1822,9 +1893,11 @@ sub matchSnpPoswithSplicingEvents
 # the reference: Controlling the proportion of falsely-rejected hypotheses
 # when conducting multiple tests with climatological data
 #	input:		reference to the p-value list, FDR threshold
+#	optional input:	whether verbose print outs are enabled
 #	output:		the p-value threshold for the FDR threshold
 sub fdrControl{
-  my ($pRef, $fdrCutoff) = @_;
+  my ($pRef, $fdrCutoff, $isVerbose) = @_;
+  if(!defined($isVerbose){ $isVerbose = 0;   }
   my @pList = @$pRef;
   my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
@@ -1870,12 +1943,12 @@ sub fdrControl{
   }
   $aHat /= $bigI;
 
-  print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n";
+  print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n" if $isVerbose;
   if($aHat >= 1){
     return $pList[-1]; # all cases are estimated to be from the alternative
   }
   $fdrCutoff /= (1-$aHat);
-  print "Adjusted FDR (BH): $fdrCutoff\n"; 
+  print "Adjusted FDR (BH): $fdrCutoff\n" if $isVerbose; 
   my $pos = 0;
   while($pos < @pAdjust){
     #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
@@ -1885,9 +1958,11 @@ sub fdrControl{
     $pos++;
   }
   if($pos == 0){ 
-    print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
-    print "Set a default: 0.01 (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
-    return 0.01;
+    if($isVerbose){
+      print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
+      print "Set a default: $fdrCutoff (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
+    }
+    return $fdrCutoff;
   }
   #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
   return $pList[$pos-1];
@@ -1985,7 +2060,7 @@ snpParser.pl -- All the sub-routines for SNV (sometimes denoted interchangeably 
 	# read and parse SNVs
 	my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
         # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
-	$SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
+	$SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
 	# match SNVs with gene transcript annotations
 	my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 	# match gene SNVs with AI/AT and alternative splicing (AS) events
