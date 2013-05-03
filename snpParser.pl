@@ -451,10 +451,10 @@ sub processASEWithNev
        for(keys %snpGroup){
          my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
 	 foreach(@allSnpInfo){
-	   my ($p, $pos, $alleles, $snpId) = getSnpInfo($_);
+	   my ($p, $pos, $alleles, $snpId, $refCnt, $altCnt) = getSnpInfo($_);
            if($p <= $snvPValueCutoff){
 	      $aseList{$pos} = 1; 
-	      $aseInfo .= "$snpId,$p,$alleles,$pos\t";
+	      $aseInfo .= "$snpId,$p,$alleles,$pos,$refCnt:$altCnt\t";
 	      $aseCount += 1;
 	   }
 	 }
@@ -622,7 +622,7 @@ sub processASEWithNev
 
 sub mergeAsarpByKey{
   my ($aRef, $aRcRef, $keyword) = @_;
-  print "keyword: $keyword\n";
+  #print "keyword: $keyword\n";
 
   my $resRef = $aRef->{$keyword};
   my $resRcRef = $aRcRef->{$keyword};
@@ -656,14 +656,12 @@ sub mergeAsarpByKey{
        if($keyword ne 'ASARPsnp'){
          $asarp{$_} = $hs{$_};
        }else{
-         print "\nNow is $_: +: $hs{$_}\n";
          # need to add the strand info
 	 my @snps = split(/\t/, $hs{$_});
 	 for(my $j = 0; $j < @snps; $j++){
 	   $snps[$j] .= ',+'; 
 	 }
 	 $asarp{$_} = join("\t", @snps);
-	 print "+: $_: $asarp{$_}\n";
        }
        
      }
@@ -681,13 +679,11 @@ sub mergeAsarpByKey{
 	 if(defined($asarp{$_})){
 	   @snps = split(/\t/, $asarp{$_});
 	 }
-         print "\nNow is $_: -: $hsRc{$_}\n";
 	 my @snpsRc = split(/\t/, $hsRc{$_});
 	 for(my $j = 0; $j < @snpsRc; $j++){
 	   $snpsRc[$j] .= ',-'; 
 	 }
          $asarp{$_} = join("\t", @snps, @snpsRc);
-	 print "merged: $_: $asarp{$_}\n";
        }
      }
 
@@ -715,16 +711,16 @@ sub mergeASARP
 #   'aseSnvStr' => $aseSnvStr,
 #   'powSnvStr' => $pwSnvStr,
   for(keys %stats){
-    print "$_: ";
+    #print "$_: ";
     if(defined($as{$_})){
       $stats{$_} += $as{$_};
-      print "+: $as{$_}\t";
+      #print "+: $as{$_}\t";
     }
     if(defined($rc{$_})){
       $stats{$_} += $rc{$_};
-      print "-: $rc{$_}\t";
+      #print "-: $rc{$_}\t";
     }
-    print "total: $stats{$_}\n";
+    #print "total: $stats{$_}\n";
   }
 
   my %ase = (); #SNVs
@@ -750,9 +746,9 @@ sub mergeASARP
       $overlapAse += 1;
     }
     $ase{$_} = 1; 
-    print "$_\n";
+    #print "$_\n";
   }
-  print "done\n";
+  #print "done\n";
   my $overlapPow = 0;
   for(@allPowSnvs){
     if(defined($pow{$_})){
@@ -775,16 +771,7 @@ sub mergeASARP
   # merge the ASE and ASARP results
   for(qw (ASEgene ASARPgene ASARPsnp ASARPcontrol)){
     $merged{$_} =  mergeAsarpByKey($aRef, $aRcRef, $_);
-    print "merged: $merged{$_}\n";
-    my @xx = @{$merged{$_}};
-    for(@xx){
-      my %hs = %{$_};
-      if(keys %hs > 0){
-        for(keys %hs){
-	  print "$_: $hs{$_}\n";
-	}
-      }
-    }
+    #print "merged: $merged{$_}\n";
   }
 
   return \%merged;

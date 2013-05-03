@@ -51,9 +51,10 @@ if(defined($FDRCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
   }
   $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
-  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n";
+  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n\n";
 }
 
+print "Reading annotations and event-related files\n";
 # read the transcript annotation file: same whether strand-specific flag is set or now
 my $transRef = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans'); #utility sub: show transcripts (key: trans)
@@ -64,6 +65,7 @@ my $altRef = getGeneAltTransEnds($transRef); #get alternative initiation/termina
 my $allEventsListRef = readAllEvents($splicingF, $rnaseqF, $estF, $transRef, $geneNamesRef);
 my $splicingRef = compileGeneSplicingEvents($genesRef, values %$allEventsListRef); #compile events from different sources
 
+print "\nProcessing SNVs\n";
 ################################# strand specific ############################################
 # uniform init vars: Rc version means the - strand
 my ($geneSnpRef, $geneSnpRcRef, $snpEventsRef, $snpEventsRcRef) = (undef, undef, undef, undef);
@@ -93,8 +95,8 @@ if(!$STRANDFLAG){
 
 }else{
   # the following requires strand-specific handling if flag is set
-  print "\nAdditional handling for the +/- SNVs as strand-specific flag is set\n";
-  ($geneSnpRef) = setGeneSnps($snpRef, $transRef, '+');  print "SNVs of the - strand:\n";
+  print "Additional handling for the +/- SNVs for strand-specific setting\n";
+  ($geneSnpRef) = setGeneSnps($snpRef, $transRef, '+');  #print "SNVs of the - strand:\n";
   ($geneSnpRcRef) = setGeneSnps($snpRcRef, $transRef, '-');
   #print "Powerful Snvs (+): \n";  printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
   #print "Powerful Snvs (-): \n";  printGetGeneSnpsResults($geneSnpRcRef,'gPowSnps', $snpRcRef,'powSnps', 1); #$SNVPCUTOFF);
