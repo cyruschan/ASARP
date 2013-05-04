@@ -627,7 +627,7 @@ sub processASEWithNev
        }
        #non-empty, get things:
        my @snps = split(/\t/, $asarpGeneControls{$_});
-       my @targetGeneSnps = split(/\t/, $asarpGeneHash{$_};
+       my @targetGeneSnps = split(/\t/, $asarpGeneHash{$_});
        for(@snps){
          my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
        }
@@ -662,7 +662,7 @@ sub processASEWithNev
 sub pValueCorrection{
   my ($snpPairs, $pControlRef, $threshold) = @_;
 
-  my %pContrl = %$pControlRef;
+  my %pControl = %$pControlRef;
   #what the format is:
   #$asarpGeneControls{$gene} .= "$type;$pValue;$trgtPos;$ctrlPos\t";
   my $correctedPairs = "";
@@ -1897,21 +1897,56 @@ sub matchSnpPoswithSplicingEvents
 #	output:		the p-value threshold for the FDR threshold
 sub fdrControl{
   my ($pRef, $fdrCutoff, $isVerbose) = @_;
-  if(!defined($isVerbose){ $isVerbose = 0;   }
+  if(!defined($isVerbose)){ $isVerbose = 0;   }
   my @pList = @$pRef;
   my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
+  my $pSize = @pList;
   # Create a communication bridge with R and start R
   my $R = Statistics::R->new();
-  $R->run("plist <- c(".join(",",@pList).")");
+
+  #$R->set('plist', \@pList);
+  my $stepSize = 10000;
+  if($pSize > $stepSize){ # huge input
+    $R->run("plist <- c()"); #initialize
+    for(my $xi = 0; $xi < $pSize; $xi+=$stepSize){ #each time
+      my $end = $xi+$stepSize-1;
+      if($end >= $pSize){ $end = $pSize-1; }  #the upper bound
+      #print "getting plist: $xi to $end\n";
+      $R->run("plist <- c(plist, c(".join(",", @pList[$xi .. $end])."))");
+    }
+  }else{
+    $R->run("plist <- c(".join(",",@pList).")");
+  }
   #the expected proportion of false discoveries amongst the rejected hypotheses
   #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
+  #print "Running R using BH\n";
   $R->run('x <- p.adjust(plist, method="BH")');
-  my $pAdjustRef = $R->get('x');
+  $R->run('rLen <- length(x)');
+  my $rSize = $R->get('rLen');
+  #print "Getting x from R: size $rSize\n";
+  
+  my @pAdjust = ();
+  if($rSize > $stepSize){
+    # need to use the same trick to get parts from Statistics::R
+    for(my $xi = 1; $xi <= $pSize; $xi+=$stepSize){ #each time: one-based in R
+      #1-based in R!
+      my $end = $xi+$stepSize-1;
+      if($end > $pSize){ $end = $pSize; }  #the upper bound
+
+      #print "getting x: $xi to $end\n";
+      $R->run("xSlice <- x[$xi:$end]");
+      my $pSliceRef = $R->get('xSlice');
+      push(@pAdjust, @$pSliceRef);
+    }
+  }else{
+    my $pAdjustRef = $R->get('x');
+    @pAdjust = @$pAdjustRef;
+  }
   $R->stop;
-  my @pAdjust = @$pAdjustRef;
-  if(@pAdjust < @pList){
-    die "ERROR: the adjusted p-value list from R is incomplete! Aborted\n";
+  if($rSize != $pSize || @pAdjust != $pSize){
+    print "ERROR: Statistics::R result size: ".(scalar @pAdjust).", or R result size: $pSize different from input size: $pSize\n";
+    die "ERROR: the adjusted p-value list from R is inconsistent (see STDOUT for details)! Aborted\n";
   }
   #estimate a new a, default parameters used
   my $aHat = 0;
