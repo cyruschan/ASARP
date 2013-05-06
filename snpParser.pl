@@ -574,7 +574,7 @@ sub processASEWithNev
 		       
 		       #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
 		       if($pValue <= $asarpPValueCutoff) { #significant
-		         #print "significant ($pValue) pair found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
+		         print "significant ($pValue) candidate pair found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
 			 my @types = ();
 			 if($altInit ne ''){ push @types, "AI:$altInit"; } #alternative 5' initiation
 			 if($altTerm ne ''){  push @types, "AT:$altTerm"; } #alternative 3' termination
@@ -602,9 +602,10 @@ sub processASEWithNev
        }
      }
      
-     # new p-value scheme: 
+     print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n"; 
      # first to keep necessary information only: for Bonferroni correction, this step can be skipped 
      for(keys %pValueSnpHash){
+       print "$_\t";
        if(!defined($asarpSnpHash{$_})){ #only keep those in the final target list
          delete $pValueSnpHash{$_};
        }else{
@@ -612,9 +613,11 @@ sub processASEWithNev
 	 #my $pValueSnpHash{$_} = fdrControl(\@pList, $asarpPValueCutoff, 0); #0/undef--not verbose
        }
      }
-     # new p-value scheme: correction
+     print "\n# new p-value scheme: correction\n";
      for(keys %asarpGeneControls){
+       print "Before: $asarpGeneControls{$_}\n";
        $asarpGeneControls{$_} = pValueCorrection($asarpGeneControls{$_}, \%pValueSnpHash, $asarpPValueCutoff);
+       print "After:  $asarpGeneControls{$_}\n";
      }
      #refine the other results:
      my %newGeneHash = ();
