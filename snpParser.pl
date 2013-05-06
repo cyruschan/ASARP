@@ -574,7 +574,7 @@ sub processASEWithNev
 		       
 		       #print "absolute ratio difference found: $tRatio VS $cRatio\n ASARP $gene $trgtPos found!\n";
 		       if($pValue <= $asarpPValueCutoff) { #significant
-		         print "significant ($pValue) candidate pair found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
+		         #print "significant ($pValue) candidate pair found! $gene: $trgtPos (AI: $altInit AT: $altTerm AS: $altSpInfo) VS $ctrlPos: $powSnps{$ctrlPos}\n";	 
 			 my @types = ();
 			 if($altInit ne ''){ push @types, "AI:$altInit"; } #alternative 5' initiation
 			 if($altTerm ne ''){  push @types, "AT:$altTerm"; } #alternative 3' termination
@@ -602,10 +602,10 @@ sub processASEWithNev
        }
      }
      
-     print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n" if(keys %pValueSnpHash > 0); 
+     #print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n" if(keys %pValueSnpHash > 0); 
      # first to keep necessary information only: for Bonferroni correction, this step can be skipped 
      for(keys %pValueSnpHash){
-       print "$_\t";
+       #print "$_\t";
        if(!defined($asarpSnpHash{$_})){ #only keep those in the final target list
          delete $pValueSnpHash{$_};
        }else{
@@ -613,11 +613,11 @@ sub processASEWithNev
 	 #my $pValueSnpHash{$_} = fdrControl(\@pList, $asarpPValueCutoff, 0); #0/undef--not verbose
        }
      }
-     print "\n# new p-value scheme: correction\n" if(keys %pValueSnpHash > 0);
+     #print "\n# new p-value scheme: correction\n" if(keys %pValueSnpHash > 0);
      for(keys %asarpGeneControls){
-       print "Before: $asarpGeneControls{$_}\n";
+       #print "Before: $asarpGeneControls{$_}\n";
        $asarpGeneControls{$_} = pValueCorrection($asarpGeneControls{$_}, \%pValueSnpHash, $asarpPValueCutoff);
-       print "After:  $asarpGeneControls{$_}\n";
+       #print "After:  $asarpGeneControls{$_}\n";
      }
      #refine the other results:
      my %newGeneHash = ();
@@ -625,7 +625,7 @@ sub processASEWithNev
      for(keys %asarpGeneControls){
        if($asarpGeneControls{$_} eq ''){ #all the candidates have been removed
          delete $asarpGeneControls{$_}; #delete the key as well
-	 print "control SNVs for gene $_ deleted\n";
+	 #print "control SNVs for gene $_ deleted\n";
 	 next; #nothing to be added 
        }
        #non-empty, get things:
@@ -674,9 +674,9 @@ sub pValueCorrection{
   for(@snps){
     my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
     #Bonferroni correction:
-    print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
+    #print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
     $pValue =$pValue*$pControl{$trgtPos}; # correction done
-    print "$pValue\n";
+    #print "$pValue\n";
     if($pValue <= $threshold){
       $correctedPairs .= "$type;$pValue;$trgtPos;$ctrlPos\t"; # filtering
     }
