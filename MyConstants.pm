@@ -12,7 +12,7 @@ our @EXPORT_OK = qw( $CHRNUM $supportedList $supportedTags );
 #Readonly::Scalar our $CHRNUM => 24; #total number of chromosomes handled
 #Readonly::Scalar our $supportedList => ' snps; powSnps; trans; events; geneSnps;';
 
-our $CHRNUM = 24; #total number of chromosomes handled
+our $CHRNUM = 25; #total number of chromosomes handled
 #each key word should be prefixed by space ' ' and suffixed by ';'
 our $supportedList = ' snps; powSnps; trans; events; gSnps; gPowSnps;'; 
 our $supportedTags = ' rna; est; anno;';
