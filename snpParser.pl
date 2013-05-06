@@ -602,7 +602,7 @@ sub processASEWithNev
        }
      }
      
-     print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n"; 
+     print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n" if(keys %pValueSnpHash > 0); 
      # first to keep necessary information only: for Bonferroni correction, this step can be skipped 
      for(keys %pValueSnpHash){
        print "$_\t";
@@ -613,7 +613,7 @@ sub processASEWithNev
 	 #my $pValueSnpHash{$_} = fdrControl(\@pList, $asarpPValueCutoff, 0); #0/undef--not verbose
        }
      }
-     print "\n# new p-value scheme: correction\n";
+     print "\n# new p-value scheme: correction\n" if(keys %pValueSnpHash > 0);
      for(keys %asarpGeneControls){
        print "Before: $asarpGeneControls{$_}\n";
        $asarpGeneControls{$_} = pValueCorrection($asarpGeneControls{$_}, \%pValueSnpHash, $asarpPValueCutoff);
