@@ -27,7 +27,12 @@ is_paired_end		0: single-end; 1: paired-end
 			where pair-1 should be always followed by pair-2 in the next line.
 
 OPTIONAL [strongly recommended to be input]:
-is_strand_sp		0: non-strand specific; 1: strand-specific
+is_strand_sp		0: non-strand specific (or no input); 
+			1: strand-specific with pair 1 **sense**;
+			2: strand-specific with pair 1 **anti-sense**
+			Be careful with the strand-specific setting as it will give totally opposite 
+			strand information if wrongly set.
+
 			The strand-specific option is used for strand-specific RNA-Seq data.
 			When set, specialized bedgraph files will be output (output_bedgraph)
 			where there is a 5th extra attribute specifying the strand: + or -
@@ -50,6 +55,14 @@ my ($samFile, $snvFile, $outputSnvs, $outputBedgraph, $pairEnded, $strandFlag, $
 if(!defined($strandFlag)){
   print "WARNING: is_strand_sp should be input to specify whether the RNA-Seq data (input_sam_file) are strand specific.\nSet to be 0: non-strand specific for backward compatibility\n";
   $strandFlag = 0;
+}elsif($strandFlag == 0){
+  print "NOTE: non-strand-specific (default)\n";
+}elsif($strandFlag == 1){
+  print "IMPORTANT NOTE: pair 1 is sense in the strand-specific setting\n";
+}elsif($strandFlag == 2){
+  print "IMPORTANT NOTE: pair 1 is anti-sense in the strand-specific setting\n";
+}else{
+  die "ERROR: have to set a specific strand-specific flag: 0/1/2; unkonwn flag set: $strandFlag\n";
 }
 
 our $INTRVL = 100000; #interval to output processed counts
@@ -81,8 +94,14 @@ while(<FP>){
   # handle the strand info
   if($strand & 16){ # i.e. 0x10 according to SAM format: http://samtools.sourceforge.net/SAM1.pdf
     $strand = '-';
+    if(defined($strandFlag) && $strandFlag == 2){ # pair 1 is anti-sense
+      $strand = '+'; #flip pair 1's strand
+    }
   }else{
     $strand = '+'; 
+    if(defined($strandFlag) && $strandFlag == 2){ # pair 1 is anti-sense
+      $strand = '-'; #flip pair 1's strand
+    }
   }
   if($mismatches > 0){ #we can record SNV candidates
     # attr 16-20
@@ -669,7 +688,12 @@ ARGUMENTS:
 
 OPTIONAL [strongly recommended to be input]:
 
- is_strand_sp		0: non-strand specific; 1: strand-specific
+ is_strand_sp		0: non-strand specific (or no input); 
+			1: strand-specific with pair 1 **sense**;
+			2: strand-specific with pair 1 **anti-sense**
+			Be careful with the strand-specific setting as it will give totally opposite 
+			strand information if wrongly set.
+
 			The strand-specific option is used for strand-specific RNA-Seq data.
 			When set, specialized bedgraph files will be output (output_bedgraph)
 			where there is a 5th extra attribute specifying the strand: + or -
