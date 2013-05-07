@@ -569,9 +569,11 @@ sub processASEWithNev
 		       my @ps = ();
 		       if($absRatio >= $alleleRatioCutoff){
 		         push @ps, $pValue;
+			 print "Add $gene: $trgtPos, $pValue, $absRatio\n";
 		       }
 		       if($absRatio2 >= $alleleRatioCutoff){
 		         push @ps, $pValue2;
+			 print "Add $gene: $trgtPos, $pValue2, $absRatio2\n";
 		       }
 		       $pValue = 1; #re-init (not a good choice but just not to modify too much following)
 		       for(@ps){
@@ -689,9 +691,9 @@ sub pValueCorrection{
   for(@snps){
     my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
     #Bonferroni correction:
-    #print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
+    print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
     $pValue =$pValue*$pControl{$trgtPos}; # correction done
-    #print "$pValue\n";
+    print "$pValue\n";
     if($pValue <= $threshold){
       $correctedPairs .= "$type;$pValue;$trgtPos;$ctrlPos\t"; # filtering
     }
