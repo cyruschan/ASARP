@@ -557,18 +557,33 @@ sub processASEWithNev
 		     my $pValue2 = $R->get('p2');
 		     #print "fisher test result 2: $pValue2\n";
 		     
-		     # new p-value scheme: assume each haplotype is equally probable:
-		     $pValue = ($pValue+$pValue2)/2; # 1/2*$pValue + 1/2*$pValue2
+		     # give up new p-value scheme (too stringent for exp cases): assume each haplotype is equally probable:
+		     #$pValue = ($pValue+$pValue2)/2; # 1/2*$pValue + 1/2*$pValue2
 		     my $tRatio = $tAllel1/($tAllel1+$tAllel2);
 		     my $cRatio = $cAllel1/($cAllel1+$cAllel2);
 		     #Step 2.3 Check if the allelic ratio difference is larger than the threshold
-		     if(abs($tRatio-$cRatio) >= $alleleRatioCutoff || abs($tRatio-(1-$cRatio)) >= $alleleRatioCutoff){ #allelic difference filter
+		     my $absRatio = abs($tRatio-$cRatio);
+		     my $absRatio2 = abs($tRatio-(1-$cRatio));
+		     if($absRatio >= $alleleRatioCutoff || $absRatio2 >= $alleleRatioCutoff){ #allelic difference filter linked with fisher test
+		       # just use multiple tests to evaluate the p-value; fisher test and ratio diff should be linked
+		       my @ps = ();
+		       if($absRatio >= $alleleRatioCutoff){
+		         push @ps, $pValue;
+		       }
+		       if($absRatio2 >= $alleleRatioCutoff){
+		         push @ps, $pValue2;
+		       }
+		       $pValue = 1; #re-init (not a good choice but just not to modify too much following)
+		       for(@ps){
+		         if($_ < $pValue){  $pValue = $_; } #just use the smaller one, if there are more than one
+		       }
+
 		       # record the number (if Bonferroni Correction is used) or all the p-values (if FDR control is used)
 		       if(!defined($pValueSnpHash{$trgtPos})){
-		         $pValueSnpHash{$trgtPos} = 1; # counts for BF correction
+		         $pValueSnpHash{$trgtPos} = @ps; # counts for BF correction
 		         #$pValueSnpHash{$trgtPos} = $pValue; # counts for BF correction
 		       }else{
-		         $pValueSnpHash{$trgtPos} += 1; # counts for BF correction
+		         $pValueSnpHash{$trgtPos} += @ps; # counts for BF correction
 		         #$pValueSnpHash{$trgtPos} .= ",$pValue"; # counts for BF correction
 		       }
 		       
