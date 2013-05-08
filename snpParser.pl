@@ -637,26 +637,62 @@ sub processASEWithNev
        #print "After:  $asarpGeneControls{$_}\n";
      }
      #refine the other results:
-     my %newGeneHash = ();
-     my %newSnpHash = ();
+     my %newAsarpGeneHash = ();
+     my %newAsarpSnpHash = ();
+     my %newOutTabu = (); #new tabu list
      for(keys %asarpGeneControls){
-       if($asarpGeneControls{$_} eq ''){ #all the candidates have been removed
-         delete $asarpGeneControls{$_}; #delete the key as well
-	 #print "control SNVs for gene $_ deleted\n";
+       my $gene = $_;
+       if($asarpGeneControls{$gene} eq ''){ #all the candidates have been removed
+         delete $asarpGeneControls{$gene}; #delete the key as well
+	 print "All control SNVs for gene $gene deleted\n";
 	 next; #nothing to be added 
        }
-       #non-empty, get things:
+
+       print "Getting new $gene results\n";
+       #non-empty, get information for newGeneHash and newSnpHash:
        my @snps = split(/\t/, $asarpGeneControls{$_});
        my @targetGeneSnps = split(/\t/, $asarpGeneHash{$_});
        for(@snps){
          my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
+	 print " ($type, $pValue, $trgtPos, $ctrlPos)\n";
+	 
+	 #now we need to get back extra info of the target SNV position ...
+	 my $targetSnpInfo = undef;
+	 if(defined($powSnps{$trgtPos})){
+	   $targetSnpInfo = $powSnps{$trgtPos};
+	 }elsif(defined($ordSnps{$trgtPos})){
+	   $targetSnpInfo = $ordSnps{$trgtPos};
+	 }else{
+	   die "ERROR: SNP at position $trgtPos not recorded for gene $gene at Chr $i\n";
+	 }
+         my ($tDummyP, $tDummyPos, $tAlleles, $tSnpId, $tAllel1, $tAllel2) = (undef, undef, undef, undef, undef, undef);
+	 my @allTargetSnps = split(';', $targetSnpInfo);
+	 for(@allTargetSnps){
+	   ($tDummyP, $tDummyPos, $tAlleles, $tSnpId, $tAllel1, $tAllel2) = getSnpInfo($_);
+	   #just get the first targetSnp
+	   last;
+	 }
+
+	 print "Retrieved $trgtPos: ($tDummyP, $tDummyPos, $tAlleles, $tSnpId, $tAllel1, $tAllel2)\n";
+	 
+	 #re-do similar things in the processASEWithNev sub
+	 #but this time the hashes are newAsarp*
+	 my $snpCheck = $gene.",".$trgtPos;
+	 if(!defined($newOutTabu{$snpCheck})){
+	   $newAsarpGeneHash{$gene} .= "$type;$trgtPos $tSnpId $tAlleles $tAllel1:$tAllel2\t"; 
+	   $newOutTabu{$snpCheck} = 1;
+	 }
+	 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
+	 if(!defined($newAsarpSnpHash{$trgtPos}) || !($newAsarpSnpHash{$trgtPos} =~ /$snpStub/)){
+	   $newAsarpSnpHash{$trgtPos} .= $type.";".$snpStub;
+	 }
        }
      }
 
-     $aseGenes[$i] = \%aseGeneHash;
-     $asarpGenes[$i] = \%asarpGeneHash;
-     $asarpControls[$i] = \%asarpGeneControls;
-     $asarpSnps[$i] = \%asarpSnpHash;
+     $aseGenes[$i] = \%aseGeneHash; #not affected
+     $asarpGenes[$i] = \%newAsarpGeneHash; # updated by Correction
+     $asarpControls[$i] = \%asarpGeneControls; # updated by Correction (in place)
+     $asarpSnps[$i] = \%newAsarpSnpHash; # updated by Correction
 
   }
   $R->stop;
