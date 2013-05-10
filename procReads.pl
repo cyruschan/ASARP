@@ -292,7 +292,8 @@ for my $chr (keys %blocks){
     my ($bpp1, $bpp2) = (0, 1); 
     if(@bedgraph_idx >0){
       $bpp1 = $bedgraph_idx[0];
-      $bpp2 = $bedgraph_idx[-1];
+      my ($dummyChr, $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
+      $bpp2 = $bedLastPos;
     } 
     my $plusRange = "$chr:".($bpp1+1).":".$bpp2; #start converted back to 1-based for chr range in UCSC
     print PP "track type=bedGraph name=\"reads_".$chr."_plus\" description=\"$plusRange $title; + strand only\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
@@ -306,7 +307,8 @@ for my $chr (keys %blocks){
     my ($bmp1, $bmp2) = (0, 1); 
     if(@bedgraphRc_idx >0){
       $bmp1 = $bedgraphRc_idx[0];
-      $bmp2 = $bedgraphRc_idx[-1];
+      my ($dummyChr2, $dummyS2, $bedLastPos2) = split(" ", $bedgraphRc[-1]);
+      $bmp2 = $bedLastPos2;
     } 
     my $minusRange = "$chr:".($bmp1+1).":".$bmp2; #start converted back to 1-based for chr range in UCSC
     print MP "track type=bedGraph name=\"reads_".$chr."_minus\" description=\"$minusRange $title; - strand only\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
