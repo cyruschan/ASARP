@@ -125,14 +125,8 @@ or allele specific expression (ASE) studies</p>
  chr10 181482 181483 8 -
  chr10 181483 181499 9 -
  ...</pre>
-<p>Note that all + lines are output before any - lines output. While the 5th strand attribute is not specified in the bedgraph standard, one can use the following Unix commands to get the + and - only bedgraph files respectively (suppose the SNV file is <code>input.bedgraph</code>):</p>
-<p>To generate + only bed (note that no explicit + attributes in the file content)</p>
-<pre> cat input.bedgraph | grep &quot;track type=&quot; &gt;output.plus.bedgraph
- cat input.bedgraph | grep '+$' | cut -d ' ' -f 1,2,3,4 &gt;&gt;output.plus.bedgraph</pre>
-<p>To generate - only bed (note that no explicit - attributes in the file content)</p>
-<pre> cat input.bedgraph | grep &quot;track type=&quot; &gt;output.minus.bedgraph
- cat input.bedgraph | grep '\-$' | cut -d ' ' -f 1,2,3,4 &gt;&gt;output.minus.bedgraph</pre>
-<p>The first grep gets the track line. The second grep gets + or - lines and keeps the 4 standard attributes, skipping the last strand attribute.</p>
+<p>Note that all + lines are output before any - lines output. While the 5th strand attribute is not specified in the bedgraph standard,
+two additional bedgraph files are output, with suffixes .plus and .minus, to provide the + and - only standard bedgraph tracks respectively.</p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>

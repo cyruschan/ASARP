@@ -220,10 +220,6 @@ if(@allChrsInSam>0){
 #}
 
 #############################################################
-# output SNVs
-open(SP, ">", $outputSnvs) or die "ERROR: cannot open $outputSnvs to output candidate SNVs\n";
-# output bedgraph
-open(BP, ">", $outputBedgraph) or die "ERROR: cannot open $outputBedgraph to output bedgraph\n";
 my $ttlSnvs = 0;
 # sort all the block starts and make pile-ups
 for my $chr (keys %blocks){
@@ -245,6 +241,8 @@ for my $chr (keys %blocks){
   }
 
   ####################################################################
+  # output bedgraph
+  open(BP, ">", $outputBedgraph) or die "ERROR: cannot open $outputBedgraph to output bedgraph\n";
   # output bedgraph for this chromosome
   my $addDescr = "$title; ";
   # get the track opt first
@@ -285,8 +283,40 @@ for my $chr (keys %blocks){
       if($bedCnt%$INTRVL == 0){ print "$bedCnt...";  }
     }
   }
-
+  close(BP);
   print " $bedCnt lines. Done.\n";
+
+  if($strandFlag){
+    print "Outputting standard 4-attribute bedgraph files ($outputBedgraph.plus and .minus), one for each strand...";
+    open(PP, ">", "$outputBedgraph.plus") or die "ERROR: cannot open $outputBedgraph.plus to output bedgraph\n";
+    my ($bpp1, $bpp2) = (0, 1); 
+    if(@bedgraph_idx >0){
+      $bpp1 = $bedgraph_idx[0];
+      $bpp2 = $bedgraph_idx[-1];
+    } 
+    my $plusRange = "$chr:".($bpp1+1).":".$bpp2; #start converted back to 1-based for chr range in UCSC
+    print PP "track type=bedGraph name=\"reads_".$chr."_plus\" description=\"$plusRange $title; + strand only\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
+    for(@bedgraph){
+      print PP $_."\n"; #strand added
+    }
+    close(PP);
+    
+    
+    open(MP, ">", "$outputBedgraph.minus") or die "ERROR: cannot open $outputBedgraph.minus to output bedgraph\n";
+    my ($bmp1, $bmp2) = (0, 1); 
+    if(@bedgraphRc_idx >0){
+      $bmp1 = $bedgraphRc_idx[0];
+      $bmp2 = $bedgraphRc_idx[-1];
+    } 
+    my $minusRange = "$chr:".($bmp1+1).":".$bmp2; #start converted back to 1-based for chr range in UCSC
+    print MP "track type=bedGraph name=\"reads_".$chr."_minus\" description=\"$minusRange $title; - strand only\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
+    for(@bedgraphRc){
+      print MP $_."\n"; #strand added
+    }
+    close(MP);
+    print " ".(scalar @bedgraph)." + lines and ".(scalar @bedgraphRc)." - lines. Done. \n";
+
+  }
   ####################################################################
   
   print "Processing $chr genomic SNVs...";
@@ -313,6 +343,8 @@ for my $chr (keys %blocks){
 
   # for strand-specific version, need to process them separately
   
+  # output SNVs
+  open(SP, ">", $outputSnvs) or die "ERROR: cannot open $outputSnvs to output candidate SNVs\n";
   my ($snvStr, $snvRcStr) = ('', '');
   my ($dCnt, $dRcCnt) = (0, 0);
   ($snvStr, $dCnt) = getSnvReads($chr, \$snv{$chr}, \%dnaSnvs, \@dnaSnvs_idx, \@bedgraph, \@bedgraph_idx, \@discard);
@@ -333,10 +365,9 @@ for my $chr (keys %blocks){
     print SP $snvStr; #no strand-specific info at the end
   
   }
+  close(SP);
   $ttlSnvs += $dCnt + $dRcCnt;
 }
-close(SP);
-close(BP);
 print "\nFinished with $cnt read $unit and $ttlSnvs SNVs\n";
 
 ##########################################################################
@@ -796,19 +827,8 @@ The output bedgraph lines would look like:
  chr10 181483 181499 9 -
  ...
 
-Note that all + lines are output before any - lines output. While the 5th strand attribute is not specified in the bedgraph standard, one can use the following Unix commands to get the + and - only bedgraph files respectively (suppose the SNV file is C<input.bedgraph>):
-
-To generate + only bed (note that no explicit + attributes in the file content)
-
- cat input.bedgraph | grep "track type=" >output.plus.bedgraph
- cat input.bedgraph | grep '+$' | cut -d ' ' -f 1,2,3,4 >>output.plus.bedgraph
-
-To generate - only bed (note that no explicit - attributes in the file content)
-
- cat input.bedgraph | grep "track type=" >output.minus.bedgraph
- cat input.bedgraph | grep '\-$' | cut -d ' ' -f 1,2,3,4 >>output.minus.bedgraph
-
-The first grep gets the track line. The second grep gets + or - lines and keeps the 4 standard attributes, skipping the last strand attribute.
+Note that all + lines are output before any - lines output. While the 5th strand attribute is not specified in the bedgraph standard, 
+two additional bedgraph files are output, with suffixes .plus and .minus, to provide the + and - only standard bedgraph tracks respectively.
 
 =head1 SEE ALSO
 
