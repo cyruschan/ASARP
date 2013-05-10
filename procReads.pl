@@ -11,7 +11,7 @@ $| = 1;
 
 if(@ARGV < 5){
   print <<EOT;
-USAGE: perl $0 input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp discarded_read_pos]
+USAGE: perl $0 input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp bedgraph_title discarded_read_pos]
 
 NOTE: 	the read processing script is for Dr. Jae-Hyung Lee's
 	20-attribute SAM file output format, used in RNA-editing
@@ -39,7 +39,12 @@ is_strand_sp		0: non-strand specific (or no input);
 			besides the standard ones: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
 			One can use grep and cut to get +/- strand only bedgraphs.
 
-OPTIONAL [if input, must follow is_strand_sp]:
+OPTIONAL [if input, must be input in order following is_strand_sp]:
+bedgraph_title		a short title for the output bedgraph files (will be put in description of the header line)
+                        if there are spaces in between it should be quoted
+			e.g. "nbt.editing reads: distinct after dup removal"
+			if not input, "default" will be used as the short title
+
 discarded_read_pos	masked-out (low-quality) read positions in calculating 
 			the max read quality scores, 
 			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
@@ -50,7 +55,11 @@ EOT
   exit;
 }
 
-my ($samFile, $snvFile, $outputSnvs, $outputBedgraph, $pairEnded, $strandFlag, $discardPos) = @ARGV;
+my ($samFile, $snvFile, $outputSnvs, $outputBedgraph, $pairEnded, $strandFlag, $title, $discardPos) = @ARGV;
+# handling empty title
+if(!defined($title)){
+  $title = "default"; #default
+}
 # handling undefined $strandFlag for backward compatibility
 if(!defined($strandFlag)){
   print "WARNING: is_strand_sp should be input to specify whether the RNA-Seq data (input_sam_file) are strand specific.\nSet to be 0: non-strand specific for backward compatibility\n";
@@ -237,7 +246,7 @@ for my $chr (keys %blocks){
 
   ####################################################################
   # output bedgraph for this chromosome
-  my $addDescr = "nbt.editing reads: distinct after dup removal; ";
+  my $addDescr = "$title; ";
   # get the track opt first
   my ($dummyChr, $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
   my $bedFirstPos = $bedgraph_idx[0];
@@ -700,7 +709,12 @@ OPTIONAL [strongly recommended to be input]:
 			besides the standard ones: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
 			One can use grep and cut to get +/- strand only bedgraphs.
 
-OPTIONAL [if input, must follow is_strand_sp]:
+OPTIONAL [if input, must be input in order following is_strand_sp]:
+
+ bedgraph_title		a short title for the output bedgraph files (will be put in description of the header line)
+                        if there are spaces in between it should be quoted
+			e.g. "nbt.editing reads: distinct after dup removal"
+			if not input, "default" will be used as the short title
 
  discarded_read_pos	masked-out (low-quality) read positions in calculating 
 			the max read quality scores, 
