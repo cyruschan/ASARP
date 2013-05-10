@@ -28,16 +28,16 @@ print $fp "Type\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal
 
 # Demonstration of using the fileParser
 # read the transcript annotation file
-my $transRef = readTranscriptFile($xiaoF);
+my ($transRef) = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans'); #utility sub: show transcripts (key: trans)
 
 # Demonstration of using the snpParser
-my $snpRef = initSnp($snpF, $POWCUTOFF);
+my ($snpRef) = initSnp($snpF, $POWCUTOFF);
 #print "SNV List:\n";
 #printListByKey($snpRef, 'powSnps');
 #printListByKey($snpRef, 'snps');
 
-my $geneSnpRef = setGeneSnps($snpRef, $transRef);
+my ($geneSnpRef) = setGeneSnps($snpRef, $transRef);
 #print "Significant Snvs: \n";
 #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
 #print "Ordinary Snvs: \n";
