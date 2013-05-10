@@ -569,11 +569,11 @@ sub processASEWithNev
 		       my @ps = ();
 		       if($absRatio >= $alleleRatioCutoff){
 		         push @ps, $pValue;
-			 print "Add $gene: $trgtPos, $pValue, $absRatio\n";
+			 #print "Add $gene: $trgtPos, $pValue, $absRatio\n";
 		       }
 		       if($absRatio2 >= $alleleRatioCutoff){
 		         push @ps, $pValue2;
-			 print "Add $gene: $trgtPos, $pValue2, $absRatio2\n";
+			 #print "Add $gene: $trgtPos, $pValue2, $absRatio2\n";
 		       }
 		       $pValue = 1; #re-init (not a good choice but just not to modify too much following)
 		       for(@ps){
@@ -644,17 +644,17 @@ sub processASEWithNev
        my $gene = $_;
        if($asarpGeneControls{$gene} eq ''){ #all the candidates have been removed
          delete $asarpGeneControls{$gene}; #delete the key as well
-	 print "All control SNVs for gene $gene deleted\n";
+	 #print "All control SNVs for gene $gene deleted\n";
 	 next; #nothing to be added 
        }
 
-       print "Getting new $gene results\n";
+       #print "Getting new $gene results\n";
        #non-empty, get information for newGeneHash and newSnpHash:
        my @snps = split(/\t/, $asarpGeneControls{$_});
        my @targetGeneSnps = split(/\t/, $asarpGeneHash{$_});
        for(@snps){
          my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
-	 print " ($type, $pValue, $trgtPos, $ctrlPos)\n";
+	 #print " ($type, $pValue, $trgtPos, $ctrlPos)\n";
 	 
 	 #now we need to get back extra info of the target SNV position ...
 	 my $targetSnpInfo = undef;
@@ -673,7 +673,7 @@ sub processASEWithNev
 	   last;
 	 }
 
-	 print "Retrieved $trgtPos: ($tDummyP, $tDummyPos, $tAlleles, $tSnpId, $tAllel1, $tAllel2)\n";
+	 #print "Retrieved $trgtPos: ($tDummyP, $tDummyPos, $tAlleles, $tSnpId, $tAllel1, $tAllel2)\n";
 	 
 	 #re-do similar things in the processASEWithNev sub
 	 #but this time the hashes are newAsarp*
@@ -727,9 +727,9 @@ sub pValueCorrection{
   for(@snps){
     my ($type, $pValue, $trgtPos, $ctrlPos) = split(/;/, $_);
     #Bonferroni correction:
-    print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
+    #print "$trgtPos: $pValue corrected by $pControl{$trgtPos} tests = ";
     $pValue =$pValue*$pControl{$trgtPos}; # correction done
-    print "$pValue\n";
+    #print "$pValue\n";
     if($pValue <= $threshold){
       $correctedPairs .= "$type;$pValue;$trgtPos;$ctrlPos\t"; # filtering
     }
