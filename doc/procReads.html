@@ -49,14 +49,24 @@ or allele specific expression (ASE) studies</p>
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.</pre>
 <p>OPTIONAL [strongly recommended to be input]:</p>
-<pre> is_strand_sp		0: non-strand specific; 1: strand-specific
+<pre> is_strand_sp		0: non-strand specific (or no input); 
+			1: strand-specific with pair 1 **sense**;
+			2: strand-specific with pair 1 **anti-sense**
+			Be careful with the strand-specific setting as it will give totally opposite 
+			strand information if wrongly set.
+
 			The strand-specific option is used for strand-specific RNA-Seq data.
 			When set, specialized bedgraph files will be output (output_bedgraph)
 			where there is a 5th extra attribute specifying the strand: + or -
 			besides the standard ones: <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a>
 			One can use grep and cut to get +/- strand only bedgraphs.</pre>
-<p>OPTIONAL [if input, must follow is_strand_sp]:</p>
-<pre> discarded_read_pos	masked-out (low-quality) read positions in calculating 
+<p>OPTIONAL [if input, must be input in order following is_strand_sp]:</p>
+<pre> bedgraph_title		a short title for the output bedgraph files (will be put in description of the header line)
+                        if there are spaces in between it should be quoted
+			e.g. &quot;nbt.editing reads: distinct after dup removal&quot;
+			if not input, &quot;default&quot; will be used as the short title
+
+ discarded_read_pos	masked-out (low-quality) read positions in calculating 
 			the max read quality scores, 
 			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
 			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
