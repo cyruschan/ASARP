@@ -1953,6 +1953,7 @@ sub matchSnpPoswithSplicingEvents
 #	output:		the p-value threshold for the FDR threshold
 sub fdrControl{
   my ($pRef, $fdrCutoff, $isVerbose) = @_;
+  my $orgFdrCutoff = $fdrCutoff; # fall-back plan when the adjusted FDR fails
   if(!defined($isVerbose)){ $isVerbose = 0;   }
   my @pList = @$pRef;
   my $pListSize = @pList; #size
@@ -2056,6 +2057,18 @@ sub fdrControl{
     return $fdrCutoff;
   }
   #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
+  if($pList[$pos-1] <= $orgFdrCutoff){
+    return $pList[$pos-1];
+  }
+  #fall-back plan
+  print "WARNING: The adjusted FDR method does not work (i.e. cutoff > $orgFdrCutoff). Switched to BH method\n" if $isVerbose;
+  $pos = 0;
+  while($pos < @pAdjust){
+    if($pAdjust[$pos] > $orgFdrCutoff){
+      last;
+    }
+    $pos++;
+  }
   return $pList[$pos-1];
 }
 
