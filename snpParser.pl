@@ -780,7 +780,7 @@ sub mergeAsarpByKey{
      }
      # first it's empty
      for(keys %hs){
-       if($keyword ne 'ASARPsnp'){
+       if(0){ #$keyword ne 'ASARPsnp'){
          $asarp{$_} = $hs{$_};
        }else{
          # need to add the strand info
@@ -794,7 +794,7 @@ sub mergeAsarpByKey{
      }
      # then it's cautious
      for(keys %hsRc){
-       if($keyword ne 'ASARPsnp'){ #only this uses the SNV position as the key, and thus $_ may appear in both strands
+       if(0){ #$keyword ne 'ASARPsnp'){ #only this uses the SNV position as the key, and thus $_ may appear in both strands
          if(!defined($asarp{$_})){
            $asarp{$_} = $hsRc{$_}; 
          }else{ # on gene level ($_) the result should be strand specific and therefore they should be exclusive
