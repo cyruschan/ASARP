@@ -786,7 +786,7 @@ sub mergeAsarpByKey{
          # need to add the strand info
 	 my @snps = split(/\t/, $hs{$_});
 	 for(my $j = 0; $j < @snps; $j++){
-	   $snps[$j] .= ',+'; 
+	   $snps[$j] .= ';+'; 
 	 }
 	 $asarp{$_} = join("\t", @snps);
        }
@@ -808,7 +808,7 @@ sub mergeAsarpByKey{
 	 }
 	 my @snpsRc = split(/\t/, $hsRc{$_});
 	 for(my $j = 0; $j < @snpsRc; $j++){
-	   $snpsRc[$j] .= ',-'; 
+	   $snpsRc[$j] .= ';-'; 
 	 }
          $asarp{$_} = join("\t", @snps, @snpsRc);
        }

@@ -16,7 +16,7 @@ $| = 1;
 if(@ARGV<5){
   print <<EOT;
 
-USAGE: perl $0 snv_file asarp_file db outfolder annotations
+USAGE: perl $0 snv_file asarp_file db outfolder annotations [top_k description ispgSnp selecttype]
 
 This script streamlines significant ASARP SNV cases (i.e.
 keeping only the target-control ASARP SNV pairs with the 
@@ -49,15 +49,16 @@ description	a description string (quoted when space is used) to identify
 		the current sample/dataset, e.g. "gm12878 encode cytosol" in 
 		the pgSnp tracks.
 		If not input, "default" will be added to the track description
-
 ispgSnp		whether to output the pgSnp tracks (useful when only top_k ASARP
 		SNVs are desired): 0-NO; 1-YES (default)
+selecttype	select only 1 ASARP SNV type to investigate, e.g. AI/AT/AS, or 
+		more specific: SE/RI/ASS
 
 EOT
   exit;
 }
 
-my ($snpF, $input, $db, $outFolder, $xiaoF, $topK, $idString, $isPgSnp) = @ARGV;
+my ($snpF, $input, $db, $outFolder, $xiaoF, $topK, $idString, $isPgSnp, $selectType) = @ARGV;
 
 if(!defined($isPgSnp)){
   $isPgSnp = 1; # to output by default
@@ -67,6 +68,23 @@ if(!defined($topK) || $topK <=0){
 }
 if(!defined($idString)){
   $idString = 'default';
+}
+if(!defined($selectType)){
+  $selectType = ''; #no filter
+}else{
+  $selectType = uc $selectType;
+  my @asarpTypes = qw(AS AI AT SE RI ASS);
+  my $isGood = 0;
+  for(@asarpTypes){
+    if($selectType eq $_){
+      $isGood = 1;
+      last;
+    }
+  }
+  if(!$isGood){
+    die "ERROR: only ASARP select type in @asarpTypes supported; you input: $selectType\n";
+  }
+  print "Only ASARP cases of the select type: $selectType will be output\n";
 }
 
 print "Loading SNV information from $snpF\n";
@@ -207,7 +225,11 @@ for(my $i = 1; $i < @pred; $i++){
     my %bestP = (); #the best p-value for each target SNV
     while($i<@pred && $pred[$i] ne "" && !($pred[$i]=~/^chr/)){
       #get target-control pairs
-      my ($catInfo, $pVal, $trgtPos, $ctrlPos) = split(';', $pred[$i]);
+      my ($catInfo, $pVal, $trgtPos, $ctrlPos, $snvStrand) = split(';', $pred[$i]);
+      if(index($catInfo, $selectType.':') == -1 && index($catInfo, $selectType.':') == -1){ #1st: AI/AS/AT; 2nd: RI/SE/ASS
+        $i++;
+	next; #not the type we want
+      }
       if(defined($bestP{$trgtPos}) && $bestP{$trgtPos} <= $pVal){ #no need to look at this case
 	$i++;
 	next; # no need to see this any more
@@ -220,15 +242,19 @@ for(my $i = 1; $i < @pred; $i++){
         die "ERROR: cannot find exon end sets for $gene\n";
       }
       my ($rangeL, $rangeR) = getBoundary($trgtPos, \%exs, \@sortedExs, 1);
-      my ($ctrlRangeL, $ctrlRangeR) = getBoundary($ctrlPos, \%exs, \@sortedExs, 0); # no need to get flanking regions as NEV is not required for ctrlPos
-      print "$gene: Trgt $trgtPos: $rangeL-$rangeR\n$gene: Ctrl $ctrlPos: $ctrlRangeL-$ctrlRangeR\n";
+      #my ($ctrlRangeL, $ctrlRangeR) = getBoundary($ctrlPos, \%exs, \@sortedExs, 0); # no need to get flanking regions as NEV is not required for ctrlPos
+      #print "$gene: Trgt $trgtPos: $rangeL-$rangeR\n$gene: Ctrl $ctrlPos: $ctrlRangeL-$ctrlRangeR\n";
       #if($ctrlRangeL < $rangeL){ $rangeL = $ctrlRangeL; }
       #if($ctrlRangeR > $rangeR){ $rangeR = $ctrlRangeR; }
 
       # now we need %geneTrgts
       my $snpInfo = $geneTrgts{"$gene;$trgtPos"};
       my $ctrlSnpInfo = $snps{"$chr;$ctrlPos"};
-      $coms{"$gene;$trgtPos"} = join("\t", "$chr:$rangeL-$rangeR", "$gene $snpInfo type: $catInfo", "ctrl:$ctrlPos $ctrlSnpInfo (p:$pVal)");
+      if(!defined($snvStrand)){ #no strand
+        $coms{"$gene;$trgtPos"} = join("\t", "$chr:$rangeL-$rangeR", "$gene $snpInfo type: $catInfo", "ctrl:$ctrlPos $ctrlSnpInfo (p:$pVal)");
+      }else{ #has strand
+        $coms{"$gene;$trgtPos"} = join("\t", "$chr:$rangeL-$rangeR", "$gene $snvStrand $snpInfo type: $catInfo", "ctrl:$ctrlPos $ctrlSnpInfo (p:$pVal)");
+      }
       #print $coms{"$gene;$trgtPos"}, "\n"; exit;
 
       if(!defined($chrStart{$chr})){  $chrStart{$chr} = $trgtPos;  }
@@ -274,38 +300,50 @@ if($topK && $topK < $pSize){
       }
     }
   }
-  print "$cnt ASARP target SNVs are shortlisted according to p-value cutoff: $cutoff\n";
+  print "\n$cnt ASARP target SNVs are shortlisted according to p-value cutoff: $cutoff\n";
 }
 # done
 # if pgSnp tracks are needed to be output
 if($isPgSnp){
 
-  print "\nOutput pgSnp to $outFolder\n";
-  open(AP, ">", "$outFolder/all.pgSnp") or die "ERROR: cannot open $outFolder/all.pgSnp for writing\n";
-  print AP "track type=pgSnp visibility=3 db=$db name=\"SNV_all_chrs\" description=\"$idString: ASARP SNVs in all chromosomes\"\n";
+  print "Output pgSnp to $outFolder/all.pgSnp\n";
+  open(PAP, ">", "$outFolder/all.pgSnp") or die "ERROR: cannot open $outFolder/all.pgSnp for writing\n";
+  print PAP "track type=pgSnp visibility=3 db=$db name=\"SNV_all_chrs\" description=\"$idString: ASARP SNVs in all chromosomes\"\n";
 
   for(keys %pgSnp){
     my $chr = $_;
     #print "$chr\n";
-    open(OP, ">", "$outFolder/$chr.pgSnp") or die "ERROR: cannot open $outFolder/$chr.pgSnp for writing\n";
-    print OP "track type=pgSnp visibility=3 db=$db name=\"SNV_$chr\" description=\"$idString: ASARP SNVs in $chr\"\n";
-    print OP "browser position $chr:$chrStart{$chr}-$chrEnd{$chr}\n";
-    print OP $pgSnp{$chr};
-    print AP $pgSnp{$chr}; #all.pgSnp
-    close(OP);
+    #open(OP, ">", "$outFolder/$chr.pgSnp") or die "ERROR: cannot open $outFolder/$chr.pgSnp for writing\n";
+    #print OP "track type=pgSnp visibility=3 db=$db name=\"SNV_$chr\" description=\"$idString: ASARP SNVs in $chr\"\n";
+    #print OP "browser position $chr:$chrStart{$chr}-$chrEnd{$chr}\n";
+    #print OP $pgSnp{$chr};
+    print PAP $pgSnp{$chr}; #all.pgSnp
+    #close(OP);
   } 
-  close(AP);
+  close(PAP);
 }
 
-print "\nOutput pgSnp.aux to $outFolder\n";
+my $summary = 'all';
+if($selectType ne ''){
+  $summary = $selectType;
+}
+if($topK > 0 && $topK < $pSize){
+  $summary = "$summary.top$topK";
+}
+$summary = "$summary.aux";
+print "Output pgSnp.aux to $outFolder/$summary\n";
+open(SAP, ">", "$outFolder/$summary") or die "ERROR: cannot open $outFolder/$summary for writing\n";
+
 for(my $j=1; $j<=$CHRNUM; $j++){
   my $chr = formatChr($j);
   if(defined($pgAux{$chr})){
-    open(AP, ">", "$outFolder/$chr.pgSnp.aux") or die "ERROR: cannot open $outFolder/$chr.pgSnp.aux for writing\n";
-    print AP $pgAux{$chr};
-    close(AP);
+    #open(AP, ">", "$outFolder/$chr.pgSnp.aux") or die "ERROR: cannot open $outFolder/$chr.pgSnp.aux for writing\n";
+    #print AP $pgAux{$chr};
+    print SAP $pgAux{$chr}; #summary
+    #close(AP);
   }
 }
+close(SAP);
 
 sub getBoundary{
 
