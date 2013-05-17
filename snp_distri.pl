@@ -11,9 +11,10 @@ require "snpParser.pl"; #sub's for snps
 
 # input arguments: $outputFile--output, $snpF--SNV file path, $xiaoF--transcript annotation file
 # optional: $POWCUTOFF--powerful SNV cutoff, default: 20
-my ($outputFile, $snpF, $xiaoF, $POWCUTOFF) = @ARGV;
+my ($outputFile, $snpF, $xiaoF, $POWCUTOFF, $snvPwrOut, $snvOrdOut) = @ARGV;
 if(@ARGV < 3){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
-  print "USAGE: perl $0 output_file snv_file transcript_file [powerful_snv_cutoff]\n";
+  print "USAGE: perl $0 output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]\n";
+  print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.\n";
   exit;
 }
 if(!defined($POWCUTOFF)){
@@ -44,12 +45,12 @@ my ($geneSnpRef) = setGeneSnps($snpRef, $transRef);
 #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
 
 print "Calculating powerful SNV distribution...\n";
-my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps'); 
+my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $snvPwrOut); 
 print $fp "Powerful(>=$POWCUTOFF)\t".join("\t",@part1)."\n";
 printSnvDist(@part1);
 
 print "Calculating non-powerful SNV distribution...\n";
-my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps'); 
+my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $snvOrdOut); 
 print $fp "Non-powerful(<$POWCUTOFF)\t".join("\t",@part2)."\n";
 printSnvDist(@part2);
 
@@ -68,7 +69,7 @@ close($fp);
 # print out the gene snps results for certain type (powerful or ordinary snps)
 sub getGeneSnpsDistri
 {
-  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey) = @_;
+  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $detailedOutput) = @_;
 
   my @dist = (); #snp distribution results
   for (my $i=0; $i<=$CHRNUM; $i++){
@@ -139,6 +140,12 @@ sub getGeneSnpsDistri
     }
   }
 
+  #add detailed output file
+  my $fp = undef;
+  if(defined($detailedOutput)){
+    open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
+    print $fp "chr\tpos\tcategory\n";
+  }
   #collect and sumamrize the results:
   my $tGeneSnpPosNo = 0;
   my $tCompPosNo = 0;
@@ -156,8 +163,26 @@ sub getGeneSnpsDistri
       if($inEx + $inIn + $in5UTR + $in3UTR > 1){
         $tCompPosNo ++;
       }
+
+      if(defined($detailedOutput)){
+        my $category = "";
+	if($inEx+$in5UTR+$in3UTR == 0){
+	  if($inIn){
+	    $category = "INTRON";
+	  }else{
+	    $category = "INTERGENIC";
+	  }
+	}else{
+	  if($inEx){ $category .="EXON;"; }
+	  if($in5UTR){ $category .="5'UTR;"; }
+	  if($in3UTR){ $category .="3'UTR;"; }
+	}
+	print $fp "$chr\t$_\t$category\n";
+      }
     }
   }
+  close($fp) if defined($detailedOutput);
+
   # No of intergenic SNV positions
   my $tIntergSnp = $allSnpNo - $tGeneSnpPosNo;
 
