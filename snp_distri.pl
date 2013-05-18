@@ -167,11 +167,12 @@ sub getGeneSnpsDistri
       if(defined($detailedOutput)){
         my $category = "";
 	if($inEx+$in5UTR+$in3UTR == 0){
-	  if($inIn){
-	    $category = "INTRON";
-	  }else{
-	    $category = "INTERGENIC";
-	  }
+	  $category = "INTRON";
+	  #if($inIn){
+	  #  $category = "INTRON";
+	  #}else{
+	  #  $category = "INTERGENIC"; #no such cases in in-gene SNVs
+	  #}
 	}else{
 	  if($inEx){ $category .="EXON;"; }
 	  if($in5UTR){ $category .="5'UTR;"; }
@@ -220,13 +221,17 @@ It also serves as an introductory application script to get familiar with the AS
 
 =head1 SYNOPSIS
 
-  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff]
+  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]
 
 C<snv_file>: a SNV list, see the format description in L<snpParser>
 
 C<powerful_snv_cutoff>: an optional cutoff to categorize SNVs into powerful (>= C<powerful_snv_cutoff>) and non-powerful types. Default: 20
 
 C<transcript_file>: Transcript and gene annotation file, see the format description in L<fileParser>
+
+The optional arguments must be input in order.
+
+C<pwr_snv_details> and C<ordinary_snv_details> are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.
 
 =over 6
 
@@ -281,6 +286,20 @@ The application also outputs percentage (over the total SNV positions) sumamries
 	Intergenic total: 6580 (14.26%)
 	Total SNV Positions: 46146
 	...
+
+
+If C<pwr_snv_details> and C<ordinary_snv_details> are input, you will have two addtional output files providing detailed categories of all individual B<in-gene> SNVs. E.g.
+
+ chr	pos	category
+ chr1	68586620	INTRON
+ chr1	68591173	3'UTR;
+ chr1	68590177	INTRON
+ chr1	68608003	INTRON
+ chr1	68591253	3'UTR;
+ chr1	68591405	3'UTR;
+ chr1	68624878	EXON;
+ chr1	68589935	INTRON
+ chr1	68585708	INTRON
 
 =head1 SEE ALSO
 
