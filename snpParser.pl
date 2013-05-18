@@ -1218,12 +1218,17 @@ sub formatGeneLevelVerNAR{
 	my @info = split('\t', $chrRes{$gene});
 	foreach(@info){
 	 #my ($event, $pAsarp, $target, $control) = split(';', $_);
-	 my ($event, $target) = split(';', $_);
+	 my ($event, $target, $tStrand) = split(';', $_);
+	 if(!defined($tStrand)){
+	   $tStrand = ""; # no strand information
+	 }else{
+	   $tStrand = " $tStrand"; # add a space
+	 }
 	 my @allEvents = split(',', $event);
 	 for(@allEvents){
 	   my ($alt, $detail) = split(':', $_);
            if(!defined($tabu{$target.$alt})){
-	     $asarps{$alt} .= $gene."\t".formatChr($i)." ". $target."\n";
+	     $asarps{$alt} .= $gene."\t".formatChr($i)." ". $target."$tStrand\n";
 	     $tabu{$target.$alt} = $detail;
 	   }
 	   my $stub = $alt.";";
