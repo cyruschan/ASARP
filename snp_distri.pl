@@ -11,9 +11,10 @@ require "snpParser.pl"; #sub's for snps
 
 # input arguments: $outputFile--output, $snpF--SNV file path, $xiaoF--transcript annotation file
 # optional: $POWCUTOFF--powerful SNV cutoff, default: 20
-my ($outputFile, $snpF, $xiaoF, $POWCUTOFF) = @ARGV;
+my ($outputFile, $snpF, $xiaoF, $POWCUTOFF, $snvPwrOut, $snvOrdOut) = @ARGV;
 if(@ARGV < 3){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
-  print "USAGE: perl $0 output_file snv_file transcript_file [powerful_snv_cutoff]\n";
+  print "USAGE: perl $0 output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]\n";
+  print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.\n";
   exit;
 }
 if(!defined($POWCUTOFF)){
@@ -44,12 +45,12 @@ my ($geneSnpRef) = setGeneSnps($snpRef, $transRef);
 #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
 
 print "Calculating powerful SNV distribution...\n";
-my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps'); 
+my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $snvPwrOut); 
 print $fp "Powerful(>=$POWCUTOFF)\t".join("\t",@part1)."\n";
 printSnvDist(@part1);
 
 print "Calculating non-powerful SNV distribution...\n";
-my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps'); 
+my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $snvOrdOut); 
 print $fp "Non-powerful(<$POWCUTOFF)\t".join("\t",@part2)."\n";
 printSnvDist(@part2);
 
@@ -68,7 +69,7 @@ close($fp);
 # print out the gene snps results for certain type (powerful or ordinary snps)
 sub getGeneSnpsDistri
 {
-  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey) = @_;
+  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $detailedOutput) = @_;
 
   my @dist = (); #snp distribution results
   for (my $i=0; $i<=$CHRNUM; $i++){
@@ -139,6 +140,12 @@ sub getGeneSnpsDistri
     }
   }
 
+  #add detailed output file
+  my $fp = undef;
+  if(defined($detailedOutput)){
+    open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
+    print $fp "chr\tpos\tcategory\n";
+  }
   #collect and sumamrize the results:
   my $tGeneSnpPosNo = 0;
   my $tCompPosNo = 0;
@@ -156,8 +163,27 @@ sub getGeneSnpsDistri
       if($inEx + $inIn + $in5UTR + $in3UTR > 1){
         $tCompPosNo ++;
       }
+
+      if(defined($detailedOutput)){
+        my $category = "";
+	if($inEx+$in5UTR+$in3UTR == 0){
+	  $category = "INTRON";
+	  #if($inIn){
+	  #  $category = "INTRON";
+	  #}else{
+	  #  $category = "INTERGENIC"; #no such cases in in-gene SNVs
+	  #}
+	}else{
+	  if($inEx){ $category .="EXON;"; }
+	  if($in5UTR){ $category .="5'UTR;"; }
+	  if($in3UTR){ $category .="3'UTR;"; }
+	}
+	print $fp "$chr\t$_\t$category\n";
+      }
     }
   }
+  close($fp) if defined($detailedOutput);
+
   # No of intergenic SNV positions
   my $tIntergSnp = $allSnpNo - $tGeneSnpPosNo;
 
@@ -195,13 +221,17 @@ It also serves as an introductory application script to get familiar with the AS
 
 =head1 SYNOPSIS
 
-  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff]
+  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]
 
 C<snv_file>: a SNV list, see the format description in L<snpParser>
 
 C<powerful_snv_cutoff>: an optional cutoff to categorize SNVs into powerful (>= C<powerful_snv_cutoff>) and non-powerful types. Default: 20
 
 C<transcript_file>: Transcript and gene annotation file, see the format description in L<fileParser>
+
+The optional arguments must be input in order.
+
+C<pwr_snv_details> and C<ordinary_snv_details> are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.
 
 =over 6
 
@@ -256,6 +286,20 @@ The application also outputs percentage (over the total SNV positions) sumamries
 	Intergenic total: 6580 (14.26%)
 	Total SNV Positions: 46146
 	...
+
+
+If C<pwr_snv_details> and C<ordinary_snv_details> are input, you will have two addtional output files providing detailed categories of all individual B<in-gene> SNVs. E.g.
+
+ chr	pos	category
+ chr1	68586620	INTRON
+ chr1	68591173	3'UTR;
+ chr1	68590177	INTRON
+ chr1	68608003	INTRON
+ chr1	68591253	3'UTR;
+ chr1	68591405	3'UTR;
+ chr1	68624878	EXON;
+ chr1	68589935	INTRON
+ chr1	68585708	INTRON
 
 =head1 SEE ALSO
 
