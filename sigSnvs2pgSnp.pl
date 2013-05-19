@@ -21,7 +21,9 @@ USAGE: perl $0 snv_file asarp_file db outfolder annotations [top_k description i
 This script streamlines significant ASARP SNV cases (i.e.
 keeping only the target-control ASARP SNV pairs with the 
 lowest p-values) and provides a compact view for UCSC 
-genome browser visualization
+genome browser visualization. It automatically detects
+strand-specific snv_file and generates 2 pgSnp track files
+(one per strand) for uploading to UCSC genome browser.
 
 It generates pgSNP tracks and the associated custom .aux files to specify
 the appropriate ranges for visualization and to provide detailed
@@ -38,6 +40,14 @@ asarp_file	the ASARP result path/file name, serving as the prefix for
 		of the ASARP pipeline
 db		db (species code) for UCSC genome browser, e.g. "hg19" or "mm9"
 outfolder	output folder for the pgSnp and .aux files
+                the output file(s) would be:
+		outfolder/[all or selecttype.toptop_k].aux
+		if pgSnp output is set:
+		outfolder/all.pgSnp 
+		*OR*
+		outfolder/all.+.pgSnp (if strand-specific)
+		outfolder/all.-.pgSnp (if strand-specific)
+
 annotations	transcript annotation file, which is also required for
 		the ASARP pipeline (e.g. hg19.merged...txt)
 
@@ -49,10 +59,11 @@ description	a description string (quoted when space is used) to identify
 		the current sample/dataset, e.g. "gm12878 encode cytosol" in 
 		the pgSnp tracks.
 		If not input, "default" will be added to the track description
-ispgSnp		whether to output the pgSnp tracks (useful when only top_k ASARP
-		SNVs are desired): 0-NO; 1-YES (default)
+ispgSnp		whether to output the .pgSnp tracks along with the .aux files
+		(useful to be set 0  when only top_k ASARP SNVs .aux are desired): 
+		0-NO; 1-YES (default)
 selecttype	select only 1 ASARP SNV type to investigate, e.g. AI/AT/AS, or 
-		more specific: SE/RI/ASS
+		a more specific type in AS: SE/RI/ASS
 
 EOT
   exit;
@@ -124,6 +135,9 @@ if($predGenes[0] ne $checkText){
 
 print "Getting the target SNV information from gene.prediction...\n";
 my %pgSnp = ();
+my %pgSnpRc = (); # to handle strand-specific version
+my $isStrandSpecific = 0;
+
 my %geneTrgts = (); #just store the target information
 for(my $i = 1; $i < @predGenes; $i++){
   if($predGenes[$i] =~ /^chr/){ #starting of a new gene
@@ -132,15 +146,21 @@ for(my $i = 1; $i < @predGenes; $i++){
     # get the target SNVs
     while($i<@predGenes && $predGenes[$i] ne "" && !($predGenes[$i]=~/^chr/)){
       #get SNPs
-      my ($catInfo, $snpInfo) = split(';', $predGenes[$i]);
+      my ($catInfo, $snpInfo, $strandInfo) = split(';', $predGenes[$i]);
       my($pos, $id, $al, $reads) = split(' ', $snpInfo);
       $geneTrgts{"$gene;$pos"} = $snpInfo;
       
       my ($al1, $al2) = split('>', $al);
       my ($r1, $r2) = split(':', $reads);
       my $snpTrack = join("\t", $chr, $pos-1, $pos, "$al1/$al2", 2, "$r1,$r2", "0,0"); #extra #, $gene, $catInfo);
-      $pgSnp{$chr} .= $snpTrack."\n";
-      
+      if(defined($strandInfo)){ 
+        $isStrandSpecific = 1; #strand-specific
+      }
+      if(defined($strandInfo) && $strandInfo eq '-'){
+	$pgSnpRc{$chr} .= $snpTrack."\n";
+      }else{
+        $pgSnp{$chr} .= $snpTrack."\n";
+      }
       $i++;
     }
   }
@@ -305,22 +325,12 @@ if($topK && $topK < $pSize){
 # done
 # if pgSnp tracks are needed to be output
 if($isPgSnp){
-
-  print "Output pgSnp to $outFolder/all.pgSnp\n";
-  open(PAP, ">", "$outFolder/all.pgSnp") or die "ERROR: cannot open $outFolder/all.pgSnp for writing\n";
-  print PAP "track type=pgSnp visibility=3 db=$db name=\"SNV_all_chrs\" description=\"$idString: ASARP SNVs in all chromosomes\"\n";
-
-  for(keys %pgSnp){
-    my $chr = $_;
-    #print "$chr\n";
-    #open(OP, ">", "$outFolder/$chr.pgSnp") or die "ERROR: cannot open $outFolder/$chr.pgSnp for writing\n";
-    #print OP "track type=pgSnp visibility=3 db=$db name=\"SNV_$chr\" description=\"$idString: ASARP SNVs in $chr\"\n";
-    #print OP "browser position $chr:$chrStart{$chr}-$chrEnd{$chr}\n";
-    #print OP $pgSnp{$chr};
-    print PAP $pgSnp{$chr}; #all.pgSnp
-    #close(OP);
-  } 
-  close(PAP);
+  if(!$isStrandSpecific){
+    outputPgSnp(\%pgSnp, $outFolder, $idString, ""); # all.pgSnp
+  }else{
+    outputPgSnp(\%pgSnp, $outFolder, $idString, "+"); # all.+.pgSnp
+    outputPgSnp(\%pgSnpRc, $outFolder, $idString, "-"); # all.-.pgSnp
+  }
 }
 
 my $summary = 'all';
@@ -390,3 +400,36 @@ sub getBoundary{
       return ($ctrlL, $ctrlR);
       # for a ctrl SNV, it must be expressed somewhere but there may be no transcripts overlapping it 
 }      
+
+
+sub outputPgSnp{
+  my ($pgSnpRef, $outFolderName, $idString, $strandInfo) = @_;
+  my $descr = "description=\"$idString: "; 
+  my $name = "SNV_all_chrs";
+  my $outFile = "$outFolderName/all";
+  if(defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
+    $outFile .= ".$strandInfo.pgSnp";
+    $name .= "_$strandInfo";
+    $descr .= "$strandInfo only ASARP SNVs in all chromosomes\"";
+  }else{
+    $outFile .= ".pgSnp";
+    $descr .= "ASARP SNVs in all chromosomes\"";
+  }
+  my %pgSnp = %$pgSnpRef;
+
+  print "Output pgSnp [$descr] to $outFile\n";
+  open(PAP, ">", "$outFile") or die "ERROR: cannot open $outFile for writing\n";
+  print PAP "track type=pgSnp visibility=3 db=$db name=\"$name\" $descr\n";
+
+  for(keys %pgSnp){
+    my $chr = $_;
+    #print "$chr\n";
+    #open(OP, ">", "$outFolder/$chr.pgSnp") or die "ERROR: cannot open $outFolder/$chr.pgSnp for writing\n";
+    #print OP "track type=pgSnp visibility=3 db=$db name=\"SNV_$chr\" description=\"$idString: ASARP SNVs in $chr\"\n";
+    #print OP "browser position $chr:$chrStart{$chr}-$chrEnd{$chr}\n";
+    #print OP $pgSnp{$chr};
+    print PAP $pgSnp{$chr}; #all.pgSnp
+    #close(OP);
+  } 
+  close(PAP);
+}
