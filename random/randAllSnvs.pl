@@ -44,8 +44,14 @@ open(SP, $orgSnvs) or die "ERROR: cannot open original SNV file $orgSnvs to read
 while(<SP>){
   $cnt++;
   chomp $_;
-  my ($chr, $pos, $al, $id, $reads) = split(' ', $_); 
+  my ($chr, $pos, $al, $id, $reads, $strandInfo) = split(' ', $_); 
   my $info = join(" ", $chr, $pos, $al, $id);
+  if(defined($strandInfo)){
+    if($strandInfo ne '+' && $strandInfo ne '-'){
+      die "ERROR: strand is expected to be + or -: got $strandInfo\n";
+    }
+    $info = $info."\t".$strandInfo;
+  }
   my ($r1, $r2, $wnt) = split(':', $reads);
   $r1 += $r2;
   push @snvs, $info;
@@ -67,7 +73,12 @@ for(my $i=$from; $i<=$to; $i++){
         $read2++;
       }
     }
-    $toOutput .= "$snvs[$j] $read1:$read2:0\n"; #random reads
+    my ($basicInfo, $strandInfo) = split(/\t/, $snvs[$j]);
+    if(!defined($strandInfo)){
+      $toOutput .= "$snvs[$j] $read1:$read2:0\n"; #random reads
+    }else{
+      $toOutput .= "$basicInfo $read1:$read2:0 $strandInfo\n"; #random reads, strand-specific
+    }
   }
   #print "\nRandomized SNV:\n$toOutput\n";
   open(RFP, ">", "$outFolder/rand.snv.$i") or print "WARNING: fail to open random SNV file for index $i\n";
