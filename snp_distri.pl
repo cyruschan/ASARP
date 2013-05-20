@@ -11,12 +11,21 @@ require "snpParser.pl"; #sub's for snps
 
 # input arguments: $outputFile--output, $snpF--SNV file path, $xiaoF--transcript annotation file
 # optional: $POWCUTOFF--powerful SNV cutoff, default: 20
-my ($outputFile, $snpF, $xiaoF, $POWCUTOFF, $snvPwrOut, $snvOrdOut) = @ARGV;
-if(@ARGV < 3){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
-  print "USAGE: perl $0 output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]\n";
-  print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.\n";
+my ($outputFile, $snpF, $xiaoF, $strandFlag, $POWCUTOFF, $snvPwrOut, $snvOrdOut) = @ARGV;
+if(@ARGV < 4){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
+  print "USAGE: perl $0 output_file snv_file transcript_file strand_flag [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]\n";
+  print "\nstrand_flag: 0--non-strand-specific; 1--strand-specific. \nIf set, there will be 2 snv_details files for each category (pwr or ordinary), \nwith .plus and .minus indicating the distribtuion in the + and - strands\n";
+  print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of \npowerful and non-powerful (ordinary) SNVs respectively.\n";
   exit;
 }
+if($strandFlag == 1){
+  print "NOTE: strand-specific output is enabled. There will be *.plus and *.minus for each snv detail output file if it is specified\n";
+}elsif($strandFlag == 0){
+  print "NOTE: Non-strand-specific output is set.\n"; 
+}else{
+  die "ERROR: strand_flag is expected to be 0 or 1. Now $strandFlag is input\n";
+}
+
 if(!defined($POWCUTOFF)){
   $POWCUTOFF = 20;
   print "Default powerful_snv_cutoff used: $POWCUTOFF\n";
@@ -24,47 +33,89 @@ if(!defined($POWCUTOFF)){
 
 my $fp = undef;
 open($fp, ">", $outputFile) or die "ERROR: Cannot open $outputFile to write\n";
-print $fp "Type\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
-
 
 # Demonstration of using the fileParser
 # read the transcript annotation file
 my ($transRef) = readTranscriptFile($xiaoF);
 #printListByKey($transRef, 'trans'); #utility sub: show transcripts (key: trans)
 
-# Demonstration of using the snpParser
-my ($snpRef) = initSnp($snpF, $POWCUTOFF);
-#print "SNV List:\n";
-#printListByKey($snpRef, 'powSnps');
-#printListByKey($snpRef, 'snps');
+# need to make it strand specific:
+if($strandFlag){
 
-my ($geneSnpRef) = setGeneSnps($snpRef, $transRef);
-#print "Significant Snvs: \n";
-#printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
-#print "Ordinary Snvs: \n";
-#printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+  my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF, '+');
+  my ($snpRcRef, $pRcRef) = initSnp($snpF, $POWCUTOFF, '-');
+  my ($pwrOut, $ordOut, $pwrOutRc, $ordOutRc) = (undef, undef, undef, undef);
+  if(defined($snvPwrOut)){
+    $pwrOut = $snvPwrOut.".plus";
+    $pwrOutRc = $snvPwrOut.".minus";
+    print "Two powerful SNV detail files: $pwrOut and $pwrOutRc will be output for plus and minus strands\n";
+  }
+  if(defined($snvOrdOut)){
+    $ordOut = $snvOrdOut.".plus";
+    $ordOutRc = $snvOrdOut.".minus";
+    print "Two ordinary SNV detail files: $ordOut and $ordOutRc will be output for plus and minus strands\n";
+  }
+  print "+ strand only SNP distribution:\n";
+  print $fp "Type (+ only)\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
+  my @total = snpDistOneStrand($snpRef, $transRef, $fp, $pwrOut, $ordOut, '+');
+  print "- strand only SNP distribution:\n";
+  print $fp "Type (- only)\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
+  my @totalRc = snpDistOneStrand($snpRcRef, $transRef, $fp, $pwrOutRc, $ordOutRc, '-');
 
-print "Calculating powerful SNV distribution...\n";
-my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $snvPwrOut); 
-print $fp "Powerful(>=$POWCUTOFF)\t".join("\t",@part1)."\n";
-printSnvDist(@part1);
-
-print "Calculating non-powerful SNV distribution...\n";
-my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $snvOrdOut); 
-print $fp "Non-powerful(<$POWCUTOFF)\t".join("\t",@part2)."\n";
-printSnvDist(@part2);
-
-my @total = ();
-for(my $i = 0; $i < @part1; $i++){
-  $total[$i] = $part1[$i] + $part2[$i];
+  print "\nOverall SNV distribution (+ strand only):\n";
+  printSnvDist(@total);
+  print $fp "Overall (+)\t".join("\t",@total)."\n";
+  
+  print "\nOverall SNV distribution (- strand only):\n";
+  printSnvDist(@totalRc);
+  print $fp "Overall (-)\t".join("\t",@totalRc)."\n";
+  
+  close($fp);
+}else{
+  #non-strand-specific version
+  
+  print $fp "Type\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
+  # Demonstration of using the snpParser
+  my ($snpRef) = initSnp($snpF, $POWCUTOFF);
+  #print "SNV List:\n";
+  #printListByKey($snpRef, 'powSnps');
+  #printListByKey($snpRef, 'snps');
+  my @total = snpDistOneStrand($snpRef, $transRef, $fp, $snvPwrOut, $snvOrdOut);
+  #the elements contained in the total array:
+  #($tEx, $tIn, $t5UTR, $t3UTR, $tCompPosNo, $tGeneSnpPosNo, $tIntergSnp, $allSnpNo) = @total;
+  print "\nOverall SNV distribution:\n";
+  printSnvDist(@total);
+  print $fp "Overall\t".join("\t",@total)."\n";
+  close($fp);
 }
-#the elements contained in the total array:
-#($tEx, $tIn, $t5UTR, $t3UTR, $tCompPosNo, $tGeneSnpPosNo, $tIntergSnp, $allSnpNo) = @total;
-print "\nOverall SNV distribution:\n";
-printSnvDist(@total);
-print $fp "Overall\t".join("\t",@total)."\n";
 
-close($fp);
+
+sub snpDistOneStrand{
+  # $fp is the file handle being open, bad (need to finish it quick though)
+  my ($snpRef, $transRef, $fp, $snvPwrOut, $snvOrdOut, $strandInfo) = @_;
+
+  my ($geneSnpRef) = setGeneSnps($snpRef, $transRef, $strandInfo);
+  #print "Significant Snvs: \n";
+  #printGetGeneSnpsResults($geneSnpRef,'gPowSnps', $snpRef,'powSnps', 1); #$SNVPCUTOFF);
+  #print "Ordinary Snvs: \n";
+  #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
+
+  print "Calculating powerful SNV distribution...\n";
+  my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $snvPwrOut); 
+  print $fp "Powerful(>=$POWCUTOFF)\t".join("\t",@part1)."\n";
+  printSnvDist(@part1);
+
+  print "Calculating non-powerful SNV distribution...\n";
+  my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $snvOrdOut); 
+  print $fp "Non-powerful(<$POWCUTOFF)\t".join("\t",@part2)."\n";
+  printSnvDist(@part2);
+
+  my @total = ();
+  for(my $i = 0; $i < @part1; $i++){
+    $total[$i] = $part1[$i] + $part2[$i];
+  }
+  return @total;
+}
 
 # print out the gene snps results for certain type (powerful or ordinary snps)
 sub getGeneSnpsDistri
