@@ -30,61 +30,97 @@ EOT
 
 # input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
 my ($outputFile, $configs, $params) = getArgs(@ARGV); 
-my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF) = getRefFileConfig($configs); # input annotation/event files
+my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
 my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
 
-my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
-#print "SNV List:\n";
-#printListByKey($snpRef, 'powSnps');
+# if strand-specific flag is set, need to get two separate SNV lists (+ and - respectively)
+# the extra Rc (reference complement) references are for - strand if $STRANDFLAG is set
+my ($snpRef, $snpRcRef, $pRef, $pRcRef) = (undef, undef, undef, undef);
+
+if($STRANDFLAG){
+  ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF, '+');
+  ($snpRcRef, $pRcRef) = initSnp($snpF, $POWCUTOFF, '-');
+  #print "SNV List: +\n";  printListByKey($snpRef, 'powSnps');  printListByKey($snpRef, 'snps');
+  #print "SNV List: -\n";  printListByKey($snpRcRef, 'powSnps');  printListByKey($snpRcRef, 'snps');
+  
+  my @pList = @$pRef;
+  my @pRcList = @$pRcRef;
+  #merge two lists
+  my @joinList = (@pList, @pRcList);
+  $pRef = \@joinList; # renew the reference to be the full list
+}else{
+  ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
+  #print "SNV List:\n";
+  #printListByKey($snpRef, 'powSnps');  #printListByKey($snpRef, 'snps');
+}
+
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
 if(defined($FDRCUTOFF)){
   print "Calculating the Chi-Squared Test p-value cutoff for FDR <= $FDRCUTOFF...\n";
   if(defined($SNVPCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
   }
-  $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF);
-  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n";
+  $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n\n";
 }
 
-#basic statistics for powerful SNVs but not genes
-my $powSnvCnt = 0;
-my $aseSnvCnt = 0;
+my ($AP, $PP) = (undef, undef); #file handles
+open($AP, ">", "$outputFile.ase") or die "ERROR: cannot open $outputFile.ase for ASE SNVs\n";
+open($PP, ">", "$outputFile.pwr") or die "ERROR: cannot open $outputFile.pwr for Powerful SNVs\n";
 
-open(AP, ">", "$outputFile.ase") or die "ERROR: cannot open $outputFile.ase for ASE SNVs\n";
-open(PP, ">", "$outputFile.pwr") or die "ERROR: cannot open $outputFile.pwr for Powerful SNVs\n";
+if($STRANDFLAG){
+  print "+ strand only powerful and ASE SNVs\n";
+  my ($ase, $pwr) = outputAsePwrSnvsOneStrand($snpRef, $SNVPCUTOFF, $AP, $PP);
+  print "- strand only powerful and ASE SNVs\n";
+  my ($aseRc, $pwrRc) = outputAsePwrSnvsOneStrand($snpRcRef, $SNVPCUTOFF, $AP, $PP);
+  $ase+=$aseRc;
+  $pwr+=$pwrRc;
+  print "\nCombining both + and - strands, there are in total $ase ASE SNVs out of $pwr powerful SNVs\n";
+}else{
 
-for(my $i=1; $i<=$CHRNUM; $i++){
-  my ($snpChrRef) = getListByKeyChr($snpRef, 'powSnps', $i);
-  my %powSnps = %$snpChrRef;
-  my $powCntChr = keys %powSnps;  
-  my $aseCntChr = 0;
-  
-  #basic statistics
-  $powSnvCnt += $powCntChr; # keys %powSnps;
-  for(keys %powSnps){
-    my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
-    for(@allSnpInfo){
-      my ($p, $pos, $alleles, $snpId, $refAl, $altAl) = getSnpInfo($_);
-      #get allelic ratios
-      my $r = $refAl/($refAl+$altAl);
-      my $toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $p);
-      if($p <= $SNVPCUTOFF){
-        $aseCntChr += 1; #each SNV **location** added once
-	print AP $toOutput."\n"; #ase
-      }
-      print PP $toOutput."\n"; #powerful, which is a superset of ase
-      last; # I assume there can be multiple SNVs at the same position, but usually ppl don't
-      #therefore, a "last" is shot to get only the first one in the position
-    }
-  }
-  if($powCntChr >0){  printChr($i); print" has $powCntChr powerful SNVs and $aseCntChr SNVs\n";  }
-  $aseSnvCnt += $aseCntChr;
+  outputAsePwrSnvsOneStrand($snpRef, $SNVPCUTOFF, $AP, $PP);
 }
 
-close(AP);
-close(PP);
-print "\nThere are in total $aseSnvCnt ASE SNVs out of $powSnvCnt powerful SNVs\n";
+close($AP);
+close($PP);
 print "Done\n";
+
+sub outputAsePwrSnvsOneStrand{
+	my ($snpRef, $SNVPCUTOFF, $AP, $PP) = @_;
+	#basic statistics for powerful SNVs but not genes
+	my $powSnvCnt = 0;
+	my $aseSnvCnt = 0;
+
+	for(my $i=1; $i<=$CHRNUM; $i++){
+	  my ($snpChrRef) = getListByKeyChr($snpRef, 'powSnps', $i);
+	  my %powSnps = %$snpChrRef;
+	  my $powCntChr = keys %powSnps;  
+	  my $aseCntChr = 0;
+	  
+	  #basic statistics
+	  $powSnvCnt += $powCntChr; # keys %powSnps;
+	  for(keys %powSnps){
+	    my @allSnpInfo = split(';', $powSnps{$_}); #separate by ;, if there are multiple snps at the same position
+	    for(@allSnpInfo){
+	      my ($p, $pos, $alleles, $snpId, $refAl, $altAl) = getSnpInfo($_);
+	      #get allelic ratios
+	      my $r = $refAl/($refAl+$altAl);
+	      my $toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $p);
+	      if($p <= $SNVPCUTOFF){
+		$aseCntChr += 1; #each SNV **location** added once
+		print $AP $toOutput."\n"; #ase
+	      }
+	      print $PP $toOutput."\n"; #powerful, which is a superset of ase
+	      last; # I assume there can be multiple SNVs at the same position, but usually ppl don't
+	      #therefore, a "last" is shot to get only the first one in the position
+	    }
+	  }
+	  if($powCntChr >0){  printChr($i); print" has $powCntChr powerful SNVs and $aseCntChr SNVs\n";  }
+	  $aseSnvCnt += $aseCntChr;
+	}
+	print "\nThere are in total $aseSnvCnt ASE SNVs out of $powSnvCnt powerful SNVs\n";
+	return ($aseSnvCnt, $powSnvCnt);
+}
 
 =head1 NAME
 
