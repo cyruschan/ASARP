@@ -107,9 +107,9 @@ sub outputAsePwrSnvsOneStrand{
 	      my $r = $refAl/($refAl+$altAl);
 	      my $toOutput = "";
 	      if(defined($strandInfo)){
-	      	$toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $strandInfo, $p);
+	      	$toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, "$refAl:$altAl:0", $strandInfo, $r, $p);
 	      }else{
-	      	$toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $p);
+	      	$toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, "$refAl:$altAl:0", $r, $p);
 	      }
 	      if($p <= $SNVPCUTOFF){
 		$aseCntChr += 1; #each SNV **location** added once
@@ -154,12 +154,14 @@ There will be two result files:
 "output_file.ase" with the ASE SNVs (a subset of the powerful SNVs), and 
 "output_file.pwr" with the powerful SNVs
 
-Format (space dilimited): chromosome position ref>alt dbSNP_ID allelic_ratio ref#:alt#:0 p-value
+Format (space dilimited): chromosome position ref>alt dbSNP_ID ref#:alt#:0 [strand_info] p-value allelic_ratio 
 ref indicates the reference allele, and alt the alternative allele. ref# and alt# are their respective counts (wrong nucleotides are not used so 0 is output in ref#:alt#:0). allelic_ratio = ref#/(ref#+alt#). p-value is the Chi-Squared Test p-value. Examples:
 
- chr1 68591173 A>G rs1046835 0.651898734177215 103:55:0 0.0001341704
- chr5 96111371 G>A rs13160562 0.640350877192982 73:41:0 0.00272584
- chr5 96215303 C>T na 0.96969696969697 96:3:0 9.029544e-21
+ chr1 68591173 A>G rs1046835 103:55:0 [+] 0.651898734177215 0.0001341704
+ chr5 96111371 G>A rs13160562 73:41:0 [+] 0.640350877192982 0.00272584
+ chr5 96215303 C>T na 96:3:0 [+] 0.9696969696969 79.029544e-21
+
+The strand_info shown in [ ] will only be output if the input file config has the strand-specific flag set. If it is unset, the [ ] will not be output
 
 =head1 SEE ALSO
 
