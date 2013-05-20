@@ -70,9 +70,9 @@ open($PP, ">", "$outputFile.pwr") or die "ERROR: cannot open $outputFile.pwr for
 
 if($STRANDFLAG){
   print "+ strand only powerful and ASE SNVs\n";
-  my ($ase, $pwr) = outputAsePwrSnvsOneStrand($snpRef, $SNVPCUTOFF, $AP, $PP);
+  my ($ase, $pwr) = outputAsePwrSnvsOneStrand($snpRef, $SNVPCUTOFF, $AP, $PP, '+');
   print "- strand only powerful and ASE SNVs\n";
-  my ($aseRc, $pwrRc) = outputAsePwrSnvsOneStrand($snpRcRef, $SNVPCUTOFF, $AP, $PP);
+  my ($aseRc, $pwrRc) = outputAsePwrSnvsOneStrand($snpRcRef, $SNVPCUTOFF, $AP, $PP, '-');
   $ase+=$aseRc;
   $pwr+=$pwrRc;
   print "\nCombining both + and - strands, there are in total $ase ASE SNVs out of $pwr powerful SNVs\n";
@@ -86,7 +86,7 @@ close($PP);
 print "Done\n";
 
 sub outputAsePwrSnvsOneStrand{
-	my ($snpRef, $SNVPCUTOFF, $AP, $PP) = @_;
+	my ($snpRef, $SNVPCUTOFF, $AP, $PP, $strandInfo) = @_;
 	#basic statistics for powerful SNVs but not genes
 	my $powSnvCnt = 0;
 	my $aseSnvCnt = 0;
@@ -105,7 +105,12 @@ sub outputAsePwrSnvsOneStrand{
 	      my ($p, $pos, $alleles, $snpId, $refAl, $altAl) = getSnpInfo($_);
 	      #get allelic ratios
 	      my $r = $refAl/($refAl+$altAl);
-	      my $toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $p);
+	      my $toOutput = "";
+	      if(defined($strandInfo)){
+	      	$toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $strandInfo, $p);
+	      }else{
+	      	$toOutput = join(" ", formatChr($i), $pos, $alleles, $snpId, $r, "$refAl:$altAl:0", $p);
+	      }
 	      if($p <= $SNVPCUTOFF){
 		$aseCntChr += 1; #each SNV **location** added once
 		print $AP $toOutput."\n"; #ase
