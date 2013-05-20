@@ -15,6 +15,7 @@ asarp_result		ASARP prediction output, in particular
 			.gene.prediction is expected
 rand_results		the output folder and file prefix for the randomized ASARP SNV result files
 			ASARP consistent suffix is assumed for result files, i.e. .gene.prediction
+			rand_results will be used as the common prefix for these files:
 			e.g. "result/rand" for all "result.rand.*.gene.prediction" files
 indices			The number of randomized SNV files, or the index range 
 			for the randomized batch
