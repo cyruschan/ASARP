@@ -2,6 +2,42 @@
 use warnings;
 use strict;
 
+# get ase.prediction from ASARP results
+# input: 	gene.prediction result file
+# output:	$aseHsRef: 
+#		reference to a hash containing information to 
+#		distinguish all ASE genes and ASE gene counts
+sub getAseResult{
+ 
+  my ($input) = @_;
+
+  open(FP, $input) or die "ERROR: cannot open $input to read\n";
+  my @pred = <FP>;
+  chomp @pred;
+  close(FP);
+
+  my $checkText = "ASE gene level (all powerful SNVs are ASEs)";
+  if($pred[0] ne $checkText){
+    die "ERROR: expecting $input to be ase.prediction (with header: $checkText)\n";
+  }
+
+  my %aseHs = (); #hash for all the SNV identifiers
+  for(my $i = 1; $i < @pred; $i++){
+    if($pred[$i] =~ /^chr/){ #starting of a new gene
+      my ($chr, $gene) = split('\t', $pred[$i]);
+      my $key = "$chr;$gene";
+      if(!defined($aseHs{$key})){
+        $aseHs{$key} = 1;
+      }else{
+        $aseHs{$key} += 1;
+      }
+    }
+  }
+
+  return \%aseHs;
+}
+
+
 # get gene.prediction from ASARP results
 # input: 	gene.prediction result file
 # output:	$snvsRef: reference to an array containing all SNVs	
@@ -32,10 +68,13 @@ sub getAsarpResult{
       #get the snps for this gene
       while($i<@pred && $pred[$i] ne "" && !($pred[$i]=~/^chr/)){
         #get SNPs
-        my ($dummyInfo, $snpInfo) = split(';', $pred[$i]);
+        my ($dummyInfo, $snpInfo, $strandInfo) = split(';', $pred[$i]);
         my($pos, $id, $al, $reads) = split(' ', $snpInfo);
         my ($r1, $r2) = split(':', $reads);
         my $info = join(" ", $chr, $pos, $al, $id);
+	if(!defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
+	  $info .= " $strandInfo"; # add strand information
+	}
 
 	$dummyInfo .= " $chr $gene $reads"; #chr, gene and reads: X:Y are also needed
         if(!defined($snvHs{$info})){

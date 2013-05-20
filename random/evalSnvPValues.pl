@@ -15,6 +15,7 @@ asarp_result		ASARP prediction output, in particular
 			.gene.prediction is expected
 rand_results		the output folder and file prefix for the randomized ASARP SNV result files
 			ASARP consistent suffix is assumed for result files, i.e. .gene.prediction
+			rand_results will be used as the common prefix for these files:
 			e.g. "result/rand" for all "result.rand.*.gene.prediction" files
 indices			The number of randomized SNV files, or the index range 
 			for the randomized batch
@@ -76,7 +77,14 @@ for(keys %pHash){
   my $pFlag = 0;
   my @info = split('\t', $pHash{$_});
   for(@info){ 
-    my ($p, $chr, $pos, $al, $id, $type) = split(' ', $_);
+    my ($p, $chr, $pos, $al, $id, $strand, $type) = split(' ', $_);
+    if($strand ne '+' && $strand ne '-'){ #non-strand-specific, then this is $type
+      if(!defined($type)){	$type = $strand;	
+      }else{	
+        die "ERROR: $strand does not contain strand information then it is expected to be non-strand-specific, and this should be undefined: $type\n"; 
+      }
+    }
+    #strand no use?
     $sumP{$type} += $p;
     $pCnt{$type} += 1;
     if($p <= $pCutoff){
