@@ -32,10 +32,13 @@ sub getAsarpResult{
       #get the snps for this gene
       while($i<@pred && $pred[$i] ne "" && !($pred[$i]=~/^chr/)){
         #get SNPs
-        my ($dummyInfo, $snpInfo) = split(';', $pred[$i]);
+        my ($dummyInfo, $snpInfo, $strandInfo) = split(';', $pred[$i]);
         my($pos, $id, $al, $reads) = split(' ', $snpInfo);
         my ($r1, $r2) = split(':', $reads);
         my $info = join(" ", $chr, $pos, $al, $id);
+	if(!defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
+	  $info .= " $strandInfo"; # add strand information
+	}
 
 	$dummyInfo .= " $chr $gene $reads"; #chr, gene and reads: X:Y are also needed
         if(!defined($snvHs{$info})){

@@ -76,7 +76,14 @@ for(keys %pHash){
   my $pFlag = 0;
   my @info = split('\t', $pHash{$_});
   for(@info){ 
-    my ($p, $chr, $pos, $al, $id, $type) = split(' ', $_);
+    my ($p, $chr, $pos, $al, $id, $strand, $type) = split(' ', $_);
+    if($strand ne '+' && $strand ne '-'){ #non-strand-specific, then this is $type
+      if(!defined($type)){	$type = $strand;	
+      }else{	
+        die "ERROR: $strand does not contain strand information then it is expected to be non-strand-specific, and this should be undefined: $type\n"; 
+      }
+    }
+    #strand no use?
     $sumP{$type} += $p;
     $pCnt{$type} += 1;
     if($p <= $pCutoff){
