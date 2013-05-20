@@ -57,10 +57,10 @@ if($strandFlag){
   }
   print "+ strand only SNP distribution:\n";
   print $fp "Type (+ only)\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
-  my @total = snpDistOneStrand($snpRef, $transRef, $fp, $pwrOut, $ordOut, '+');
+  my @total = snpDistOneStrand($snpRef, $transRef, $fp, '+', $pwrOut, $ordOut);
   print "- strand only SNP distribution:\n";
   print $fp "Type (- only)\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
-  my @totalRc = snpDistOneStrand($snpRcRef, $transRef, $fp, $pwrOutRc, $ordOutRc, '-');
+  my @totalRc = snpDistOneStrand($snpRcRef, $transRef, $fp, '-', $pwrOutRc, $ordOutRc);
 
   print "\nOverall SNV distribution (+ strand only):\n";
   printSnvDist(@total);
@@ -80,7 +80,7 @@ if($strandFlag){
   #print "SNV List:\n";
   #printListByKey($snpRef, 'powSnps');
   #printListByKey($snpRef, 'snps');
-  my @total = snpDistOneStrand($snpRef, $transRef, $fp, $snvPwrOut, $snvOrdOut);
+  my @total = snpDistOneStrand($snpRef, $transRef, $fp, undef, $snvPwrOut, $snvOrdOut);
   #the elements contained in the total array:
   #($tEx, $tIn, $t5UTR, $t3UTR, $tCompPosNo, $tGeneSnpPosNo, $tIntergSnp, $allSnpNo) = @total;
   print "\nOverall SNV distribution:\n";
@@ -92,7 +92,7 @@ if($strandFlag){
 
 sub snpDistOneStrand{
   # $fp is the file handle being open, bad (need to finish it quick though)
-  my ($snpRef, $transRef, $fp, $snvPwrOut, $snvOrdOut, $strandInfo) = @_;
+  my ($snpRef, $transRef, $fp, $strandInfo, $snvPwrOut, $snvOrdOut) = @_;
 
   my ($geneSnpRef) = setGeneSnps($snpRef, $transRef, $strandInfo);
   #print "Significant Snvs: \n";
@@ -101,12 +101,12 @@ sub snpDistOneStrand{
   #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
 
   print "Calculating powerful SNV distribution...\n";
-  my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $snvPwrOut); 
+  my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $strandInfo, $snvPwrOut); 
   print $fp "Powerful(>=$POWCUTOFF)\t".join("\t",@part1)."\n";
   printSnvDist(@part1);
 
   print "Calculating non-powerful SNV distribution...\n";
-  my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $snvOrdOut); 
+  my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $strandInfo, $snvOrdOut); 
   print $fp "Non-powerful(<$POWCUTOFF)\t".join("\t",@part2)."\n";
   printSnvDist(@part2);
 
@@ -120,7 +120,7 @@ sub snpDistOneStrand{
 # print out the gene snps results for certain type (powerful or ordinary snps)
 sub getGeneSnpsDistri
 {
-  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $detailedOutput) = @_;
+  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $strandInfo, $detailedOutput) = @_;
 
   my @dist = (); #snp distribution results
   for (my $i=0; $i<=$CHRNUM; $i++){
@@ -194,8 +194,13 @@ sub getGeneSnpsDistri
   #add detailed output file
   my $fp = undef;
   if(defined($detailedOutput)){
-    open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
-    print $fp "chr\tpos\tcategory\n";
+    if(!defined($strandInfo)){
+      open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
+      print $fp "chr\tpos\tcategory\n";
+    }else{
+      open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
+      print $fp "chr\tpos\tcategory\tstrand\n"; #additional strand
+    }
   }
   #collect and sumamrize the results:
   my $tGeneSnpPosNo = 0;
@@ -229,7 +234,11 @@ sub getGeneSnpsDistri
 	  if($in5UTR){ $category .="5'UTR;"; }
 	  if($in3UTR){ $category .="3'UTR;"; }
 	}
-	print $fp "$chr\t$_\t$category\n";
+        if(!defined($strandInfo)){
+	  print $fp "$chr\t$_\t$category\n";
+	}else{
+	  print $fp "$chr\t$_\t$category\t$strandInfo\n";
+	}
       }
     }
   }
