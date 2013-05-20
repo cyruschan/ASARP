@@ -37,11 +37,12 @@ The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in the <cod
 <p>There will be two result files:
 &quot;output_file.ase&quot; with the ASE SNVs (a subset of the powerful SNVs), and
 &quot;output_file.pwr&quot; with the powerful SNVs</p>
-<p>Format (space dilimited): chromosome position ref&gt;alt dbSNP_ID allelic_ratio ref#:alt#:0 p-value
+<p>Format (space dilimited): chromosome position ref&gt;alt dbSNP_ID ref#:alt#:0 [strand_info] p-value allelic_ratio
 ref indicates the reference allele, and alt the alternative allele. ref# and alt# are their respective counts (wrong nucleotides are not used so 0 is output in ref#:alt#:0). allelic_ratio = ref#/(ref#+alt#). p-value is the Chi-Squared Test p-value. Examples:</p>
-<pre> chr1 68591173 A&gt;G rs1046835 0.651898734177215 103:55:0 0.0001341704
- chr5 96111371 G&gt;A rs13160562 0.640350877192982 73:41:0 0.00272584
- chr5 96215303 C&gt;T na 0.96969696969697 96:3:0 9.029544e-21</pre>
+<pre> chr1 68591173 A&gt;G rs1046835 103:55:0 [+] 0.651898734177215 0.0001341704
+ chr5 96111371 G&gt;A rs13160562 73:41:0 [+] 0.640350877192982 0.00272584
+ chr5 96215303 C&gt;T na 96:3:0 [+] 0.9696969696969 79.029544e-21</pre>
+<p>The strand_info shown in [ ] will only be output if the input file config has the strand-specific flag set. If it is unset, the [ ] will not be output</p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='asarp.html'>asarp</a></i>, <i><a href='snp_distri.html'>snp_distri</a></i>, <i><a href='fileParser.html'>fileParser</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
