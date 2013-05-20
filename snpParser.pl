@@ -849,48 +849,7 @@ sub mergeASARP
     }
     #print "total: $stats{$_}\n";
   }
-
-  my %ase = (); #SNVs
-  my %pow = (); #SNVs
-  my @allAseSnvs = ();
-  if(defined($as{'aseSnvStr'})){
-    push @allAseSnvs, split(/\t/, $as{'aseSnvStr'}); #+
-  }
-  if(defined($rc{'aseSnvStr'})){
-    push @allAseSnvs, split(/\t/, $rc{'aseSnvStr'}); #-
-  }
-  my @allPowSnvs = ();
-  if(defined($as{'powSnvStr'})){
-    push @allPowSnvs, split(/\t/, $as{'powSnvStr'}); #+
-  }
-  if(defined($rc{'powSnvStr'})){
-    push @allPowSnvs, split(/\t/, $rc{'powSnvStr'}); #-
-  }
-  my $overlapAse = 0;
-  print "allAseSnvs\n";
-  for(@allAseSnvs){
-    if(defined($ase{$_})){
-      $overlapAse += 1;
-    }
-    $ase{$_} = 1; 
-    #print "$_\n";
-  }
-  #print "done\n";
-  my $overlapPow = 0;
-  for(@allPowSnvs){
-    if(defined($pow{$_})){
-      $overlapPow += 1;
-    }
-    $pow{$_} = 1; 
-  }
-
-  my $aseCnt = keys %ase;
-  my $powCnt = keys %pow;
-  if($stats{'aseSnvCnt'} - $overlapAse != $aseCnt || $stats{'powSnvCnt'}-$overlapPow != $powCnt){
-    die "ERROR: ".$stats{'aseSnvCnt'}." - $overlapAse != $aseCnt\n   Or: ".$stats{'powSnvCnt'}." - $overlapPow != $powCnt\n";
-  }
-  $stats{'aseSnvCnt'} = $aseCnt;
-  $stats{'powSnvCnt'} = $powCnt;
+  # no need to merge SNVs at the same coordinate from 2 strands in the current version, each snv on a particular strand is unique!
   for(keys %stats){ #all basic stats have been merged now
     $merged{$_} = $stats{$_};
   }
