@@ -68,7 +68,7 @@ my @randTypes = ();
 my $randomSnvCntRef = \@randTypes; # accumulates all the AI/AS/AT/COMP counts for the randomized SNVs
 for(my $i=$from; $i<=$to; $i++){
   my $randFileName = "$randF.$i.gene.prediction";
-  my ($randSnvsRef, $randSumsRef, $randSnvHsRef, $randStatRef) = getAsarpResult($randFileName);
+  my ($randSnvsRef, $randSumsRef, $randSnvHsRef, $randStatRef) = getAsarpResult($randFileName, $aseHsRef);
   my %oneRandStat = %$randStatRef;
 
   my $cntExlAse = 0;
