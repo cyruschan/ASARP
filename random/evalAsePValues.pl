@@ -86,7 +86,7 @@ for(keys %realAse){
 }
 print $toOutputP;
 print "OVerall ASE FDR estimated: ";
-print "%.4f\n", $fdrCnt/$pCnt;
+printf "%.4f\n", $fdrCnt/$pCnt;
 print "Output P-Values of ASE Genes to $outputF\n";
 open(OP, ">", $outputF) or die "ERROR: cannot open output: $outputF\n";
 print OP $toOutputP;
