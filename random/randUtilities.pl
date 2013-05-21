@@ -47,6 +47,10 @@ sub getAsarpResult{
  
   my ($input) = @_;
 
+  my %geneFdr = ();
+  for(qw(AI AS AT COMP)){
+    $geneFdr{$_} = 0;
+  }
   open(FP, $input) or die "ERROR: cannot open $input to read\n";
   my @pred = <FP>;
   chomp @pred;
@@ -65,14 +69,31 @@ sub getAsarpResult{
       my ($chr, $gene) = split('\t', $pred[$i]);
       $i++; #go to the next line
 
+      my %geneTypeCnt = (); # to record all the different type counts for this gene
+      for(qw(AI AS AT COMP)){
+        $geneTypeCnt{$_} = 0;
+      }
       #get the snps for this gene
       while($i<@pred && $pred[$i] ne "" && !($pred[$i]=~/^chr/)){
         #get SNPs
         my ($dummyInfo, $snpInfo, $strandInfo) = split(';', $pred[$i]);
+
+	# check the gene level
+        my $compFlag = 0;
+	for(qw (AI AS AT)){
+	  if(index($dummyInfo, $_)!=-1){
+	    $geneTypeCnt{$_} = 1;
+	    $compFlag += 1;
+	  }
+	}
+	if($compFlag >= 2){
+	  $geneTypeCnt{'COMP'} = 1;
+	}
+
         my($pos, $id, $al, $reads) = split(' ', $snpInfo);
         my ($r1, $r2) = split(':', $reads);
         my $info = join(" ", $chr, $pos, $al, $id);
-	if(!defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
+	if(defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
 	  $info .= " $strandInfo"; # add strand information
 	}
 
@@ -87,10 +108,16 @@ sub getAsarpResult{
 	}
         $i++;
       }
+
+      # the current gene is done, get the results
+      for(keys %geneFdr){
+        $geneFdr{$_} += $geneTypeCnt{$_}; #at most 1 at each position
+      }
+
     }
   }
 
-  return (\@snvs, \@sums, \%snvHs);
+  return (\@snvs, \@sums, \%snvHs, \%geneFdr);
 }
 
 sub getIndex{

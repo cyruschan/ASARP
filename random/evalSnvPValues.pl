@@ -43,7 +43,7 @@ my $N = $to-$from+1; #the total number for simulations
 
 # get the real ASARP SNV results
 my @snvTypes = ();
-my ($snvsRef, $sumsRef, $snvHsRef) = getAsarpResult($input);
+my ($snvsRef, $sumsRef, $snvHsRef, $geneStatRef) = getAsarpResult($input);
 my $asarpSnvCntRef = getAsarpTypeCounts(\@snvTypes, $snvsRef, $snvHsRef);
 #showSnvTypeCnt($snvsRef, $asarpSnvCntRef);
 
@@ -52,11 +52,19 @@ my $asarpSnvCntRef = getAsarpTypeCounts(\@snvTypes, $snvsRef, $snvHsRef);
 # $randSnvsRef as the list (which may contain SNVs beyond $snvsRef),
 # $snvsRef is always used as the SNV list
 
+my %fdrCnts = ();
+for(qw(AI AS AT COMP)){
+  $fdrCnts{$_} = 0;
+}
 my @randTypes = ();
 my $randomSnvCntRef = \@randTypes; # accumulates all the AI/AS/AT/COMP counts for the randomized SNVs
 for(my $i=$from; $i<=$to; $i++){
   my $randFileName = "$randF.$i.gene.prediction";
-  my ($randSnvsRef, $randSumsRef, $randSnvHsRef) = getAsarpResult($randFileName);
+  my ($randSnvsRef, $randSumsRef, $randSnvHsRef, $randStatRef) = getAsarpResult($randFileName);
+  my %oneRandStat = %$randStatRef;
+  for(keys %fdrCnts){
+    $fdrCnts{$_} += $oneRandStat{$_};
+  }
   $randomSnvCntRef = getAsarpTypeCounts($randomSnvCntRef, $snvsRef, $randSnvHsRef); #use $snvsRef as the list
 }
 #showSnvTypeCnt($snvsRef, $randomSnvCntRef);
@@ -78,6 +86,7 @@ for(keys %pHash){
   my @info = split('\t', $pHash{$_});
   for(@info){ 
     my ($p, $chr, $pos, $al, $id, $strand, $type) = split(' ', $_);
+    #print "(p, chr, pos, al, id, strand, type) = ($p, $chr, $pos, $al, $id, $strand, $type)\n";
     if($strand ne '+' && $strand ne '-'){ #non-strand-specific, then this is $type
       if(!defined($type)){	$type = $strand;	
       }else{	
@@ -101,6 +110,17 @@ for(keys %pCnt){
   if($pCnt{$_}>0){
     printf "%s: %.4f\n", $_, $sumP{$_}/$pCnt{$_};
   }
+}
+print "\n";
+
+print "CORRECT: Overall ASARP FDR estimated (Gene Level)\n";
+my %geneStat = %$geneStatRef;
+for(keys %geneStat){
+  my $fdr = 0;
+  if($geneStat{$_}>0){
+    $fdr = ($fdrCnts{$_}/$N)/$geneStat{$_}; # on average, how many ASARP genes will be output on type $_
+  }
+  printf "%s: %.4f\n", $_, $fdr;
 }
 print "\n";
 

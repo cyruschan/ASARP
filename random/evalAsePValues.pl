@@ -49,6 +49,7 @@ my ($aseHsRef) = getAseResult($input);
 # $randAseHsRef as the list (which may contain ASE genes beyond $aseHsRef),
 # $aseHsRef is always used as the actual AllASE gene list
 
+my $fdrCnt = 0;
 my %randAse = ();
 for(my $i=$from; $i<=$to; $i++){
   my $randFileName = "$randF.$i.ase.prediction";
@@ -60,13 +61,17 @@ for(my $i=$from; $i<=$to; $i++){
     }
     $randAse{$_} += 1;
   }
+  $fdrCnt += keys %oneRandHs;
 }
+$fdrCnt /= $N;
 
 my $toOutputP = "";
 my %realAse = %$aseHsRef;
 my ($sumP, $pCnt) = (0, 0);
 $pCnt = keys %realAse; # total number of genes
 print "There are in total $pCnt AllASE genes to be evaluated\n";
+
+
 
 for(keys %realAse){
   my $p = 0;
@@ -81,7 +86,7 @@ for(keys %realAse){
 }
 print $toOutputP;
 print "OVerall ASE FDR estimated: ";
-print "%.4f\n", $sumP/$pCnt;
+print "%.4f\n", $fdrCnt/$pCnt;
 print "Output P-Values of ASE Genes to $outputF\n";
 open(OP, ">", $outputF) or die "ERROR: cannot open output: $outputF\n";
 print OP $toOutputP;
