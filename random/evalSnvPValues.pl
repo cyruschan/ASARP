@@ -11,8 +11,10 @@ USAGE: perl $0 asarp_result rand_results indices output_p [p_cutoff]
 NOTE: evaluation of p-values for the individual ASARP SNV results based on randomization for certain indices
 
 ARGUMENTS:
-asarp_result		ASARP prediction output, in particular
-			.gene.prediction is expected
+asarp_result		ASARP prediction major output file path, in particular
+			asarp_result.gene.prediction AND
+			asarp_result.ase.prediction are expected (should be in the same folder)
+
 rand_results		the output folder and file prefix for the randomized ASARP SNV result files
 			ASARP consistent suffix is assumed for result files, i.e. .gene.prediction
 			rand_results will be used as the common prefix for these files:
@@ -41,9 +43,15 @@ if(!defined($pCutoff)){ $pCutoff = 1; }
 my ($from, $to) = getIndex($freq);
 my $N = $to-$from+1; #the total number for simulations
 
+# need to have ASE genes to be excluded
+# get the real ASARP AllASE results:
+my ($aseHsRef, $aseSnvHsRef) = getAseResult("$input.ase.prediction");
+my %geneAse = %$aseHsRef;
+my %snvAse = %$aseSnvHsRef;
+
 # get the real ASARP SNV results
 my @snvTypes = ();
-my ($snvsRef, $sumsRef, $snvHsRef, $geneStatRef) = getAsarpResult($input);
+my ($snvsRef, $sumsRef, $snvHsRef, $geneStatRef) = getAsarpResult("$input.gene.prediction");
 my $asarpSnvCntRef = getAsarpTypeCounts(\@snvTypes, $snvsRef, $snvHsRef);
 #showSnvTypeCnt($snvsRef, $asarpSnvCntRef);
 
@@ -62,6 +70,8 @@ for(my $i=$from; $i<=$to; $i++){
   my $randFileName = "$randF.$i.gene.prediction";
   my ($randSnvsRef, $randSumsRef, $randSnvHsRef, $randStatRef) = getAsarpResult($randFileName);
   my %oneRandStat = %$randStatRef;
+
+  my $cntExlAse = 0;
   for(keys %fdrCnts){
     $fdrCnts{$_} += $oneRandStat{$_};
   }

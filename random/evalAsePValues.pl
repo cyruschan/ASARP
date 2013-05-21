@@ -11,8 +11,9 @@ USAGE: perl $0 ase_result rand_results indices output_p [p_cutoff]
 NOTE: evaluation of p-values for the individual ASARP SNV results based on randomization for certain indices
 
 ARGUMENTS:
-ase_result		ASARP AllASE gene prediction output, in particular
-			.ase.prediction is expected
+ase_result		ASARP prediction major output file path, in particular
+			ase_result.ase.prediction is expected
+
 rand_results		the output folder and file prefix for the randomized AllASE gene result files
 			ASARP pipeline consistent suffix is assumed for result files, i.e. .ase.prediction
 			rand_results will be used as the common prefix for these files:
@@ -42,19 +43,21 @@ my ($from, $to) = getIndex($freq);
 my $N = $to-$from+1; #the total number for simulations
 
 # get the real ASARP AllASE results
-my ($aseHsRef) = getAseResult($input);
+my ($aseHsRef, $snvHsRef) = getAseResult("$input.ase.prediction");
 
 # get the randomized ASARP AllAse results
 # the difference is that, rather than using
 # $randAseHsRef as the list (which may contain ASE genes beyond $aseHsRef),
 # $aseHsRef is always used as the actual AllASE gene list
 
-my $fdrCnt = 0;
+my ($fdrCnt, $snvFdrCnt) = (0, 0);
 my %randAse = ();
 for(my $i=$from; $i<=$to; $i++){
   my $randFileName = "$randF.$i.ase.prediction";
-  my ($randAseHsRef) = getAseResult($randFileName);
+  my ($randAseHsRef, $randSnvHsRef) = getAseResult($randFileName);
   my %oneRandHs = %$randAseHsRef;
+  my %oneRandSnvHs = %$randSnvHsRef;
+
   for(keys %oneRandHs){
     if($oneRandHs{$_} != 1){
       die "ERROR: each gene is expected to appear at most once in AllASE: $_ appears $oneRandHs{$_} times\n";
@@ -62,16 +65,19 @@ for(my $i=$from; $i<=$to; $i++){
     $randAse{$_} += 1;
   }
   $fdrCnt += keys %oneRandHs;
+  $snvFdrCnt += keys %oneRandSnvHs;
 }
 $fdrCnt /= $N;
+$snvFdrCnt /= $N;
 
 my $toOutputP = "";
 my %realAse = %$aseHsRef;
-my ($sumP, $pCnt) = (0, 0);
+my %realAseSnv = %$snvHsRef;
+my ($sumP, $pCnt, $pSnvCnt) = (0, 0, 0);
 $pCnt = keys %realAse; # total number of genes
+$pSnvCnt = keys %realAseSnv; 
 print "There are in total $pCnt AllASE genes to be evaluated\n";
-
-
+print "There are in total $pSnvCnt ind ASE SNVs to be evaluated\n";
 
 for(keys %realAse){
   my $p = 0;
@@ -85,8 +91,11 @@ for(keys %realAse){
   }
 }
 print $toOutputP;
-print "OVerall ASE FDR estimated: ";
+print "Overall AllASE Gene FDR estimated: ";
 printf "%.4f\n", $fdrCnt/$pCnt;
+print "Overall ind ASE SNV FDR estimated: ";
+printf "%.4f\n", $snvFdrCnt/$pSnvCnt;
+
 print "Output P-Values of ASE Genes to $outputF\n";
 open(OP, ">", $outputF) or die "ERROR: cannot open output: $outputF\n";
 print OP $toOutputP;

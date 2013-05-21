@@ -21,7 +21,8 @@ sub getAseResult{
     die "ERROR: expecting $input to be ase.prediction (with header: $checkText)\n";
   }
 
-  my %aseHs = (); #hash for all the SNV identifiers
+  my %snvHs = (); #hash for all the ASE SNV identifiers
+  my %aseHs = (); #hash for all the ASE gene identifiers
   for(my $i = 1; $i < @pred; $i++){
     if($pred[$i] =~ /^chr/){ #starting of a new gene
       my ($chr, $gene) = split('\t', $pred[$i]);
@@ -31,10 +32,31 @@ sub getAseResult{
       }else{
         $aseHs{$key} += 1;
       }
+      $i++; #go to next line!
+
+      # need to get the SNVs as well (snv-level FDR is needed as well)
+      while($i<@pred && $pred[$i] ne "" && !($pred[$i]=~/^chr/)){
+        #get SNPs
+        #sample: rs324419,1.620014e-06,T>C,46871986,0:23;+
+        my ($snpInfo, $strandInfo) = split(';', $pred[$i]);
+        my($id, $p, $al, $pos, $reads) = split(',', $snpInfo);
+        my ($r1, $r2) = split(':', $reads);
+        my $info = join(" ", $chr, $pos, $al, $id);
+        my $keySnv = "$chr;$pos"; #chr, gene and reads: X:Y are also needed
+        
+	if(defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
+          $info .= " $strandInfo"; # add strand information
+	  $keySnv = "$keySnv;$strandInfo";
+        }
+        
+	#print "Adding $keySnv with $info\n";     
+        $snvHs{$keySnv} = 1; #counted only once
+        $i++;
+      }
     }
   }
 
-  return \%aseHs;
+  return (\%aseHs, \%snvHs);
 }
 
 
@@ -45,7 +67,12 @@ sub getAseResult{
 #		$snvHsRef: reference to a hash containing information to distinguish all SNVs
 sub getAsarpResult{
  
-  my ($input) = @_;
+  my ($input, $aseGeneRef) = @_;
+
+  my %aseGenes = ();
+  if(defined($aseGeneRef)){
+    %aseGenes = %$aseGeneRef;
+  }
 
   my %geneFdr = ();
   for(qw(AI AS AT COMP)){
@@ -79,16 +106,21 @@ sub getAsarpResult{
         my ($dummyInfo, $snpInfo, $strandInfo) = split(';', $pred[$i]);
 
 	# check the gene level
-        my $compFlag = 0;
-	for(qw (AI AS AT)){
-	  if(index($dummyInfo, $_)!=-1){
-	    $geneTypeCnt{$_} = 1;
-	    $compFlag += 1;
+	if(!defined($aseGenes{"$chr;$gene"})){
+          my $compFlag = 0;
+	  for(qw (AI AS AT)){
+	    if(index($dummyInfo, $_)!=-1){
+	      $geneTypeCnt{$_} = 1;
+	      $compFlag += 1;
+	    }
+	  }
+	  if($compFlag >= 2){
+	    $geneTypeCnt{'COMP'} = 1;
 	  }
 	}
-	if($compFlag >= 2){
-	  $geneTypeCnt{'COMP'} = 1;
-	}
+        else{
+          print "Skip $chr $gene in ASARP as it is in ASE\n";
+        }
 
         my($pos, $id, $al, $reads) = split(' ', $snpInfo);
         my ($r1, $r2) = split(':', $reads);
