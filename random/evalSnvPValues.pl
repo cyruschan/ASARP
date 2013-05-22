@@ -115,7 +115,7 @@ for(keys %pHash){
 }
 print $toOutputP;
 
-print "Overall ASARP FDR estimated:\n";
+print "Overall estimated FDR (of output ASARP Genes)\n";
 for(keys %pCnt){
   if($pCnt{$_}>0){
     printf "%s: %.4f\n", $_, $sumP{$_}/$pCnt{$_};
@@ -123,7 +123,7 @@ for(keys %pCnt){
 }
 print "\n";
 
-print "CORRECT: Overall ASARP FDR estimated (Gene Level)\n";
+print "Overall estimated FDR (of the method and setting; ASE Genes Excluded)\n";
 my %geneStat = %$geneStatRef;
 for(keys %geneStat){
   my $fdr = 0;

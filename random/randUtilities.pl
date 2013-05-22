@@ -118,9 +118,7 @@ sub getAsarpResult{
 	    $geneTypeCnt{'COMP'} = 1;
 	  }
 	}
-        else{
-          print "Skip $chr $gene in ASARP as it is in ASE\n";
-        }
+        #else{   print "Skip $chr $gene in ASARP as it is in ASE\n";       }
 
         my($pos, $id, $al, $reads) = split(' ', $snpInfo);
         my ($r1, $r2) = split(':', $reads);
