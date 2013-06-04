@@ -1941,8 +1941,8 @@ sub fdrControl{
   }
   #the expected proportion of false discoveries amongst the rejected hypotheses
   #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
-  #print "Running R using BH\n";
-  $R->run('x <- p.adjust(plist, method="BH")');
+  #print "Running R using BY\n";
+  $R->run('x <- p.adjust(plist, method="BY")');
   $R->run('rLen <- length(x)');
   my $rSize = $R->get('rLen');
   #print "Getting x from R: size $rSize\n";
