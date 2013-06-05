@@ -6,7 +6,7 @@ use base 'Exporter';
 #use Readonly; #this is the better way but requires installation
 
 our @EXPORT = qw();
-our @EXPORT_OK = qw( $CHRNUM $supportedList $supportedTags );
+our @EXPORT_OK = qw( $CHRNUM $supportedList $supportedTags $asarpTags );
 
 # better way to forbid modifying, but requires installation. e.g.
 #Readonly::Scalar our $CHRNUM => 24; #total number of chromosomes handled
@@ -16,6 +16,9 @@ our $CHRNUM = 25; #total number of chromosomes handled
 #each key word should be prefixed by space ' ' and suffixed by ';'
 our $supportedList = ' snps; powSnps; trans; events; gSnps; gPowSnps;'; 
 our $supportedTags = ' rna; est; anno;';
+
+# supported ASARP (sub-) types for investigations
+our $asarpTags = 'AS AI AT ASS SE RI';
 1;
 
 =head1 NAME

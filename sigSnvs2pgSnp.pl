@@ -80,23 +80,8 @@ if(!defined($topK) || $topK <=0){
 if(!defined($idString)){
   $idString = 'default';
 }
-if(!defined($selectType)){
-  $selectType = ''; #no filter
-}else{
-  $selectType = uc $selectType;
-  my @asarpTypes = qw(AS AI AT SE RI ASS);
-  my $isGood = 0;
-  for(@asarpTypes){
-    if($selectType eq $_){
-      $isGood = 1;
-      last;
-    }
-  }
-  if(!$isGood){
-    die "ERROR: only ASARP select type in @asarpTypes supported; you input: $selectType\n";
-  }
-  print "Only ASARP cases of the select type: $selectType will be output\n";
-}
+
+$selectType = checkValidAsarpType($selectType);
 
 print "Loading SNV information from $snpF\n";
 my %snps = ();
@@ -246,7 +231,7 @@ for(my $i = 1; $i < @pred; $i++){
     while($i<@pred && $pred[$i] ne "" && !($pred[$i]=~/^chr/)){
       #get target-control pairs
       my ($catInfo, $pVal, $trgtPos, $ctrlPos, $snvStrand) = split(';', $pred[$i]);
-      if(index($catInfo, $selectType.':') == -1 && index($catInfo, $selectType.':') == -1){ #1st: AI/AS/AT; 2nd: RI/SE/ASS
+      if(index($catInfo, $selectType.':') == -1 && index($catInfo, '^'.$selectType.'(') == -1){ #1st: AI/AS/AT; 2nd: RI/SE/ASS
         $i++;
 	next; #not the type we want
       }
