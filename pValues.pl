@@ -87,8 +87,8 @@ sub plotPvalues
   my $pFdr = $R->get("$rVar\[qpos\]");
   my $plfdr = $R->get("$rVar\[lpos\]");
   
-  print "Fdr q-value: $qval with p-value: $pFdr\n\n";
-  print "Local fdr  : $lfdr with p-value: $plfdr\n\n";
+  print "Fdr q-value: $qval (p-value: $pFdr)\n\n";
+  print "Local fdr  : $lfdr (p-value: $plfdr)\n\n";
   
   # do the plot
   $R->run("png(filename=\"$outputFile\")"); #, width=3.25,height=3.25,units=\"in\", res = 1200)");

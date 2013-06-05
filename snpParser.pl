@@ -1932,15 +1932,13 @@ sub fdrControl{
   #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
   #print "Running R using BH and BY\n";
   $R->run('x <- p.adjust('.$rVarPlist.', method="BH")');
-  $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
+  $R->run('y <- p.adjust('.$rVarPlist.', method="BH")');
   $R->run('rLen <- length(x)');
   my $rSize = $R->get('rLen');
   print "Getting x from R: size $rSize\n";
   my $pAdjustRef = getListfromR($R, 'x');
   my $pAdjustByRef = getListfromR($R, 'y');
   $R->stop;
-
-  my @pAdjust = @$pAdjustRef;
   
   #estimate a new a, default parameters used
   my $aHat = 0;
@@ -1981,6 +1979,7 @@ sub fdrControl{
   print "Adjusted FDR (based on BH): $fdrCutoff\n" if $isVerbose; 
   
   my $pos = 0;
+  my @pAdjust = @$pAdjustRef;
   while($pos < @pAdjust){
     #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
     if($pAdjust[$pos] > $fdrCutoff){
@@ -2017,7 +2016,7 @@ sub fdrControl{
     $pos++;
   }
   $byFdrP = $pList[$pos-1];  # result of BY method
-  print "The BY FDR method cutoff: $modifiedFdrP\n" if $isVerbose;
+  print "The BY FDR method cutoff: $byFdrP\n" if $isVerbose;
 
   my $finalP = $modifiedFdrP;
   if($finalP > $orgFdrCutoff){ $finalP = $byFdrP; }
