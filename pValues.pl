@@ -60,7 +60,7 @@ if(defined($FDRCUTOFF)){
 }
 
 #plot p-values
-plotPvalues($pRef, $FDRCUTOFF, $modiP, $byP);
+plotPvalues($pRef, 0.05, $modiP, $byP);
 
 ######################################################################################
 ## sub-routines
@@ -93,15 +93,18 @@ sub plotPvalues
   # do the plot
   $R->run("png(filename=\"$outputFile\")"); #, width=3.25,height=3.25,units=\"in\", res = 1200)");
   $R->run("plot($rVar)"); #\[1:qpos+5\])");
-  $R->run("abline(h=$pFdr,col=3,lty=2)"); # Fdr (BH method)
-  $R->run("abline(h=$plfdr,col=4,lty=3)"); # local FDR
+  $R->run("abline(h=$pFdr,col=2,lty=1)"); # Fdr (BH method)
+  $R->run("abline(h=$plfdr,col=3,lty=2)"); # local FDR
   if($byP >0){
-    $R->run("abline(h=$byP,col=5,lty=4)"); # BY method's p
+    $R->run("abline(h=$byP,col=4,lty=3)"); # BY method's p
   }
   if($modifiedP >0){
-    $R->run("abline(h=$modifiedP,col=2,lty=1)"); # modified FDR
+    $R->run("abline(h=$modifiedP,col=5,lty=4)"); # modified FDR
   }
   $R->run('title(main="p-values")');
+  $R->run('legend(1, 0.8, c("BH(Fdr)","fdr", "BY(Fdr)", "modi Fdr"), cex=0.8, 
+     col=2:5, lty=1:4)');
+
   $R->run("dev.off()");
   
   $R->stop;

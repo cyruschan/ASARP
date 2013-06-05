@@ -1932,7 +1932,7 @@ sub fdrControl{
   #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
   #print "Running R using BH and BY\n";
   $R->run('x <- p.adjust('.$rVarPlist.', method="BH")');
-  $R->run('y <- p.adjust('.$rVarPlist.', method="BH")');
+  $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   $R->run('rLen <- length(x)');
   my $rSize = $R->get('rLen');
   print "Getting x from R: size $rSize\n";
@@ -1970,12 +1970,12 @@ sub fdrControl{
   }
   $aHat /= $bigI;
 
-  my $modifiedFdrP = $fdrCutoff;
+  my $modifiedFdrP = 1;
   print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n" if $isVerbose;
   if($aHat >= 1){
-    die "ERROR: in the adjusted FDR: all cases are estimated to be alternative (may better set p-value cutoff directly in this case)\n";
+    die "ERROR: the adjusted FDR failed to estimated the alternative percentage (need to set p-value cutoff directly in this case)\n";
   }
-  $fdrCutoff /= (1-$aHat);
+  $fdrCutoff = $orgFdrCutoff/(1-$aHat);
   print "Adjusted FDR (based on BH): $fdrCutoff\n" if $isVerbose; 
   
   my $pos = 0;
@@ -1990,14 +1990,11 @@ sub fdrControl{
   if($pos == 0){ 
     if($isVerbose){
       print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
-      print "Set a default: $fdrCutoff (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
+      print "Set a default: $orgFdrCutoff (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
     }
-    #return $fdrCutoff;
+    $modifiedFdrP = $orgFdrCutoff;
   }else{
-    #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
-    if($pList[$pos-1] <= $orgFdrCutoff){
-      $modifiedFdrP = $pList[$pos-1];
-    }
+    $modifiedFdrP = $pList[$pos-1];
   }
   print "The adjusted BH FDR method cutoff: $modifiedFdrP\n" if $isVerbose;
   if($modifiedFdrP > $orgFdrCutoff){
