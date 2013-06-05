@@ -125,7 +125,7 @@ sub plotInR
   $R->run("pdf(file=\"$outputFile\", width=3.5,height=3.5)");
   #$R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
 
-  my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.6, lwd=2";
+  my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.6, lwd=1";
   if(defined($upper)){
     $R->run("plot($rVar\[1:$upper\], $settings)"); 
     $upper = $R->get("$rVar\[$upper\]");
@@ -149,7 +149,7 @@ sub plotInR
   }
   $R->run('title(main="p-values")');
   $R->run('legend(1, '.$upper.', c("fdrtool(Fdr)","modified(Fdr)", "BY(Fdr)", "fdrtool(fdr)", "BH(p.Adjust)"), cex=0.5, 
-     col=1:5, lty=1:5)');
+     bg="white", col=1:5, lty=1:5)');
 
   $R->run("dev.off()");
   
