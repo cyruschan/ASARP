@@ -46,13 +46,13 @@ if($STRANDFLAG){
 }
 
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
-my ($finalP, $modiP, $byP) = (-1, -1, -1);
+my ($finalP, $modiP, $bhP, $byP) = (-1, -1, -1, -1);
 if(defined($FDRCUTOFF)){
   print "Calculating the Chi-Squared Test p-value cutoff for FDR <= $FDRCUTOFF...\n";
   if(defined($SNVPCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
   }
-  ($finalP, $modiP, $byP) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+  ($finalP, $modiP, $bhP, $byP) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
   $SNVPCUTOFF = $finalP;
   print "Chi-Squared Test adjusted p-value cutoff: $SNVPCUTOFF\n\n";
 }else{
@@ -60,13 +60,13 @@ if(defined($FDRCUTOFF)){
 }
 
 #plot p-values
-plotPvalues($pRef, 0.05, $modiP, $byP);
+plotPvalues($pRef, 0.05, $modiP, $bhP, $byP);
 
 ######################################################################################
 ## sub-routines
 sub plotPvalues
 {
-  my ($pRef, $cutoff, $modifiedP, $byP) = @_;
+  my ($pRef, $cutoff, $modifiedP, $bhP, $byP) = @_;
   my @pList = @$pRef;
   my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
@@ -81,31 +81,68 @@ sub plotPvalues
   
   $R->run("fdr = fdrtool($rVar, statistic=\"pvalue\")");
   $R->run("qpos <- max(which(fdr\$qval <= $cutoff))");
+  my $qpos = $R->get('qpos');
   my $qval = $R->get('fdr$qval[qpos]');
   $R->run("lpos <- max(which(fdr\$lfdr <= $cutoff))");
+  my $lpos = $R->get('lpos');
   my $lfdr = $R->get('fdr$lfdr[lpos]');
   my $pFdr = $R->get("$rVar\[qpos\]");
   my $plfdr = $R->get("$rVar\[lpos\]");
-  
-  print "Fdr q-value: $qval (p-value: $pFdr)\n\n";
-  print "Local fdr  : $lfdr (p-value: $plfdr)\n\n";
-  
+ 
+  #getPrintInR($R, $rVar);
+  #getPrintInR($R, 'fdr$qval');
+  #getPrintInR($R, 'fdr$lfdr');
+
+  print "Fdr q-value: $qval (p-value: $pFdr) pos: $qpos\n\n";
+  print "Local fdr  : $lfdr (p-value: $plfdr) pos: $lpos\n\n";
+ 
+  plotInR($R, $outputFile, $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP);
+  my $upper = $qpos;
+  if($upper+1 < @pList){ $upper += 1; } #leave some margin
+  plotInR($R, "$outputFile.zoom.png", $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper);
+
+  $R->stop;
+}
+
+sub getPrintInR
+{
+  my ($R, $var) = @_;
+  my $ref = $R->get($var);
+  my @list = @$ref;
+  print "$var\n@list\n";
+}
+
+
+sub plotInR
+{
+  my ($R, $outputFile, $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper) = @_;
   # do the plot
-  $R->run("png(filename=\"$outputFile\")"); #, width=3.25,height=3.25,units=\"in\", res = 1200)");
-  $R->run("plot($rVar)"); #\[1:qpos+5\])");
-  $R->run("abline(h=$pFdr,col=2,lty=1)"); # Fdr (BH method)
-  $R->run("abline(h=$plfdr,col=3,lty=2)"); # local FDR
-  if($byP >0){
-    $R->run("abline(h=$byP,col=4,lty=3)"); # BY method's p
+  $R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
+ 
+  if(defined($upper)){
+    $R->run("plot($rVar\[1:$upper\])");
+    $upper = $R->get("$rVar\[$upper\]");
+    print "Upper is $upper\n";
+  }else{
+    $upper = 0.8; # for legend positioning
+    $R->run("plot($rVar)"); #\[1:qpos+5\])");
   }
-  if($modifiedP >0){
-    $R->run("abline(h=$modifiedP,col=5,lty=4)"); # modified FDR
+  $R->run("abline(h=$pFdr,col=1,lty=1)"); # Fdr (BH method)
+  if($modifiedP >=0){
+    $R->run("abline(h=$modifiedP,col=2,lty=2)"); # modified FDR
+  }
+  if($byP >=0){
+    $R->run("abline(h=$byP,col=3,lty=3)"); # BY method's p
+  }
+  $R->run("abline(h=$plfdr,col=4,lty=4)"); # local FDR
+  
+  if($bhP >=0){
+    $R->run("abline(h=$bhP,col=5,lty=5)"); # BY method's p
   }
   $R->run('title(main="p-values")');
-  $R->run('legend(1, 0.8, c("BH(Fdr)","fdr", "BY(Fdr)", "modi Fdr"), cex=0.8, 
-     col=2:5, lty=1:4)');
+  $R->run('legend(1, '.$upper.', c("BH(Fdr)","modi(Fdr)", "BY(Fdr)", "local(fdr)", "BH(p.Adjust)"), cex=0.8, 
+     col=1:5, lty=1:5)');
 
   $R->run("dev.off()");
   
-  $R->stop;
 }
