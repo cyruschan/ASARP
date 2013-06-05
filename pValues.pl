@@ -123,9 +123,9 @@ sub plotInR
   # do the plot
   #$R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
   $R->run("pdf(file=\"$outputFile\", width=3.5,height=3.5)");
-  #$R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
+  $R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
 
-  my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.6, lwd=1";
+  my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.8, cex=0.1"; #pch=\".\""; #, lwd=1";
   if(defined($upper)){
     $R->run("plot($rVar\[1:$upper\], $settings)"); 
     $upper = $R->get("$rVar\[$upper\]");
@@ -135,21 +135,21 @@ sub plotInR
     $upper = 0.8; # for legend positioning
     $R->run("plot($rVar, $settings)"); #\[1:qpos+5\])");
   }
-  $R->run("abline(h=$pFdr,col=1,lty=1)"); # Fdr (BH method)
+  $R->run("abline(h=$pFdr,col=2,lty=1)"); # Fdr (fdrtool)
   if($modifiedP >=0){
-    $R->run("abline(h=$modifiedP,col=2,lty=2)"); # modified FDR
+    $R->run("abline(h=$modifiedP,col=3,lty=2)"); # modified FDR
+  }
+  if($bhP >=0){
+    $R->run("abline(h=$bhP,col=4,lty=3)"); # BH p.adjust method's p
   }
   if($byP >=0){
-    $R->run("abline(h=$byP,col=3,lty=3)"); # BY method's p
+    $R->run("abline(h=$byP,col=5,lty=4)"); # BY method's p
   }
-  $R->run("abline(h=$plfdr,col=4,lty=4)"); # local FDR
+  $R->run("abline(h=$plfdr,col=6,lty=5)"); # local fdr (fdrtool)
   
-  if($bhP >=0){
-    $R->run("abline(h=$bhP,col=5,lty=5)"); # BY method's p
-  }
-  $R->run('title(main="p-values")');
-  $R->run('legend(1, '.$upper.', c("fdrtool(Fdr)","modified(Fdr)", "BY(Fdr)", "fdrtool(fdr)", "BH(p.Adjust)"), cex=0.5, 
-     bg="white", col=1:5, lty=1:5)');
+  #$R->run('title(main="p-values")');
+  $R->run('legend(1, '.$upper.', c("fdrtool(Fdr)","modified(Fdr)","BH(Fdr)","BY(Fdr)", "fdrtool(fdr)"), cex=0.8, 
+     bg="white", col=2:6, lty=1:5)');
 
   $R->run("dev.off()");
   
