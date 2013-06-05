@@ -4,7 +4,7 @@ use Statistics::R; #interact with R
 require 'fileParser.pl';
 require 'bedHandler.pl';
 
-use MyConstants qw( $CHRNUM $supportedList $supportedTags );
+use MyConstants qw( $CHRNUM $supportedList $supportedTags $asarpTags );
 
 # the sub routines to process snps
 # input
@@ -2106,6 +2106,34 @@ sub printSnpEventsResultsByType
         }
       }
     }
+  }
+}
+
+#####################################################################################
+### post-analysis section: i.e. working on the ASARP results #####
+
+sub checkValidAsarpType{
+
+  my $selectType = @_;
+  if(!defined($selectType)){
+    $selectType = ''; #no filter
+  }else{
+    $selectType = uc $selectType;
+    my @asarpTypes = split(' ', $asarpTags);
+
+    my $isGood = 0;
+    for(@asarpTypes){
+      if($selectType eq $_){
+        $isGood = 1;
+        last;
+      }
+    }
+    if(!$isGood){
+      die "ERROR: only ASARP select type in @asarpTypes supported; you input: $selectType\n";
+    }
+    print "Only ASARP cases of the select type: $selectType are considered\n";
+
+    return $selectType;
   }
 }
 1;

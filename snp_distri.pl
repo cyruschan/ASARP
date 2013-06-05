@@ -1,4 +1,5 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
+use warnings;
 use strict;
 # a simple demonstration with the ASARP pipeline:
 # in this application, the transcripts and SNVs are read in and the SNV distribution in 5'/3' UTRs, exons and introns is reported
