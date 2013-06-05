@@ -1922,53 +1922,26 @@ sub fdrControl{
   my @pList = @$pRef;
   my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
-  my $pSize = @pList;
   # Create a communication bridge with R and start R
   my $R = Statistics::R->new();
-
-  #$R->set('plist', \@pList);
-  my $stepSize = 10000;
-  if($pSize > $stepSize){ # huge input
-    $R->run("plist <- c()"); #initialize
-    for(my $xi = 0; $xi < $pSize; $xi+=$stepSize){ #each time
-      my $end = $xi+$stepSize-1;
-      if($end >= $pSize){ $end = $pSize-1; }  #the upper bound
-      #print "getting plist: $xi to $end\n";
-      $R->run("plist <- c(plist, c(".join(",", @pList[$xi .. $end])."))");
-    }
-  }else{
-    $R->run("plist <- c(".join(",",@pList).")");
-  }
+  my $rVarPlist = "plist"; # the R variable name
+  print "Putting pList to R: size $pListSize\n";
+  passListToR($R, \@pList, $rVarPlist); 
+  
   #the expected proportion of false discoveries amongst the rejected hypotheses
   #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
-  #print "Running R using BY\n";
-  $R->run('x <- p.adjust(plist, method="BY")');
+  #print "Running R using BH and BY\n";
+  $R->run('x <- p.adjust('.$rVarPlist.', method="BH")');
+  $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   $R->run('rLen <- length(x)');
   my $rSize = $R->get('rLen');
-  #print "Getting x from R: size $rSize\n";
-  
-  my @pAdjust = ();
-  if($rSize > $stepSize){
-    # need to use the same trick to get parts from Statistics::R
-    for(my $xi = 1; $xi <= $pSize; $xi+=$stepSize){ #each time: one-based in R
-      #1-based in R!
-      my $end = $xi+$stepSize-1;
-      if($end > $pSize){ $end = $pSize; }  #the upper bound
-
-      #print "getting x: $xi to $end\n";
-      $R->run("xSlice <- x[$xi:$end]");
-      my $pSliceRef = $R->get('xSlice');
-      push(@pAdjust, @$pSliceRef);
-    }
-  }else{
-    my $pAdjustRef = $R->get('x');
-    @pAdjust = @$pAdjustRef;
-  }
+  print "Getting x from R: size $rSize\n";
+  my $pAdjustRef = getListfromR($R, 'x');
+  my $pAdjustByRef = getListfromR($R, 'y');
   $R->stop;
-  if($rSize != $pSize || @pAdjust != $pSize){
-    print "ERROR: Statistics::R result size: ".(scalar @pAdjust).", or R result size: $pSize different from input size: $pSize\n";
-    die "ERROR: the adjusted p-value list from R is inconsistent (see STDOUT for details)! Aborted\n";
-  }
+
+  my @pAdjust = @$pAdjustRef;
+  
   #estimate a new a, default parameters used
   my $aHat = 0;
   my $bigI = 20;
@@ -1999,12 +1972,14 @@ sub fdrControl{
   }
   $aHat /= $bigI;
 
+  my $modifiedFdrP = $fdrCutoff;
   print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n" if $isVerbose;
   if($aHat >= 1){
-    return $pList[-1]; # all cases are estimated to be from the alternative
+    die "ERROR: in the adjusted FDR: all cases are estimated to be alternative (may better set p-value cutoff directly in this case)\n";
   }
   $fdrCutoff /= (1-$aHat);
-  print "Adjusted FDR (BH): $fdrCutoff\n" if $isVerbose; 
+  print "Adjusted FDR (based on BH): $fdrCutoff\n" if $isVerbose; 
+  
   my $pos = 0;
   while($pos < @pAdjust){
     #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
@@ -2018,22 +1993,36 @@ sub fdrControl{
       print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
       print "Set a default: $fdrCutoff (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
     }
-    return $fdrCutoff;
+    #return $fdrCutoff;
+  }else{
+    #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
+    if($pList[$pos-1] <= $orgFdrCutoff){
+      $modifiedFdrP = $pList[$pos-1];
+    }
   }
-  #print "$pos SNVs out of ".(scalar @pList)." with FDR <= $fdrCutoff (adjusted p: $pAdjust[$pos-1] original p: $pList[$pos-1])\n";
-  if($pList[$pos-1] <= $orgFdrCutoff){
-    return $pList[$pos-1];
+  print "The adjusted BH FDR method cutoff: $modifiedFdrP\n" if $isVerbose;
+  if($modifiedFdrP > $orgFdrCutoff){
+    #fall-back plan
+    print "WARNING: The adjusted FDR method does not work (i.e. cutoff > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
   }
-  #fall-back plan
-  print "WARNING: The adjusted FDR method does not work (i.e. cutoff > $orgFdrCutoff). Switched to BH method\n" if $isVerbose;
+  
+  #BY method result:
+  my $byFdrP = 0;
+  my @pAdjustBy = @$pAdjustByRef;
   $pos = 0;
-  while($pos < @pAdjust){
-    if($pAdjust[$pos] > $orgFdrCutoff){
+  while($pos < @pAdjustBy){
+    if($pAdjustBy[$pos] > $orgFdrCutoff){
       last;
     }
     $pos++;
   }
-  return $pList[$pos-1];
+  $byFdrP = $pList[$pos-1];  # result of BY method
+  print "The BY FDR method cutoff: $modifiedFdrP\n" if $isVerbose;
+
+  my $finalP = $modifiedFdrP;
+  if($finalP > $orgFdrCutoff){ $finalP = $byFdrP; }
+
+  return ($finalP, $modifiedFdrP, $byFdrP);
 }
 
 ################ minor auxiliary (mainly for print outs and debugs) ####
@@ -2110,6 +2099,75 @@ sub printSnpEventsResultsByType
 }
 
 #####################################################################################
+### Interactions with R ####
+
+# a sub-routine to work-around the I/O problem between R and Statistics::R
+sub passListToR
+{
+  my ($R, $pRef, $rVar) = @_;
+  
+  my @pList = @$pRef;
+  @pList = sort{$a<=>$b}@pList; #sorted
+  my $pSize = @pList;
+  
+  #$R->set("$rVar", \@pList);
+  my $stepSize = 10000;
+  if($pSize > $stepSize){ # huge input
+    $R->run("$rVar <- c()"); #initialize
+    for(my $xi = 0; $xi < $pSize; $xi+=$stepSize){ #each time
+      my $end = $xi+$stepSize-1;
+      if($end >= $pSize){ $end = $pSize-1; }  #the upper bound
+      #print "getting $rVar: $xi to $end\n";
+      $R->run("$rVar <- c($rVar, c(".join(",", @pList[$xi .. $end])."))");
+    }
+  }else{
+    $R->run("$rVar <- c(".join(",",@pList).")");
+  }
+  # checking 
+  $R->run("rVarLen <- length($rVar)");
+  my $rSize = $R->get('rVarLen');
+  if($rSize != $pSize){
+    print "ERROR: Statistics::R size received by R: $rSize different from input size: $pSize\n";
+    die "ERROR: the input list to R is inconsistent in its size (see STDOUT for details)! Aborted\n";
+  }
+
+}
+
+
+sub getListfromR{
+  my ($R, $rVar) = @_;
+
+  $R->run("rVarLen <- length($rVar)");
+  my $rSize = $R->get('rVarLen');
+  
+  my $stepSize = 10000;
+  my @pAdjust = ();
+  if($rSize > $stepSize){
+    # need to use the same trick to get parts from Statistics::R
+    for(my $xi = 1; $xi <= $rSize; $xi+=$stepSize){ #each time: one-based in R
+      #1-based in R!
+      my $end = $xi+$stepSize-1;
+      if($end > $rSize){ $end = $rSize; }  #the upper bound
+
+      #print "getting x: $xi to $end\n";
+      $R->run("xSlice <- ".$rVar."[$xi:$end]");
+      my $pSliceRef = $R->get('xSlice');
+      push(@pAdjust, @$pSliceRef);
+    }
+  }else{
+    my $pAdjustRef = $R->get("$rVar");
+    @pAdjust = @$pAdjustRef;
+  }
+  if(@pAdjust != $rSize){
+    print "ERROR: Statistics::R result size output: ".(scalar @pAdjust)." different from the size in R: $rSize\n";
+    die "ERROR: the output list from R is inconsistent in its size (see STDOUT for details)! Aborted\n";
+  }
+
+  return \@pAdjust;
+  
+}
+
+#####################################################################################
 ### post-analysis section: i.e. working on the ASARP results #####
 
 sub checkValidAsarpType{
@@ -2156,7 +2214,7 @@ snpParser.pl -- All the sub-routines for SNV (sometimes denoted interchangeably 
 	# read and parse SNVs
 	my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
         # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
-	$SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+	($SNVPCUTOFF) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
 	# match SNVs with gene transcript annotations
 	my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 	# match gene SNVs with AI/AT and alternative splicing (AS) events

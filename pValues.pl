@@ -46,25 +46,27 @@ if($STRANDFLAG){
 }
 
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
+my ($finalP, $modiP, $byP) = (-1, -1, -1);
 if(defined($FDRCUTOFF)){
   print "Calculating the Chi-Squared Test p-value cutoff for FDR <= $FDRCUTOFF...\n";
   if(defined($SNVPCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
   }
-  $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+  ($finalP, $modiP, $byP) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+  $SNVPCUTOFF = $finalP;
   print "Chi-Squared Test adjusted p-value cutoff: $SNVPCUTOFF\n\n";
 }else{
   print "FDR control NOT used. User set Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n";
 }
 
 #plot p-values
-plotPvalues($pRef, $FDRCUTOFF, $SNVPCUTOFF);
+plotPvalues($pRef, $FDRCUTOFF, $modiP, $byP);
 
 ######################################################################################
 ## sub-routines
 sub plotPvalues
 {
-  my ($pRef, $cutoff, $modifiedFDR) = @_;
+  my ($pRef, $cutoff, $modifiedP, $byP) = @_;
   my @pList = @$pRef;
   my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
@@ -89,44 +91,18 @@ sub plotPvalues
   print "Local fdr  : $lfdr with p-value: $plfdr\n\n";
   
   # do the plot
-  $R->run("png(filename=\"$outputFile\", width=3.25,height=3.25,units=\"in\", res = 1200)");
-  $R->run("plot($rVar\[1:qpos+5\])");
-  $R->run("abline(h=$modifiedFDR,col=2,lty=1)");
-  $R->run("abline(h=$pFdr,col=3,lty=2)");
-  $R->run("abline(h=$plfdr,col=4,lty=3)");
-  
+  $R->run("png(filename=\"$outputFile\")"); #, width=3.25,height=3.25,units=\"in\", res = 1200)");
+  $R->run("plot($rVar)"); #\[1:qpos+5\])");
+  $R->run("abline(h=$pFdr,col=3,lty=2)"); # Fdr (BH method)
+  $R->run("abline(h=$plfdr,col=4,lty=3)"); # local FDR
+  if($byP >0){
+    $R->run("abline(h=$byP,col=5,lty=4)"); # BY method's p
+  }
+  if($modifiedP >0){
+    $R->run("abline(h=$modifiedP,col=2,lty=1)"); # modified FDR
+  }
   $R->run('title(main="p-values")');
   $R->run("dev.off()");
   
   $R->stop;
-}
-
-# a sub-routine to work-around the I/O problem between R and Statistics::R
-sub passListToR
-{
-  my ($R, $pRef, $rVar) = @_;
-  
-  my @pList = @$pRef;
-  my $pListSize = @pList; #size
-  @pList = sort{$a<=>$b}@pList; #sorted
-  my $pSize = @pList;
-  
-  #$R->set("$rVar", \@pList);
-  my $stepSize = 10000;
-  if($pSize > $stepSize){ # huge input
-    $R->run("$rVar <- c()"); #initialize
-    for(my $xi = 0; $xi < $pSize; $xi+=$stepSize){ #each time
-      my $end = $xi+$stepSize-1;
-      if($end >= $pSize){ $end = $pSize-1; }  #the upper bound
-      #print "getting $rVar: $xi to $end\n";
-      $R->run("$rVar <- c($rVar, c(".join(",", @pList[$xi .. $end])."))");
-    }
-  }else{
-    $R->run("$rVar <- c(".join(",",@pList).")");
-  }
-
-}
-
-sub getListFromR
-{
 }
