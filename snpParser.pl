@@ -1980,6 +1980,7 @@ sub fdrControl{
   
   my $pos = 0;
   my @pAdjust = @$pAdjustRef;
+  #print "pAdjust (BH)\n@pAdjust\n";
   while($pos < @pAdjust){
     #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
     if($pAdjust[$pos] > $fdrCutoff){
@@ -2001,24 +2002,17 @@ sub fdrControl{
     #fall-back plan
     print "WARNING: The adjusted FDR method does not work (i.e. cutoff > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
   }
-  
-  #BY method result:
-  my $byFdrP = 0;
-  my @pAdjustBy = @$pAdjustByRef;
-  $pos = 0;
-  while($pos < @pAdjustBy){
-    if($pAdjustBy[$pos] > $orgFdrCutoff){
-      last;
-    }
-    $pos++;
-  }
-  $byFdrP = $pList[$pos-1];  # result of BY method
-  print "The BY FDR method cutoff: $byFdrP\n" if $isVerbose;
+
+  #print "pAdjust (BY)\n@$pAdjustByRef\n";
+  print "BY: ";
+  my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
+  print "BH: ";
+  my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
 
   my $finalP = $modifiedFdrP;
   if($finalP > $orgFdrCutoff){ $finalP = $byFdrP; }
 
-  return ($finalP, $modifiedFdrP, $byFdrP);
+  return ($finalP, $modifiedFdrP, $bhFdrP, $byFdrP);
 }
 
 ################ minor auxiliary (mainly for print outs and debugs) ####
@@ -2146,8 +2140,8 @@ sub getListfromR{
       if($end > $rSize){ $end = $rSize; }  #the upper bound
 
       #print "getting x: $xi to $end\n";
-      $R->run("xSlice <- ".$rVar."[$xi:$end]");
-      my $pSliceRef = $R->get('xSlice');
+      $R->run($rVar."Slice <- ".$rVar."[$xi:$end]");
+      my $pSliceRef = $R->get($rVar."Slice");
       push(@pAdjust, @$pSliceRef);
     }
   }else{
@@ -2163,6 +2157,25 @@ sub getListfromR{
   
 }
 
+sub getFdr
+{
+  my ($pListRef, $pAdjustByRef, $orgFdrCutoff) = @_;
+  my @pList = @$pListRef;
+  #BY method result:
+  my $byFdrP = 0;
+  my @pAdjustBy = @$pAdjustByRef;
+  my $pos = 0;
+  while($pos < @pAdjustBy){
+    if($pAdjustBy[$pos] > $orgFdrCutoff){
+      last;
+    }
+    $pos++;
+  }
+  my $finalPos = $pos-1;
+  $byFdrP = $pList[$finalPos];  # result of BY method
+  print "Fdr   : $pAdjustBy[$finalPos] (p-value: $byFdrP) pos: $pos\n";
+  return $byFdrP;
+}
 #####################################################################################
 ### post-analysis section: i.e. working on the ASARP results #####
 
