@@ -1925,7 +1925,7 @@ sub fdrControl{
   # Create a communication bridge with R and start R
   my $R = Statistics::R->new();
   my $rVarPlist = "plist"; # the R variable name
-  print "Putting pList to R: size $pListSize\n";
+  #print "Putting pList to R: size $pListSize\n";
   passListToR($R, \@pList, $rVarPlist); 
   
   #the expected proportion of false discoveries amongst the rejected hypotheses
@@ -1935,7 +1935,7 @@ sub fdrControl{
   $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   $R->run('rLen <- length(x)');
   my $rSize = $R->get('rLen');
-  print "Getting x from R: size $rSize\n";
+  #print "Getting x from R: size $rSize\n";
   my $pAdjustRef = getListfromR($R, 'x');
   my $pAdjustByRef = getListfromR($R, 'y');
   $R->stop;
@@ -1976,7 +1976,7 @@ sub fdrControl{
     die "ERROR: the adjusted FDR failed to estimated the alternative percentage (need to set p-value cutoff directly in this case)\n";
   }
   $fdrCutoff = $orgFdrCutoff/(1-$aHat);
-  print "Adjusted FDR (based on BH): $fdrCutoff\n" if $isVerbose; 
+  print "Adjusted FDR cutoff (based on BH): $fdrCutoff\n" if $isVerbose; 
   
   my $pos = 0;
   my @pAdjust = @$pAdjustRef;
@@ -1997,16 +1997,16 @@ sub fdrControl{
   }else{
     $modifiedFdrP = $pList[$pos-1];
   }
-  print "The adjusted BH FDR method cutoff: $modifiedFdrP\n" if $isVerbose;
+  print "The modified FDR cutoff: $modifiedFdrP\n" if $isVerbose;
   if($modifiedFdrP > $orgFdrCutoff){
     #fall-back plan
-    print "WARNING: The adjusted FDR method does not work (i.e. cutoff > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
+    print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
   }
 
   #print "pAdjust (BY)\n@$pAdjustByRef\n";
-  print "BY: ";
+  #print "BY: ";
   my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
-  print "BH: ";
+  #print "BH: ";
   my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
 
   my $finalP = $modifiedFdrP;
@@ -2173,7 +2173,7 @@ sub getFdr
   }
   my $finalPos = $pos-1;
   $byFdrP = $pList[$finalPos];  # result of BY method
-  print "Fdr   : $pAdjustBy[$finalPos] (p-value: $byFdrP) pos: $pos\n";
+  #print "Fdr   : $pAdjustBy[$finalPos] (p-value: $byFdrP) pos: $pos\n";
   return $byFdrP;
 }
 #####################################################################################
