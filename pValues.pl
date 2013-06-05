@@ -60,13 +60,15 @@ if(defined($FDRCUTOFF)){
 }
 
 #plot p-values
-plotPvalues($pRef, 0.05, $modiP, $bhP, $byP);
+plotPvalues($pRef, $FDRCUTOFF, $modiP, $bhP, $byP);
 
 ######################################################################################
 ## sub-routines
 sub plotPvalues
 {
   my ($pRef, $cutoff, $modifiedP, $bhP, $byP) = @_;
+  print "Plotting different FDR methods at threshold: $cutoff\n";
+  print "modified Fdr: $modifiedP\nBH Fdr: $bhP\nBY Fdr: $byP\n";
   my @pList = @$pRef;
   my $pListSize = @pList; #size
   @pList = sort{$a<=>$b}@pList; #sorted
@@ -93,13 +95,15 @@ sub plotPvalues
   #getPrintInR($R, 'fdr$qval');
   #getPrintInR($R, 'fdr$lfdr');
 
-  print "Fdr q-value: $qval (p-value: $pFdr) pos: $qpos\n\n";
-  print "Local fdr  : $lfdr (p-value: $plfdr) pos: $lpos\n\n";
+  print "fdrtool Fdr: $pFdr\n";
+  print "fdrtool fdr: $plfdr\n";
+  #print "fdrtool Fdr: $qval (p-value: $pFdr) pos: $qpos\n";
+  #print "fdrtool fdr: $lfdr (p-value: $plfdr) pos: $lpos\n";
  
   plotInR($R, $outputFile, $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP);
   my $upper = $qpos;
   if($upper+1 < @pList){ $upper += 1; } #leave some margin
-  plotInR($R, "$outputFile.zoom.png", $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper);
+  plotInR($R, "$outputFile.zoom.pdf", $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper);
 
   $R->stop;
 }
@@ -117,15 +121,19 @@ sub plotInR
 {
   my ($R, $outputFile, $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper) = @_;
   # do the plot
-  $R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
- 
+  #$R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
+  $R->run("pdf(file=\"$outputFile\", width=3.5,height=3.5)");
+  #$R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
+
+  my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.6, lwd=2";
   if(defined($upper)){
-    $R->run("plot($rVar\[1:$upper\])");
+    $R->run("plot($rVar\[1:$upper\], $settings)"); 
     $upper = $R->get("$rVar\[$upper\]");
-    print "Upper is $upper\n";
+    $upper = $upper*0.9; # adjust the margin
+    #print "Upper is $upper\n";
   }else{
     $upper = 0.8; # for legend positioning
-    $R->run("plot($rVar)"); #\[1:qpos+5\])");
+    $R->run("plot($rVar, $settings)"); #\[1:qpos+5\])");
   }
   $R->run("abline(h=$pFdr,col=1,lty=1)"); # Fdr (BH method)
   if($modifiedP >=0){
@@ -140,7 +148,7 @@ sub plotInR
     $R->run("abline(h=$bhP,col=5,lty=5)"); # BY method's p
   }
   $R->run('title(main="p-values")');
-  $R->run('legend(1, '.$upper.', c("BH(Fdr)","modi(Fdr)", "BY(Fdr)", "local(fdr)", "BH(p.Adjust)"), cex=0.8, 
+  $R->run('legend(1, '.$upper.', c("fdrtool(Fdr)","modified(Fdr)", "BY(Fdr)", "fdrtool(fdr)", "BH(p.Adjust)"), cex=0.5, 
      col=1:5, lty=1:5)');
 
   $R->run("dev.off()");
