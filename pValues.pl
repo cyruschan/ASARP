@@ -163,12 +163,12 @@ sub simplePlotInR
   my ($R, $outputFile, $rVar, $lower) = @_;
   # do the plot
   #$R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
-  $R->run("pdf(file=\"$outputFile\", width=7,height=3.5)");
-  $R->run("par(mar=c(7.2, 3.8, 0.2, 0.2))");
+  $R->run("pdf(file=\"$outputFile\", width=3.5,height=3.5)");
+  $R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
   
   my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.8, cex=0.1"; #pch=\".\""; #, lwd=1";
   $R->run("lowerPos <- min(which($rVar >= $lower))");
-  $R->run("plot(lowerPos:length($rVar), $rVar\[lowerPos:length($rVar)\], $settings)");
-  $R->run("abline(a=0, b=1/length($rVar), col=7, lty=1)"); # diagonal line
+  $R->run("plot($rVar\[lowerPos:length($rVar)\], lowerPos:length($rVar), $settings)");
+  $R->run("abline(a=0, b=length($rVar), col=7, lty=1)"); # diagonal line
   $R->run("dev.off()");
 }
