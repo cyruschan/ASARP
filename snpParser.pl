@@ -1939,7 +1939,7 @@ sub fdrControl{
   my $pAdjustByRef = getListfromR($R, 'y');
   $R->stop;
 
-  my ($modifiedFdrP, $aHat, $failed) = getModiFdr(\@pList, $pAdjustRef, $orgFdrCutoff, $isVerbose);
+  my ($modifiedFdrP, $aHat) = getModiFdr(\@pList, $pAdjustRef, $orgFdrCutoff, $isVerbose);
   #print "pAdjust (BY)\n@$pAdjustByRef\n";
   #print "BY: ";
   my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
@@ -1947,8 +1947,13 @@ sub fdrControl{
   my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
 
   my $finalP = $modifiedFdrP;
-  if($finalP > $orgFdrCutoff){ $finalP = $byFdrP; }
-
+  if($aHat >= 0.5){   #if($finalP > $orgFdrCutoff){ 
+    print "The estimate of the modified BH method is inaccurate, BH used\n" if $isVerbose;
+    $finalP = $bhFdrP; 
+  }
+  # make a switch here for testing different methods:
+  #$finalP = $bhFdrP; print "BH method used\n";
+  #$finalP = $byFdrP; print "BY method used\n";
   return ($finalP, $modifiedFdrP, $bhFdrP, $byFdrP);
 }
 
@@ -2099,7 +2104,7 @@ sub getModiFdr{
   my @pList = @$pRef;
   my $pListSize = @pList;
   # to improve the estimate, add a failed counter
-  my $failed = 0;
+  #my $failed = 0;
   my $modifiedFdrP = 1;
 
   #estimate a new a, default parameters used
@@ -2124,18 +2129,17 @@ sub getModiFdr{
     }
     if($bigFxi>$xi){
       $aHat += ($bigFxi-$xi)/(1-$xi);
-    }else{
-      print "bin ".($i+1)."\t";
-      $failed += 1;
-    }
+    }#else{
+    #  print "bin ".($i+1)."\t";
+    #  $failed += 1;
+    #}
     if($end >= @pList){ # boundary case
       last;
     }
     $start = $end;
   }
-  print "\n";
-  $failed /= $bigI; # failed percentage
-  print "Failed to have bigFxi > xi: $failed\n";
+  #$failed /= $bigI; # failed percentage
+  #print "\nFailed to have bigFxi > xi: $failed\n";
   $aHat /= $bigI;
 
   print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n" if $isVerbose;
@@ -2169,7 +2173,7 @@ sub getModiFdr{
     print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
   }
 
-  return ($modifiedFdrP, $aHat, $failed);
+  return ($modifiedFdrP, $aHat);
 }
 
 
