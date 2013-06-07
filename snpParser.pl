@@ -2125,6 +2125,7 @@ sub getModiFdr{
     if($bigFxi>$xi){
       $aHat += ($bigFxi-$xi)/(1-$xi);
     }else{
+      print "bin ".($i+1)."\t";
       $failed += 1;
     }
     if($end >= @pList){ # boundary case
@@ -2132,6 +2133,7 @@ sub getModiFdr{
     }
     $start = $end;
   }
+  print "\n";
   $failed /= $bigI; # failed percentage
   print "Failed to have bigFxi > xi: $failed\n";
   $aHat /= $bigI;
