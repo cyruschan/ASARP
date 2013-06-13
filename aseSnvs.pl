@@ -122,7 +122,7 @@ sub outputAsePwrSnvsOneStrand{
 	      #therefore, a "last" is shot to get only the first one in the position
 	    }
 	  }
-	  if($powCntChr >0){  printChr($i); print" has $powCntChr powerful SNVs and $aseCntChr SNVs\n";  }
+	  if($powCntChr >0){  printChr($i); print" has $powCntChr powerful SNVs and $aseCntChr ASE SNVs\n";  }
 	  $aseSnvCnt += $aseCntChr;
 	}
 	print "\nThere are in total $aseSnvCnt ASE SNVs out of $powSnvCnt powerful SNVs\n";
