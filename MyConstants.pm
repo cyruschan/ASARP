@@ -18,7 +18,7 @@ our $supportedList = ' snps; powSnps; trans; events; gSnps; gPowSnps;';
 our $supportedTags = ' rna; est; anno;';
 
 # supported ASARP (sub-) types for investigations
-our $asarpTags = 'AS AI AT ASS SE RI';
+our $asarpTags = 'ASARP AS AI AT ASS SE RI';
 1;
 
 =head1 NAME

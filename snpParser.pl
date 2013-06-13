@@ -2202,7 +2202,7 @@ sub getFdr
 sub checkValidAsarpType{
 
   my ($selectType) = @_;
-  if(!defined($selectType)){
+  if(!defined($selectType) || (uc $selectType) eq 'ASARP'){
     $selectType = ''; #no filter
   }else{
     $selectType = uc $selectType;
