@@ -60,8 +60,10 @@ if(defined($FDRCUTOFF)){
   if(defined($SNVPCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";
   }
-  $SNVPCUTOFF = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
-  print "Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n\n";
+  ($SNVPCUTOFF) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+  print "Adjusted Chi-Squared Test p-value cutoff by FDR control: $SNVPCUTOFF\n\n";
+}else{
+  print "FDR control NOT used. User set Chi-Squared Test p-value cutoff: $SNVPCUTOFF\n";
 }
 
 my ($AP, $PP) = (undef, undef); #file handles

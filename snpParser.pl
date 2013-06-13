@@ -47,7 +47,7 @@ sub initSnp{
     my ($chrRaw, $pos, $alleles, $snpName, $reads, $strandInLine)=split(/ /, $_);
     #strand-specific handling
     if(defined($strandType)){
-      if(!defined($strandInLine)){
+      if(!defined($strandInLine) || ($strandInLine ne '+' && $strandInLine ne '-')){
         die "ERROR: SNV data must contain strand (+/-) at the end when strand-specific flag is set\n";
       }else{
         if($strandType ne $strandInLine){ #handle only SNVs with the specified $strandType
@@ -55,7 +55,7 @@ sub initSnp{
 	}
       }
     }else{ #setting is non-strand specific
-      if(defined($strandInLine)){ # there will be errors if strand specific data are handled in a non-strand specific way
+      if(defined($strandInLine) && ($strandInLine eq '+' || $strandInLine eq '-')){ # there will be errors if strand specific data are handled in a non-strand specific way
         die "ERROR: strand-specific SNV data are not handled when strand=specific flag is unset\n";
       }
     }
@@ -2201,7 +2201,7 @@ sub getFdr
 
 sub checkValidAsarpType{
 
-  my $selectType = @_;
+  my ($selectType) = @_;
   if(!defined($selectType)){
     $selectType = ''; #no filter
   }else{
@@ -2218,10 +2218,9 @@ sub checkValidAsarpType{
     if(!$isGood){
       die "ERROR: only ASARP select type in @asarpTypes supported; you input: $selectType\n";
     }
-    print "Only ASARP cases of the select type: $selectType are considered\n";
-
-    return $selectType;
+    #print "Only ASARP cases of the select type: $selectType are considered\n";
   }
+  return $selectType;
 }
 1;
 
