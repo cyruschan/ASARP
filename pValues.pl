@@ -104,7 +104,9 @@ sub plotPvalues
   my $upper = $qpos;
   if($upper+1 < @pList){ $upper += 1; } #leave some margin
   plotInR($R, "$outputFile.zoom.pdf", $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper);
-
+  
+  simplePlotInR($R, "$outputFile.upper.pdf", $rVar, 0.8); # the uppder corner for modiFdr
+  
   $R->stop;
 }
 
@@ -122,8 +124,8 @@ sub plotInR
   my ($R, $outputFile, $rVar, $pFdr, $modifiedP, $byP, $plfdr, $bhP, $upper) = @_;
   # do the plot
   #$R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
-  $R->run("pdf(file=\"$outputFile\", width=3.5,height=3.5)");
-  $R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
+  $R->run("pdf(file=\"$outputFile\", width=7,height=3.5)");
+  $R->run("par(mar=c(7.2, 3.8, 0.2, 0.2))");
 
   my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.8, cex=0.1"; #pch=\".\""; #, lwd=1";
   if(defined($upper)){
@@ -135,22 +137,38 @@ sub plotInR
     $upper = 0.8; # for legend positioning
     $R->run("plot($rVar, $settings)"); #\[1:qpos+5\])");
   }
-  $R->run("abline(h=$pFdr,col=2,lty=1)"); # Fdr (fdrtool)
+  $R->run("abline(a=0, b=1/length($rVar), col=7, lty=1)"); # diagonal line
+  $R->run("abline(h=$pFdr,col=2,lty=2)"); # Fdr (fdrtool)
   if($modifiedP >=0){
-    $R->run("abline(h=$modifiedP,col=3,lty=2)"); # modified FDR
+    $R->run("abline(h=$modifiedP,col=3,lty=3)"); # modified FDR
   }
   if($bhP >=0){
-    $R->run("abline(h=$bhP,col=4,lty=3)"); # BH p.adjust method's p
+    $R->run("abline(h=$bhP,col=4,lty=4)"); # BH p.adjust method's p
   }
   if($byP >=0){
-    $R->run("abline(h=$byP,col=5,lty=4)"); # BY method's p
+    $R->run("abline(h=$byP,col=5,lty=5)"); # BY method's p
   }
-  $R->run("abline(h=$plfdr,col=6,lty=5)"); # local fdr (fdrtool)
+  $R->run("abline(h=$plfdr,col=6,lty=6)"); # local fdr (fdrtool)
   
   #$R->run('title(main="p-values")');
-  $R->run('legend(1, '.$upper.', c("fdrtool(Fdr)","modified(Fdr)","BH(Fdr)","BY(Fdr)", "fdrtool(fdr)"), cex=0.8, 
-     bg="white", col=2:6, lty=1:5)');
+  $R->run('legend(1, '.$upper.', c("fdrtool(Fdr)","modified(Fdr)","BH(Fdr)","BY(Fdr)", "fdrtool(fdr)", "diagonal"), 
+  cex=0.8, bg="white", col=c(2,3,4,5,6,7), lty=c(2,3,4,5,6,1))');
 
   $R->run("dev.off()");
   
+}
+
+sub simplePlotInR
+{
+  my ($R, $outputFile, $rVar, $lower) = @_;
+  # do the plot
+  #$R->run("png(filename=\"$outputFile\", width=5,height=5,units=\"in\", res = 600)");
+  $R->run("pdf(file=\"$outputFile\", width=3.5,height=3.5)");
+  $R->run("par(mar=c(4.2, 3.8, 0.2, 0.2))");
+  
+  my $settings = "xlab=\"indices (sorted)\", ylab=\"p-values\", cex.lab=0.8, cex=0.1"; #pch=\".\""; #, lwd=1";
+  $R->run("lowerPos <- min(which($rVar >= $lower))");
+  $R->run("plot($rVar\[lowerPos:length($rVar)\], lowerPos:length($rVar), $settings)");
+  $R->run("abline(a=0, b=length($rVar), col=7, lty=1)"); # diagonal line
+  $R->run("dev.off()");
 }

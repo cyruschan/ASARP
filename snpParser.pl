@@ -47,7 +47,7 @@ sub initSnp{
     my ($chrRaw, $pos, $alleles, $snpName, $reads, $strandInLine)=split(/ /, $_);
     #strand-specific handling
     if(defined($strandType)){
-      if(!defined($strandInLine)){
+      if(!defined($strandInLine) || ($strandInLine ne '+' && $strandInLine ne '-')){
         die "ERROR: SNV data must contain strand (+/-) at the end when strand-specific flag is set\n";
       }else{
         if($strandType ne $strandInLine){ #handle only SNVs with the specified $strandType
@@ -55,7 +55,7 @@ sub initSnp{
 	}
       }
     }else{ #setting is non-strand specific
-      if(defined($strandInLine)){ # there will be errors if strand specific data are handled in a non-strand specific way
+      if(defined($strandInLine) && ($strandInLine eq '+' || $strandInLine eq '-')){ # there will be errors if strand specific data are handled in a non-strand specific way
         die "ERROR: strand-specific SNV data are not handled when strand=specific flag is unset\n";
       }
     }
@@ -1916,8 +1916,7 @@ sub matchSnpPoswithSplicingEvents
 #	optional input:	whether verbose print outs are enabled
 #	output:		the p-value threshold for the FDR threshold
 sub fdrControl{
-  my ($pRef, $fdrCutoff, $isVerbose) = @_;
-  my $orgFdrCutoff = $fdrCutoff; # fall-back plan when the adjusted FDR fails
+  my ($pRef, $orgFdrCutoff, $isVerbose) = @_;
   if(!defined($isVerbose)){ $isVerbose = 0;   }
   my @pList = @$pRef;
   my $pListSize = @pList; #size
@@ -1932,77 +1931,15 @@ sub fdrControl{
   #http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
   #print "Running R using BH and BY\n";
   $R->run('x <- p.adjust('.$rVarPlist.', method="BH")');
-  $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   $R->run('rLen <- length(x)');
+  $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   my $rSize = $R->get('rLen');
   #print "Getting x from R: size $rSize\n";
   my $pAdjustRef = getListfromR($R, 'x');
   my $pAdjustByRef = getListfromR($R, 'y');
   $R->stop;
-  
-  #estimate a new a, default parameters used
-  my $aHat = 0;
-  my $bigI = 20;
-  my $x0 = 0.8;
-  my $bigFxi = 0;
-  my $start = 0; # because pList is sorted, we can cal a start index for each bin
-  for(my $i=0; $i<$bigI; $i++){
-    my $xi = $x0+(1-$x0)*$i/$bigI;
-    my $end = $start;
-    while($end<@pList){
-      if($pList[$end] > $xi){ #exceed bin end
-        last;
-      }
-      $end++;
-    }
-    if($start <= $end-1){
-     #print "Bin $i: $xi: from $start+1 ($pList[$start]) to $end ($pList[$end-1])\n";
-     $bigFxi += ($end-$start)/@pList; #histogram
-     #print "CDF: $bigFxi\n";
-    }
-    if($bigFxi>$xi){
-      $aHat += ($bigFxi-$xi)/(1-$xi);
-    }
-    if($end >= @pList){ # boundary case
-      last;
-    }
-    $start = $end;
-  }
-  $aHat /= $bigI;
 
-  my $modifiedFdrP = 1;
-  print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n" if $isVerbose;
-  if($aHat >= 1){
-    die "ERROR: the adjusted FDR failed to estimated the alternative percentage (need to set p-value cutoff directly in this case)\n";
-  }
-  $fdrCutoff = $orgFdrCutoff/(1-$aHat);
-  print "Adjusted FDR cutoff (based on BH): $fdrCutoff\n" if $isVerbose; 
-  
-  my $pos = 0;
-  my @pAdjust = @$pAdjustRef;
-  #print "pAdjust (BH)\n@pAdjust\n";
-  while($pos < @pAdjust){
-    #if($pList[$pos] > $fdrCutoff/$norm*($pos+1)/@pAdjust){
-    if($pAdjust[$pos] > $fdrCutoff){
-      last;
-    }
-    $pos++;
-  }
-  if($pos == 0){ 
-    if($isVerbose){
-      print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
-      print "Set a default: $orgFdrCutoff (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
-    }
-    $modifiedFdrP = $orgFdrCutoff;
-  }else{
-    $modifiedFdrP = $pList[$pos-1];
-  }
-  print "The modified FDR cutoff: $modifiedFdrP\n" if $isVerbose;
-  if($modifiedFdrP > $orgFdrCutoff){
-    #fall-back plan
-    print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
-  }
-
+  my ($modifiedFdrP, $aHat) = getModiFdr(\@pList, $pAdjustRef, $orgFdrCutoff, $isVerbose);
   #print "pAdjust (BY)\n@$pAdjustByRef\n";
   #print "BY: ";
   my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
@@ -2010,8 +1947,13 @@ sub fdrControl{
   my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
 
   my $finalP = $modifiedFdrP;
-  if($finalP > $orgFdrCutoff){ $finalP = $byFdrP; }
-
+  if($aHat >= 0.5){   #if($finalP > $orgFdrCutoff){ 
+    print "The estimate of the modified BH method is inaccurate, BH used\n" if $isVerbose;
+    $finalP = $bhFdrP; 
+  }
+  # make a switch here for testing different methods:
+  #$finalP = $bhFdrP; print "BH method used\n";
+  #$finalP = $byFdrP; print "BY method used\n";
   return ($finalP, $modifiedFdrP, $bhFdrP, $byFdrP);
 }
 
@@ -2157,6 +2099,84 @@ sub getListfromR{
   
 }
 
+sub getModiFdr{
+  my ($pRef, $pAdjustRef, $orgFdrCutoff, $isVerbose) = @_;
+  my @pList = @$pRef;
+  my $pListSize = @pList;
+  # to improve the estimate, add a failed counter
+  #my $failed = 0;
+  my $modifiedFdrP = 1;
+
+  #estimate a new a, default parameters used
+  my $aHat = 0;
+  my $bigI = 20;
+  my $x0 = 0.8;
+  my $bigFxi = 0;
+  my $start = 0; # because pList is sorted, we can cal a start index for each bin
+  for(my $i=0; $i<$bigI; $i++){
+    my $xi = $x0+(1-$x0)*$i/$bigI;
+    my $end = $start;
+    while($end<@pList){
+      if($pList[$end] > $xi){ #exceed bin end
+        last;
+      }
+      $end++;
+    }
+    if($start <= $end-1){
+     #print "Bin $i: $xi: from $start+1 ($pList[$start]) to $end ($pList[$end-1])\n";
+     $bigFxi += ($end-$start)/@pList; #histogram
+     #print "CDF: $bigFxi\n";
+    }
+    if($bigFxi>$xi){
+      $aHat += ($bigFxi-$xi)/(1-$xi);
+    }#else{
+    #  print "bin ".($i+1)."\t";
+    #  $failed += 1;
+    #}
+    if($end >= @pList){ # boundary case
+      last;
+    }
+    $start = $end;
+  }
+  #$failed /= $bigI; # failed percentage
+  #print "\nFailed to have bigFxi > xi: $failed\n";
+  $aHat /= $bigI;
+
+  print "Estimated alternative percentage (a) out of $pListSize p-values: $aHat\n" if $isVerbose;
+  if($aHat >= 1){
+    die "ERROR: the adjusted FDR failed to estimated the alternative percentage (need to set p-value cutoff directly in this case)\n";
+  }
+  my $fdrCutoff = $orgFdrCutoff/(1-$aHat);
+  print "Adjusted FDR cutoff (based on BH): $fdrCutoff\n" if $isVerbose; 
+  
+  my $pos = 0;
+  my @pAdjust = @$pAdjustRef;
+  #print "pAdjust (BH)\n@pAdjust\n";
+  while($pos < @pAdjust){
+    if($pAdjust[$pos] > $fdrCutoff){
+      last;
+    }
+    $pos++;
+  }
+  if($pos == 0){ 
+    if($isVerbose){
+      print "WARNING: No p-value cutoff can satisfy FDR <= $fdrCutoff out of $pListSize p-values\n";
+      print "Set a default: $orgFdrCutoff (NO FDR control!!) instead. \nWARNING: Recommended to set p-value cutoff instead of FDR in parameter config file\n";
+    }
+    $modifiedFdrP = $orgFdrCutoff;
+  }else{
+    $modifiedFdrP = $pList[$pos-1];
+  }
+  print "The modified FDR cutoff: $modifiedFdrP\n" if $isVerbose;
+  if($modifiedFdrP > $orgFdrCutoff){
+    #fall-back plan
+    print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
+  }
+
+  return ($modifiedFdrP, $aHat);
+}
+
+
 sub getFdr
 {
   my ($pListRef, $pAdjustByRef, $orgFdrCutoff) = @_;
@@ -2181,7 +2201,7 @@ sub getFdr
 
 sub checkValidAsarpType{
 
-  my $selectType = @_;
+  my ($selectType) = @_;
   if(!defined($selectType)){
     $selectType = ''; #no filter
   }else{
@@ -2198,10 +2218,9 @@ sub checkValidAsarpType{
     if(!$isGood){
       die "ERROR: only ASARP select type in @asarpTypes supported; you input: $selectType\n";
     }
-    print "Only ASARP cases of the select type: $selectType are considered\n";
-
-    return $selectType;
+    #print "Only ASARP cases of the select type: $selectType are considered\n";
   }
+  return $selectType;
 }
 1;
 

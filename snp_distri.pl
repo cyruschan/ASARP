@@ -15,16 +15,16 @@ require "snpParser.pl"; #sub's for snps
 my ($outputFile, $snpF, $xiaoF, $strandFlag, $POWCUTOFF, $snvPwrOut, $snvOrdOut) = @ARGV;
 if(@ARGV < 4){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
   print "USAGE: perl $0 output_file snv_file transcript_file strand_flag [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]\n";
-  print "\nstrand_flag: 0--non-strand-specific; 1--strand-specific. \nIf set, there will be 2 snv_details files for each category (pwr or ordinary), \nwith .plus and .minus indicating the distribtuion in the + and - strands\n";
+  print "\nstrand_flag: 0--non-strand-specific; 1/2--strand-specific (not distinguishable at this step). \nIf set, there will be 2 snv_details files for each category (pwr or ordinary), \nwith .plus and .minus indicating the distribtuion in the + and - strands\n";
   print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of \npowerful and non-powerful (ordinary) SNVs respectively.\n";
   exit;
 }
-if($strandFlag == 1){
+if($strandFlag == 1 || $strandFlag == 2){
   print "NOTE: strand-specific output is enabled. There will be *.plus and *.minus for each snv detail output file if it is specified\n";
 }elsif($strandFlag == 0){
   print "NOTE: Non-strand-specific output is set.\n"; 
 }else{
-  die "ERROR: strand_flag is expected to be 0 or 1. Now $strandFlag is input\n";
+  die "ERROR: strand_flag is expected to be 0 or 1/2. Now $strandFlag is input\n";
 }
 
 if(!defined($POWCUTOFF)){
