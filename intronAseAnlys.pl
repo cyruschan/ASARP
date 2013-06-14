@@ -170,14 +170,9 @@ sub specificAsePipeline
   print "\n[4]. Get ASE and ASARP results from $result and keep only $specificType results\n\n";
   my ($aseGeneRef, $aseSnvRef) = getAseAll("$result.ase.prediction");
   my ($iAseGenesRef, $iAseSnvsRef) = getSpecificAse($aseGeneRef, $aseSnvRef, \%introns);
- 
-  my %hs = %$iAseGenesRef;
-  for(keys %hs){ print "$_: $hs{$_}\n"	}
 
   my ($asarpGeneRef) = getAsarpAll("$result.gene.prediction");
   my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
-  my %hsA = %$iAsarpGenesRef;
-  for(keys %hsA){ print "$_: $hsA{$_}\n"	}
 
   return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef);
 }
