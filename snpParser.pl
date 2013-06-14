@@ -605,7 +605,7 @@ sub processASEWithNev
 			   $outTabu{$snpCheck} = 1;
 			 }
 			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
-			 if(!defined($asarpSnpHash{$trgtPos}) || !($asarpSnpHash{$trgtPos} =~ /$snpStub/)){
+			 if(!defined($asarpSnpHash{$trgtPos}) || index($asarpSnpHash{$trgtPos},";$snpStub")==-1)){
 			   $asarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 			 }
 		       }
@@ -683,7 +683,7 @@ sub processASEWithNev
 	   $newOutTabu{$snpCheck} = 1;
 	 }
 	 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
-	 if(!defined($newAsarpSnpHash{$trgtPos}) || !($newAsarpSnpHash{$trgtPos} =~ /$snpStub/)){
+	 if(!defined($newAsarpSnpHash{$trgtPos}) || index($newAsarpSnpHash{$trgtPos}, ";$snpStub")==-1){
 	   $newAsarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 	 }
        }
@@ -2168,10 +2168,10 @@ sub getModiFdr{
     $modifiedFdrP = $pList[$pos-1];
   }
   print "The modified FDR cutoff: $modifiedFdrP\n" if $isVerbose;
-  if($modifiedFdrP > $orgFdrCutoff){
-    #fall-back plan
-    print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
-  }
+  #if($modifiedFdrP > $orgFdrCutoff){
+  #  #fall-back plan
+  #  print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
+  #}
 
   return ($modifiedFdrP, $aHat);
 }
