@@ -65,7 +65,7 @@ print "\n[[II]]. Obtain all intronic ASE SNVs from sample 2\n";
 my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
 
 # now you can intersect what ever you want
-print "\n[[III]]. Intersect intronic ASE SNVs\n";
+print "\n[[III]]. Intersect ASE Genes with $specificType ASE SNVs\n";
 my ($iAse1, $iCom, $iAse2) = intersectHashes($iAseGenesRef1, $iAseGenesRef2);
 print "ASE genes containing intronic ASE SNVs:\n";
 my %iAseHs1 = %$iAse1; 
@@ -77,7 +77,7 @@ my $noComAG = keys %iComHs;
 print "$noAG1\t$noComAG\t$noAG2\n";  
 
 my ($iAseS1, $iComS, $iAseS2) = intersectHashes($iAseSnvsRef1, $iAseSnvsRef2);
-print "Intronic ASE SNVs in ASE genes:\n";
+print "$specificType ASE SNVs in ASE genes:\n";
 my %iAseSnvHs1 = %$iAseS1; 
 my %iAseSnvHs2 = %$iAseS2;
 my %iComSnvHs = %$iComS;
@@ -153,20 +153,31 @@ sub specificAsePipeline
   if(!$STRANDFLAG){ #nss
     my @snvs = readSpecificNoStrandInfo($aseSnvDistri, $specificType);
     for(@snvs){ $introns{$_} = 1; }
+    my $ttlNo = @snvs;
+    print "There are $ttlNo $specificType ASE SNVs\n";
   }else{ #strand-specific
     my @snvs = readSpecificNoStrandInfo("$aseSnvDistri.plus", $specificType); 
     for(@snvs){ $introns{"$_;+"} = 1; }
     my @snvsRc = readSpecificNoStrandInfo("$aseSnvDistri.minus", $specificType); 
     for(@snvsRc){ $introns{"$_;-"} = 1; }
+    my $ttlNoPlus = @snvs;
+    my $ttlNoMinus = @snvsRc;
+    my $ttlNo = $ttlNoPlus + $ttlNoMinus;
+    print "There are $ttlNo $specificType ASE SNVs ($ttlNoPlus + and $ttlNoMinus -)\n";
   }
   #return \%introns;
   
   print "\n[4]. Get ASE and ASARP results from $result and keep only $specificType results\n\n";
   my ($aseGeneRef, $aseSnvRef) = getAseAll("$result.ase.prediction");
   my ($iAseGenesRef, $iAseSnvsRef) = getSpecificAse($aseGeneRef, $aseSnvRef, \%introns);
-  
+ 
+  my %hs = %$iAseGenesRef;
+  for(keys %hs){ print "$_: $hs{$_}\n"	}
+
   my ($asarpGeneRef) = getAsarpAll("$result.gene.prediction");
   my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
+  my %hsA = %$iAsarpGenesRef;
+  for(keys %hsA){ print "$_: $hsA{$_}\n"	}
 
   return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef);
 }
