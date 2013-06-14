@@ -1932,29 +1932,29 @@ sub fdrControl{
   #print "Running R using BH and BY\n";
   $R->run('x <- p.adjust('.$rVarPlist.', method="BH")');
   $R->run('rLen <- length(x)');
-  $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
+  #$R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   my $rSize = $R->get('rLen');
   #print "Getting x from R: size $rSize\n";
   my $pAdjustRef = getListfromR($R, 'x');
-  my $pAdjustByRef = getListfromR($R, 'y');
+  #my $pAdjustByRef = getListfromR($R, 'y');
   $R->stop;
 
   my ($modifiedFdrP, $aHat) = getModiFdr(\@pList, $pAdjustRef, $orgFdrCutoff, $isVerbose);
   #print "pAdjust (BY)\n@$pAdjustByRef\n";
   #print "BY: ";
-  my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
+  #my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
   #print "BH: ";
-  my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
+  #my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
 
-  my $finalP = $modifiedFdrP;
-  if($aHat >= 0.5){   #if($finalP > $orgFdrCutoff){ 
-    print "The estimate of the modified BH method is inaccurate, BH used\n" if $isVerbose;
-    $finalP = $bhFdrP; 
-  }
+  my $finalP = $modifiedFdrP; # decided to use the modifiedBH method finally
+  #if($aHat >= 0.5){   #if($finalP > $orgFdrCutoff){ 
+  #  print "The estimate of the modified BH method is inaccurate, BH used\n" if $isVerbose;
+  #  $finalP = $bhFdrP; 
+  #}
   # make a switch here for testing different methods:
   #$finalP = $bhFdrP; print "BH method used\n";
   #$finalP = $byFdrP; print "BY method used\n";
-  return ($finalP, $modifiedFdrP, $bhFdrP, $byFdrP);
+  return ($finalP); #, $modifiedFdrP, $bhFdrP, $byFdrP);
 }
 
 ################ minor auxiliary (mainly for print outs and debugs) ####

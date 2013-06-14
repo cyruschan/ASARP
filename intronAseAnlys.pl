@@ -13,7 +13,7 @@ if(@ARGV < 9){
 
   print <<EOT;
 
-USAGE: perl $0 intron_output1 config1 param1 result1 intron_output2 config2 param2 result2 output
+USAGE: perl $0 intron_output1 config1 param1 result1 intron_output2 config2 param2 result2 output [asarp_path]
 
 This pipeline combines several perl scripts to analyze the intronic ASE SNVs
 from two samples (datasets), especially in the context where the two samples 
@@ -35,6 +35,12 @@ result		the result (main output summary file) of ASARP
 		be needed (assumed to be present with the main file)
 output		the finaly output file of this analysis pipeline
 
+OPTIONAL:
+asarp_path	the -I path for the ASARP pipeline folder if it is run outside
+		the original folder. Because this pipeline executes several
+		scripts in ASARP: aseSnvs.pl, snp_distri.pl, etc., the ASARP
+		path is needed for them.
+
 EOT
 
 exit;
@@ -43,13 +49,21 @@ exit;
 # focus on the intron SNVs only and compare them with the 2 sample results
 print "Compare intronic ASE SNVs\n";
 
-my ($intron1, $config1, $param1, $result1, $intron2, $config2, $param2, $result2, $output) = @ARGV;
+my ($intron1, $config1, $param1, $result1, $intron2, $config2, $param2, $result2, $output, $iPath) = @ARGV;
+if(!defined($iPath)){
+  $iPath = "";
+}else{
+  if(substr($iPath, -1, 1) ne "/" ){
+    $iPath .= "/"; #add the path slash
+  }
+}
 
+my $specificType = 'INTRON';
 print "\n[[I]]. Obtain all intronic ASE SNVs from sample 1\n";
-my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1) = intronAsePipeline($intron1, $config1, $param1, $result1);
+my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath);
 
 print "\n[[II]]. Obtain all intronic ASE SNVs from sample 2\n";
-my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2) = intronAsePipeline($intron2, $config2, $param2, $result2);
+my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
 
 # now you can intersect what ever you want
 print "\n[[III]]. Intersect intronic ASE SNVs\n";
@@ -91,9 +105,9 @@ for(keys %iRiComGenes){
 
 ###################################################################################
 
-sub intronAsePipeline
+sub specificAsePipeline
 {
-  my ($outputAse, $configs, $params, $result) = @_;
+  my ($outputAse, $configs, $params, $result, $specificType, $iPath) = @_;
   #strand-specific setting is more related to file configs (data dependent)
   my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
   my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
@@ -101,7 +115,7 @@ sub intronAsePipeline
   # run aseSnvs to get ASE SNVs only
   my $aseSnvs = "$outputAse.ase";
   print "\n[1]. Get ASE SNVs and output them to $aseSnvs\n\n";
-  my $aseSnvCmd = "perl aseSnvs.pl $outputAse $configs";
+  my $aseSnvCmd = "perl -I $iPath $iPath"."aseSnvs.pl $outputAse $configs";
   if(!defined($params)){
     $aseSnvCmd .=" $params"; #optional parameter
   }
@@ -118,7 +132,7 @@ sub intronAsePipeline
   }
   print "\n(summary to $outputAse.distri_summary.txt)\n\n";
   # the input will be "$outputAse.ase"
-  my $snvDistCmd = "perl snp_distri.pl $outputAse.distri_summary.txt $aseSnvs $xiaoF $STRANDFLAG $POWCUTOFF $aseSnvDistri";
+  my $snvDistCmd = "perl -I $iPath $iPath"."snp_distri.pl $outputAse.distri_summary.txt $aseSnvs $xiaoF $STRANDFLAG $POWCUTOFF $aseSnvDistri";
   print "$snvDistCmd\n";
   if(system($snvDistCmd)){
     die "FAILED to finish $snvDistCmd\n";
@@ -130,7 +144,7 @@ sub intronAsePipeline
   # get only the intronic positions from the list
 
   # two lists are needed (.plus and .minus) if strand-specific flag is set
-  print "\n[3]. Get only the intronic ASE SNV information from $aseSnvDistri";
+  print "\n[3]. Get only $specificType ASE SNV information from $aseSnvDistri";
   if($STRANDFLAG){
     print ".plus and .minus";
   }
@@ -138,27 +152,27 @@ sub intronAsePipeline
 
   my %introns = ();
   if(!$STRANDFLAG){ #nss
-    my @snvs = readIntronNoStrandInfo($aseSnvDistri);
+    my @snvs = readSpecificNoStrandInfo($aseSnvDistri, $specificType);
     for(@snvs){ $introns{$_} = 1; }
   }else{ #strand-specific
-    my @snvs = readIntronNoStrandInfo("$aseSnvDistri.plus"); 
+    my @snvs = readSpecificNoStrandInfo("$aseSnvDistri.plus", $specificType); 
     for(@snvs){ $introns{"$_;+"} = 1; }
-    my @snvsRc = readIntronNoStrandInfo("$aseSnvDistri.minus"); 
+    my @snvsRc = readSpecificNoStrandInfo("$aseSnvDistri.minus", $specificType); 
     for(@snvsRc){ $introns{"$_;-"} = 1; }
   }
   #return \%introns;
   
-  print "\n[4]. Get intronic ASE and ASARP results from $result\n\n";
+  print "\n[4]. Get ASE and ASARP results from $result and keep only $specificType results\n\n";
   my ($aseGeneRef, $aseSnvRef) = getAseAll("$result.ase.prediction");
-  my ($iAseGenesRef, $iAseSnvsRef) = getIntronAse($aseGeneRef, $aseSnvRef, \%introns);
+  my ($iAseGenesRef, $iAseSnvsRef) = getSpecificAse($aseGeneRef, $aseSnvRef, \%introns);
   
   my ($asarpGeneRef) = getAsarpAll("$result.gene.prediction");
-  my ($iAsarpGenesRef, $iAsarpSnvsRef) = getIntronAsarp($asarpGeneRef, \%introns);
+  my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
 
   return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef);
 }
 
-sub getIntronAsarp
+sub getSpecificAsarp
 {
   my ($geneRef, $intronRef) = @_;
   my %asarpGenes = %$geneRef;
@@ -198,7 +212,7 @@ sub getIntronAsarp
   return (\%intronAsarpGenes, \%intronAsarpSnvs); 
 }
 
-sub getIntronAse
+sub getSpecificAse
 {
   my ($geneRef, $aseRef, $intronRef) = @_;
   my %aseGenes = %$geneRef;
@@ -227,19 +241,18 @@ sub getIntronAse
   return (\%intronAseGenes, \%intronAseSnvs);
 }
 
-sub readIntronNoStrandInfo
+sub readSpecificNoStrandInfo
 {
   my @snvs = ();
-  my ($aseSnvDistri) = @_;
+  my ($aseSnvDistri, $specificType) = @_;
   open(FP, $aseSnvDistri) or die "ERROR: cannot open ASE SNV distribution file from $aseSnvDistri\n";
   my @lines = <FP>;
   close(FP);
   chomp @lines;
 
   for(@lines){
-    #if(index($_, 'INTRON;') != -1){
-    if(index($_, 'EXON;') != -1){ #fake check
-      print STDERR "now use EXON, just a fake setting for debug!!\n";
+    if(index($_, "$specificType;") != -1){ 
+      print STDERR "now use $specificType, maybe a fake setting for debug!!\n";
       my ($chr, $pos, $type) = split(/\t/, $_);
       push @snvs, "$chr;$pos";
     }
