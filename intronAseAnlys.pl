@@ -51,11 +51,10 @@ print "Compare intronic ASE SNVs\n";
 
 my ($intron1, $config1, $param1, $result1, $intron2, $config2, $param2, $result2, $output, $iPath) = @ARGV;
 if(!defined($iPath)){
-  $iPath = "";
-}else{
-  if(substr($iPath, -1, 1) ne "/" ){
-    $iPath .= "/"; #add the path slash
-  }
+  $iPath = ".";
+}
+if(substr($iPath, -1, 1) ne "/" ){
+  $iPath .= "/"; #add the path slash
 }
 
 my $specificType = 'INTRON';
