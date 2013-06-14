@@ -224,7 +224,7 @@ sub getGeneSnpsDistri
       if(defined($detailedOutput)){
         my $category = "";
 	if($inEx+$in5UTR+$in3UTR == 0){
-	  $category = "INTRON";
+	  $category = "INTRON;";
 	  #if($inIn){
 	  #  $category = "INTRON";
 	  #}else{
