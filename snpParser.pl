@@ -605,7 +605,7 @@ sub processASEWithNev
 			   $outTabu{$snpCheck} = 1;
 			 }
 			 my $snpStub = $gene.",".$tSnpId.",".$tAlleles."\t";
-			 if(!defined($asarpSnpHash{$trgtPos}) || index($asarpSnpHash{$trgtPos},";$snpStub")==-1)){
+			 if(!defined($asarpSnpHash{$trgtPos}) || index($asarpSnpHash{$trgtPos},";$snpStub")==-1){
 			   $asarpSnpHash{$trgtPos} .= $type.";".$snpStub;
 			 }
 		       }
