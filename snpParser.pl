@@ -2168,10 +2168,10 @@ sub getModiFdr{
     $modifiedFdrP = $pList[$pos-1];
   }
   print "The modified FDR cutoff: $modifiedFdrP\n" if $isVerbose;
-  if($modifiedFdrP > $orgFdrCutoff){
-    #fall-back plan
-    print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
-  }
+  #if($modifiedFdrP > $orgFdrCutoff){
+  #  #fall-back plan
+  #  print "WARNING: The modified FDR method does not work (i.e. $modifiedFdrP > $orgFdrCutoff). Switched to BY method\n" if $isVerbose;
+  #}
 
   return ($modifiedFdrP, $aHat);
 }
