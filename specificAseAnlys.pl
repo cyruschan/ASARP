@@ -67,19 +67,19 @@ my @steps = (
 "[[IV]]. Compare $asarpType genes with $specificType SNVs"
 );
 
-open(FP, ">", $output) or die "ERROR: cannot open output file: $output\n";
+open(my $fp, ">", $output) or die "ERROR: cannot open output file: $output\n";
 
 print "\n$steps[0]\n";
-print FP "$steps[0]\n"; # to output file
+print $fp "$steps[0]\n"; # to output file
 my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath);
 
 print "\n$steps[1]\n";
-print FP "$steps[1]\n"; # to output file
+print $fp "$steps[1]\n"; # to output file
 my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
 
 # now you can intersect what ever you want
 print "\n$steps[2]\n";
-print FP "$steps[2]\n"; # to output file
+print $fp "$steps[2]\n"; # to output file
 my $outAse = ""; 
 $outAse .= "ASE Gene-level\n";
 my ($iAseGNo1, $iAseGNo2) = hashRefNo($iAseGenesRef1, $iAseGenesRef2);
@@ -99,11 +99,11 @@ my ($noAS1, $noComAS, $noAS2) = hashRefNo($iAseS1, $iComS, $iAseS2);
 $outAse .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$noAS1\t$noComAS\t$noAS2\n";  
 outputDetailsByType($output, "$specificType.ASE_snvs.txt", $iAseS1, $iAseS2, $iComS);
 print "$outAse\n";
-print FP "$outAse\n";
+print $fp "$outAse\n";
 
 # what to intersect then?
 print "\n$steps[3]\n";
-print FP "$steps[3]\n";
+print $fp "$steps[3]\n";
 # may use part of samplesAnlys.pl to get only common RI results
 my $riGeneRef1 =$iAsarpGenesRef1->{$asarpType};
 my $riGeneRef2 =$iAsarpGenesRef2->{$asarpType};
@@ -119,10 +119,10 @@ $outAsarp .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$noRiGenes1\t$noRiComGene
 outputDetailsByType($output, "$specificType.$asarpType.txt", $iRiRef1, $iRiRef2, $iRiComRef);
 
 print "$outAsarp\n";
-print FP "$outAsarp\n";
+print $fp "$outAsarp\n";
 
 # End of the program
-print FP "\nALL STEPS FINISHED\n";
-close(FP);
+print $fp "\nALL STEPS FINISHED\n";
+close($fp);
 print "\nALL STEPS FINISHED\n";
 
