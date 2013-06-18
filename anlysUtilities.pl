@@ -204,6 +204,18 @@ sub getAseAll{
   return (\%aseHs, \%snvHs);
 }
 
+sub hashRefNo
+{
+  my @nos = ();
+  for(@_){
+   my ($ref) = $_;
+    my %hs = %$ref;
+    my $no = keys %hs;
+    push @nos, $no;
+  } 
+  return @nos;
+}
+
 sub intersectHashes
 {
   my ($ref1, $ref2) = @_;
@@ -232,4 +244,169 @@ sub intersectHashes
       }
   }
   return (\%s1Ex, \%sCom, \%s2Ex);
+}
+
+################################################################################
+###  sub-routines for specific post analysis pipelines #########
+
+###################################################################################
+sub specificAsePipeline
+{
+  my ($outputAse, $configs, $params, $result, $specificType, $iPath) = @_;
+  #strand-specific setting is more related to file configs (data dependent)
+  my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
+  my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
+
+  # run aseSnvs to get ASE SNVs only
+  my $aseSnvs = "$outputAse.ase";
+  print "\n[1]. Get ASE SNVs and output them to $aseSnvs\n\n";
+  my $aseSnvCmd = "perl -I $iPath $iPath"."aseSnvs.pl $outputAse $configs";
+  if(!defined($params)){
+    $aseSnvCmd .=" $params"; #optional parameter
+  }
+  print "$aseSnvCmd\n";
+  if(system($aseSnvCmd)){
+    die "FAILED to finish $aseSnvCmd\n";
+  }
+
+  # run snp_distri.pl to get the SNV distributions
+  my $aseSnvDistri = "$outputAse.ase_distri.list";
+  print "\n[2]. Get SNV distributions of ASE SNVs from $aseSnvs and output the detailed list to $aseSnvDistri";
+  if($STRANDFLAG){
+    print ".plus and .minus";
+  }
+  print "\n(summary to $outputAse.distri_summary.txt)\n\n";
+  # the input will be "$outputAse.ase"
+  my $snvDistCmd = "perl -I $iPath $iPath"."snp_distri.pl $outputAse.distri_summary.txt $aseSnvs $xiaoF $STRANDFLAG $POWCUTOFF $aseSnvDistri";
+  print "$snvDistCmd\n";
+  if(system($snvDistCmd)){
+    die "FAILED to finish $snvDistCmd\n";
+  }
+
+  # if strand-specific
+  #$ordOut = $snvOrdOut.".plus";
+  #$ordOutRc = $snvOrdOut.".minus";
+  # get only the $specificType positions from the list
+
+  # two lists are needed (.plus and .minus) if strand-specific flag is set
+  print "\n[3]. Get only $specificType ASE SNV information from $aseSnvDistri";
+  if($STRANDFLAG){
+    print ".plus and .minus";
+  }
+  print"\n\n";
+
+  my %introns = ();
+  if(!$STRANDFLAG){ #nss
+    my @snvs = readSpecificNoStrandInfo($aseSnvDistri, $specificType);
+    for(@snvs){ $introns{$_} = 1; }
+    my $ttlNo = @snvs;
+    print "There are $ttlNo $specificType ASE SNVs\n";
+  }else{ #strand-specific
+    my @snvs = readSpecificNoStrandInfo("$aseSnvDistri.plus", $specificType); 
+    for(@snvs){ $introns{"$_;+"} = 1; }
+    my @snvsRc = readSpecificNoStrandInfo("$aseSnvDistri.minus", $specificType); 
+    for(@snvsRc){ $introns{"$_;-"} = 1; }
+    my $ttlNoPlus = @snvs;
+    my $ttlNoMinus = @snvsRc;
+    my $ttlNo = $ttlNoPlus + $ttlNoMinus;
+    print "There are $ttlNo $specificType ASE SNVs ($ttlNoPlus + and $ttlNoMinus -)\n";
+  }
+  #return \%introns;
+  
+  print "\n[4]. Get ASE and ASARP results from $result and keep only $specificType results\n\n";
+  my ($aseGeneRef, $aseSnvRef) = getAseAll("$result.ase.prediction");
+  my ($iAseGenesRef, $iAseSnvsRef) = getSpecificAse($aseGeneRef, $aseSnvRef, \%introns);
+
+  my ($asarpGeneRef) = getAsarpAll("$result.gene.prediction");
+  my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
+
+  return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef);
+}
+
+sub getSpecificAsarp
+{
+  my ($geneRef, $intronRef) = @_;
+  my %asarpGenes = %$geneRef;
+  my %intronSnvs = %$intronRef;
+
+  my %intronAsarpGenes = ();
+  my %intronAsarpSnvs = ();
+  for(keys %asarpGenes){ # for every type in the results
+    my %intronAsGenes = ();
+    my %intronAsSnvs = ();
+    my %asGenes = %{$asarpGenes{$_}};
+    for(keys %asGenes){
+      my ($chr, $gene) = split(';', $_);
+      my $hasIntron = 0;
+      my @snvs = split(/\t/, $asGenes{$_});
+      for(@snvs){
+        #split to get detailed information
+	my ($dummyInfo, $snpInfo, $strandInfo) = split(';', $_);
+	my($pos, $id, $al, $reads) = split(' ', $snpInfo);
+	my $snvKey = "$chr;$pos";
+	if(defined($strandInfo)){
+	  $snvKey .= ";$strandInfo";
+	}
+	if(defined($intronSnvs{$snvKey})){
+	  $hasIntron = 1;
+	  $intronAsSnvs{$snvKey} .= "$_\t"; #which gene(s) the intron SNV belongs to
+	}
+      }
+      if($hasIntron){
+        $intronAsGenes{$_} = $asGenes{$_};
+      }
+    }
+    # now only one ASARP type is finished (AS), other types will be finished similarly
+    $intronAsarpSnvs{$_} = \%intronAsSnvs;
+    $intronAsarpGenes{$_} = \%intronAsGenes;
+  }
+  return (\%intronAsarpGenes, \%intronAsarpSnvs); 
+}
+
+sub getSpecificAse
+{
+  my ($geneRef, $aseRef, $intronRef) = @_;
+  my %aseGenes = %$geneRef;
+  my %aseSnvs = %$aseRef;
+  my %intronSnvs = %$intronRef;
+
+  my %intronAseGenes = (); #ASE genes that contain the corresponding introns
+  my %intronAseSnvs = (); #all ASE SNVs contained by certain genes
+  for(keys %aseGenes){
+    # check every gene for its Snvs
+    my $hasIntron = 0;
+    my @allAseSnvs = split(/\t/, $aseGenes{$_});
+    my $geneKey = $_; #to get debug info
+    for(@allAseSnvs){
+      if(defined($intronSnvs{$_})){
+        $hasIntron = 1; #print "HIT: $_ is in ASE GENE: $geneKey\n";
+	$intronAseSnvs{$_} = $aseSnvs{$_}; # have to save all $specificType SNVs;
+	#one intron SNV belonging to (even) multiple ASE genes always has the same information
+      }
+    }
+    if($hasIntron){
+      $intronAseGenes{$_} = $aseGenes{$_}; # to include this gene
+    }
+  }
+
+  return (\%intronAseGenes, \%intronAseSnvs);
+}
+
+sub readSpecificNoStrandInfo
+{
+  my @snvs = ();
+  my ($aseSnvDistri, $specificType) = @_;
+  open(FP, $aseSnvDistri) or die "ERROR: cannot open ASE SNV distribution file from $aseSnvDistri\n";
+  my @lines = <FP>;
+  close(FP);
+  chomp @lines;
+
+  for(@lines){
+    if(index($_, "$specificType;") != -1){ 
+      my ($chr, $pos, $type) = split(/\t/, $_);
+      push @snvs, "$chr;$pos";
+    }
+  }
+
+  return @snvs;
 }

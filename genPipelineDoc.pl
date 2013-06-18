@@ -1,4 +1,5 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
+use warnings;
 use strict;
 
 # generate the index and the main frame
@@ -9,29 +10,39 @@ my $menuContent = "";
 genTitleFrame();
 genIndexFrameset();
 
+# all sections (and in order)
+my @sections = qw (INTRO PREPROCESS ASARP ANALYSIS CORE-SUB);
+my %layout = ();
+for(@sections){
+  $layout{$_} = {};
+}
+
 # all pre-processing scripts
 my @pres = qw( rmDup mergeSam procReads );
 for(@pres){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
-
-# all application scripts
-my @apps = qw( aseSnvs snp_distri asarp );
+$layout{"PREPROCESS"} = \@pres; # in order
+# main program, all application scripts
+my @apps = qw( asarp aseSnvs snp_distri );
 for(@apps){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
+$layout{"ASARP"} = \@apps; # in order
 
+## core sub-routines (code)
 # all source code
 my @source = qw( fileParser snpParser );
 for(@source){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
-
 # all constants (wrapped in a module)
 my @const = qw( MyConstants );
 for(@const){
   system("perl genHtmlDoc.pl $_.pm doc/$_.html $_");
 }
+my @cores = (@const, @source);
+$layout{"CORE-SUB"} = \@cores; # in order
 
 # menu page
 genMenuPage(\@pres, \@apps, \@source, \@const);
