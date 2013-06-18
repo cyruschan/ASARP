@@ -57,53 +57,72 @@ if(substr($iPath, -1, 1) ne "/" ){
 }
 #my $specificType = 'INTRON';
 # focus on the specific SNVs only and compare them with the 2 sample results
+my $asarpType = 'RI';
+my $asarpName = "Retained Intron";
 print "Analyzing $specificType ASE SNVs\n";
+my @steps = (
+"[[I]]. Obtain all $specificType ASE SNVs from sample 1",
+"[[II]]. Obtain all $specificType ASE SNVs from sample 2",
+"[[III]]. Intersect ASE Genes with $specificType ASE SNVs",
+"[[IV]]. Compare $asarpType genes with $specificType SNVs"
+);
 
+open(FP, ">", $output) or die "ERROR: cannot open output file: $output\n";
 
-print "\n[[I]]. Obtain all $specificType ASE SNVs from sample 1\n";
+print "\n$steps[0]\n";
+print FP "$steps[0]\n"; # to output file
 my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath);
 
-print "\n[[II]]. Obtain all $specificType ASE SNVs from sample 2\n";
+print "\n$steps[1]\n";
+print FP "$steps[1]\n"; # to output file
 my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
 
 # now you can intersect what ever you want
-print "\n[[III]]. Intersect ASE Genes with $specificType ASE SNVs\n";
-
-print "ASE Gene-level\n";
+print "\n$steps[2]\n";
+print FP "$steps[2]\n"; # to output file
+my $outAse = ""; 
+$outAse .= "ASE Gene-level\n";
 my ($iAseGNo1, $iAseGNo2) = hashRefNo($iAseGenesRef1, $iAseGenesRef2);
-print "SAMPLE1: $iAseGNo1 SAMPLE2: $iAseGNo2\n";
+$outAse .= "SAMPLE1: $iAseGNo1 SAMPLE2: $iAseGNo2\n";
 my ($iAse1, $iCom, $iAse2) = intersectHashes($iAseGenesRef1, $iAseGenesRef2);
-print "ASE genes containing $specificType ASE SNVs:\n";
+$outAse .= "Intersect: ASE genes containing $specificType ASE SNVs:\n";
 my ($noAG1, $noComAG, $noAG2) = hashRefNo($iAse1, $iCom, $iAse2);
-print "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n";
-print "$noAG1\t$noComAG\t$noAG2\n";  
+$outAse .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$noAG1\t$noComAG\t$noAG2\n"; 
 outputDetailsByType($output, "$specificType.ASE.txt", $iAse1, $iAse2, $iCom);
 
-print "ASE SNV-level\n";
+$outAse .= "ASE SNV-level\n";
 my ($iAseNo1, $iAseNo2) = hashRefNo($iAseSnvsRef1, $iAseSnvsRef2);
-print "SAMPLE1: $iAseNo1 SAMPLE2: $iAseNo2\n";
+$outAse .= "SAMPLE1: $iAseNo1 SAMPLE2: $iAseNo2\n";
 my ($iAseS1, $iComS, $iAseS2) = intersectHashes($iAseSnvsRef1, $iAseSnvsRef2);
-print "$specificType ASE SNVs in ASE genes:\n";
+$outAse .=  "Intersect: $specificType ASE SNVs in ASE genes:\n";
 my ($noAS1, $noComAS, $noAS2) = hashRefNo($iAseS1, $iComS, $iAseS2);
-print "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n";
-print "$noAS1\t$noComAS\t$noAS2\n";  
+$outAse .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$noAS1\t$noComAS\t$noAS2\n";  
 outputDetailsByType($output, "$specificType.ASE_snvs.txt", $iAseS1, $iAseS2, $iComS);
+print "$outAse\n";
+print FP "$outAse\n";
 
 # what to intersect then?
-my $asarpType = 'RI';
-my $asarpName = "Retained Intron";
-print "\n[[IV]]. Compare $asarpType ($asarpName) genes with $specificType SNVs\n";
+print "\n$steps[3]\n";
+print FP "$steps[3]\n";
 # may use part of samplesAnlys.pl to get only common RI results
 my $riGeneRef1 =$iAsarpGenesRef1->{$asarpType};
 my $riGeneRef2 =$iAsarpGenesRef2->{$asarpType};
 
+my $outAsarp = "";
+$outAsarp .= "$specificType SNVs in $asarpType Gene-level\n";
 my ($riGNo1, $riGNo2) = hashRefNo($riGeneRef1, $riGeneRef2);
-print "SAMPLE1: $riGNo1 SAMPLE2: $riGNo2\n";
+$outAsarp .= "SAMPLE1: $riGNo1 SAMPLE2: $riGNo2\n";
 my ($iRiRef1, $iRiComRef, $iRiRef2) = intersectHashes($riGeneRef1, $riGeneRef2);
+$outAsarp .= "Intersect: $asarpType genes\n";
 my ($noRiGenes1, $noRiComGenes, $noRiGenes2) = hashRefNo($iRiRef1, $iRiComRef, $iRiRef2);
-print "$specificType ASE SNVs common in genes with $asarpType ($asarpName):\n";
-print "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n";
-print "$noRiGenes1\t$noRiComGenes\t$noRiGenes2\n";
+$outAsarp .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$noRiGenes1\t$noRiComGenes\t$noRiGenes2\n";
 outputDetailsByType($output, "$specificType.$asarpType.txt", $iRiRef1, $iRiRef2, $iRiComRef);
 
+print "$outAsarp\n";
+print FP "$outAsarp\n";
+
+# End of the program
+print FP "\nALL STEPS FINISHED\n";
+close(FP);
+print "\nALL STEPS FINISHED\n";
 
