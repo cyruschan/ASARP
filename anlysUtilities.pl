@@ -260,7 +260,7 @@ sub specificAsePipeline
   # run aseSnvs to get ASE SNVs only
   my $aseSnvs = "$outputAse.ase";
   print "\n[1]. Get ASE SNVs and output them to $aseSnvs\n\n";
-  my $aseSnvCmd = "perl -I $iPath $iPath"."aseSnvs.pl $outputAse $configs";
+  my $aseSnvCmd = "perl -I $iPath $iPath"."aseSnvs.pl $outputAse $configs $params";
   if(!defined($params)){
     $aseSnvCmd .=" $params"; #optional parameter
   }
