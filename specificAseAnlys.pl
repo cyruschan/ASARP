@@ -71,11 +71,11 @@ open(my $fp, ">", $output) or die "ERROR: cannot open output file: $output\n";
 
 print "\n$steps[0]\n";
 print $fp "$steps[0]\n"; # to output file
-my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath);
+my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1, $aseGenesRef1, $exclGenesRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath);
 
 print "\n$steps[1]\n";
 print $fp "$steps[1]\n"; # to output file
-my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
+my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2, $aseGenesRef2, $exclGenesRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
 
 # now you can intersect what ever you want
 print "\n$steps[2]\n";
@@ -89,6 +89,24 @@ $outAse .= "Intersect: ASE genes containing $specificType ASE SNVs:\n";
 my ($noAG1, $noComAG, $noAG2) = hashRefNo($iAse1, $iCom, $iAse2);
 $outAse .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$noAG1\t$noComAG\t$noAG2\n"; 
 outputDetailsByType($output, "$specificType.ASE.txt", $iAse1, $iAse2, $iCom);
+
+print "SAMPLE1 $specificType ASE SNVs in SAMPLE2 ASE genes (not in SAMPLE1 ASE genes)\n";
+my ($ex1, $ex1Ase2, $ase2) = intersectHashes($exclGenesRef1, $aseGenesRef2);
+my ($noEx1Ase2) = hasRefNo($ex1Ase2); 
+print "There are $noEx1Ase2\n";
+my %hs = %$ex1Ase2;
+for(keys %hs){
+  print "$_\n$hs{$_}\n";
+}
+
+print "SAMPLE2 $specificType ASE SNVs in SAMPLE1 ASE genes (not in SAMPLE2 ASE genes)\n";
+my ($ex2, $ex2Ase1, $ase1) = intersectHashes($exclGenesRef2, $aseGenesRef1);
+my ($noEx2Ase1) = hasRefNo($ex2Ase1); 
+print "There are $noEx2Ase1\n";
+my %hs2 = %$ex2Ase1;
+for(keys %hs2){
+  print "$_\n$hs2{$_}\n";
+}
 
 $outAse .= "ASE SNV-level\n";
 my ($iAseNo1, $iAseNo2) = hashRefNo($iAseSnvsRef1, $iAseSnvsRef2);

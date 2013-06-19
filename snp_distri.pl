@@ -12,11 +12,11 @@ require "snpParser.pl"; #sub's for snps
 
 # input arguments: $outputFile--output, $snpF--SNV file path, $xiaoF--transcript annotation file
 # optional: $POWCUTOFF--powerful SNV cutoff, default: 20
-my ($outputFile, $snpF, $xiaoF, $strandFlag, $POWCUTOFF, $snvPwrOut, $snvOrdOut) = @ARGV;
+my ($outputFile, $snpF, $xiaoF, $strandFlag, $POWCUTOFF, $snvPwrOut, $snvOrdOut, $isDetailed) = @ARGV;
 if(@ARGV < 4){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
-  print "USAGE: perl $0 output_file snv_file transcript_file strand_flag [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]\n";
+  print "USAGE: perl $0 output_file snv_file transcript_file strand_flag [powerful_snv_cutoff pwr_snv_details ordinary_snv_details is_detailed]\n";
   print "\nstrand_flag: 0--non-strand-specific; 1/2--strand-specific (not distinguishable at this step). \nIf set, there will be 2 snv_details files for each category (pwr or ordinary), \nwith .plus and .minus indicating the distribtuion in the + and - strands\n";
-  print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of \npowerful and non-powerful (ordinary) SNVs respectively.\n";
+  print "The optional arguments must be input in order.\npwr_snv_details ordinary_snv_details are the output files for the detailed SNV categories of \npowerful and non-powerful (ordinary) SNVs respectively. If is_detailed is set 1 after both *_snv_details, detailed information of the SNVs will be output\n";
   exit;
 }
 if($strandFlag == 1 || $strandFlag == 2){
@@ -38,6 +38,11 @@ open($fp, ">", $outputFile) or die "ERROR: Cannot open $outputFile to write\n";
 # Demonstration of using the fileParser
 # read the transcript annotation file
 my ($transRef) = readTranscriptFile($xiaoF);
+my $transGeneRef = undef;
+if(defined($isDetailed) && $isDetailed eq "1"){ #one is the only setting
+  print "NOTE: detailed SNV information (gene, type, transcript ID, neighboring exons) will be output as pwr_snv_details.lst ordinary_snv_details.lst \n";
+  ($transGeneRef) = readTranscriptFileByGene($xiaoF);
+}
 #printListByKey($transRef, 'trans'); #utility sub: show transcripts (key: trans)
 
 # need to make it strand specific:
@@ -58,10 +63,10 @@ if($strandFlag){
   }
   print "+ strand only SNP distribution:\n";
   print $fp "Type (+ only)\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
-  my @total = snpDistOneStrand($snpRef, $transRef, $fp, '+', $pwrOut, $ordOut);
+  my @total = snpDistOneStrand($snpRef, $transRef, $fp, '+', $pwrOut, $ordOut, $transGeneRef);
   print "- strand only SNP distribution:\n";
   print $fp "Type (- only)\tExon\tIntron\t5'UTR\t3'UTR\tComplex\tIn-gene\tIntergenic\tTotal\n";
-  my @totalRc = snpDistOneStrand($snpRcRef, $transRef, $fp, '-', $pwrOutRc, $ordOutRc);
+  my @totalRc = snpDistOneStrand($snpRcRef, $transRef, $fp, '-', $pwrOutRc, $ordOutRc, $transGeneRef);
 
   print "\nOverall SNV distribution (+ strand only):\n";
   printSnvDist(@total);
@@ -81,7 +86,7 @@ if($strandFlag){
   #print "SNV List:\n";
   #printListByKey($snpRef, 'powSnps');
   #printListByKey($snpRef, 'snps');
-  my @total = snpDistOneStrand($snpRef, $transRef, $fp, undef, $snvPwrOut, $snvOrdOut);
+  my @total = snpDistOneStrand($snpRef, $transRef, $fp, undef, $snvPwrOut, $snvOrdOut, $transGeneRef);
   #the elements contained in the total array:
   #($tEx, $tIn, $t5UTR, $t3UTR, $tCompPosNo, $tGeneSnpPosNo, $tIntergSnp, $allSnpNo) = @total;
   print "\nOverall SNV distribution:\n";
@@ -93,7 +98,7 @@ if($strandFlag){
 
 sub snpDistOneStrand{
   # $fp is the file handle being open, bad (need to finish it quick though)
-  my ($snpRef, $transRef, $fp, $strandInfo, $snvPwrOut, $snvOrdOut) = @_;
+  my ($snpRef, $transRef, $fp, $strandInfo, $snvPwrOut, $snvOrdOut, $transGeneRef) = @_;
 
   my ($geneSnpRef) = setGeneSnps($snpRef, $transRef, $strandInfo);
   #print "Significant Snvs: \n";
@@ -102,12 +107,12 @@ sub snpDistOneStrand{
   #printGetGeneSnpsResults($geneSnpRef,'gSnps', $snpRef,'snps', 1);
 
   print "Calculating powerful SNV distribution...\n";
-  my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $strandInfo, $snvPwrOut); 
+  my @part1 = getGeneSnpsDistri($geneSnpRef,'gPowSnps', $snpRef,'powSnps', $strandInfo, $snvPwrOut, $transGeneRef); 
   print $fp "Powerful(>=$POWCUTOFF)\t".join("\t",@part1)."\n";
   printSnvDist(@part1);
 
   print "Calculating non-powerful SNV distribution...\n";
-  my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $strandInfo, $snvOrdOut); 
+  my @part2 = getGeneSnpsDistri($geneSnpRef,'gSnps', $snpRef,'snps', $strandInfo, $snvOrdOut, $transGeneRef); 
   print $fp "Non-powerful(<$POWCUTOFF)\t".join("\t",@part2)."\n";
   printSnvDist(@part2);
 
@@ -121,7 +126,8 @@ sub snpDistOneStrand{
 # print out the gene snps results for certain type (powerful or ordinary snps)
 sub getGeneSnpsDistri
 {
-  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $strandInfo, $detailedOutput) = @_;
+  my ($geneSnpRef, $geneSnpKey, $snpRef, $snpKey, $strandInfo, $detailedOutput, $transGeneRef) = @_;
+  my $snvDetails = ""; #super-detailed SNV information
 
   my @dist = (); #snp distribution results
   for (my $i=0; $i<=$CHRNUM; $i++){
@@ -139,6 +145,7 @@ sub getGeneSnpsDistri
 
     my %genesPrinted = (); #to store genes printed already in order not to double-print
     if(@genes){
+      my $chr = formatChr($i); #print "\n";
       #print "@genes\t";
       foreach(@genes){
         my @allGenes = split('\t', $_);
@@ -147,6 +154,25 @@ sub getGeneSnpsDistri
 	  my @geneMatches = split('\t', $geneRef->{$_});
 	  for(@geneMatches){
 	    my ($snpPos, $matchInfo, $geneName, $txStart, $id, $regStart, $regEnd) = split(';', $_);
+	    
+	    # To get even more details of the SNVs
+	    if(defined($transGeneRef)){ # super-detailed information 
+	      my $key = join(";", $chr, $geneName, $snpPos, uc $matchInfo);
+	      if(!defined($genesPrinted{$key})){
+	        #$snvDetails .= "$chr\t$geneName\n";
+	        $genesPrinted{$key} = 1;
+		$snvDetails .= "$key\n";
+	      }else{ $genesPrinted{$key} += 1; }
+	      #print $snps{$snpPos}."\n";
+              #my ($prevRef, $nextRef) = findNextExons($chr, $snpPos, $geneName, $transGeneRef, $strandInfo); 
+	      #my $prevE = join(";", keys %$prevRef); 
+	      #my $nextE = join(";", keys %$nextRef); 
+	      #my @allSnpInfo = split(';', $snps{$snpPos}); #separate by ;, if there are multiple snps at the same position
+              #foreach(@allSnpInfo){
+	      #  my $toPrint = $matchInfo."\t".$geneName."\t".$id.":".$regStart."-".$regEnd."\t$prevE\t$nextE\n";
+	      #  $snvDetails .=  $snpPos."\t".$toPrint;
+	      #}
+	    }
 	    #use bit to represent $matchInfo types: exon, intron, 5'UTR, 3'UTR
             my($inEx, $inIn, $in5UTR, $in3UTR) = (0,0,0,0);
 
@@ -196,12 +222,18 @@ sub getGeneSnpsDistri
   my $fp = undef;
   if(defined($detailedOutput)){
     if(!defined($strandInfo)){
-      open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
+      open($fp, ">", $detailedOutput) or die "ERROR: Cannot open $detailedOutput\n";
       print $fp "chr\tpos\tcategory\n";
     }else{
-      open($fp, ">", $detailedOutput) or die "Cannot open $detailedOutput\n";
+      open($fp, ">", $detailedOutput) or die "ERROR: Cannot open $detailedOutput\n";
       print $fp "chr\tpos\tcategory\tstrand\n"; #additional strand
     }
+  }
+
+  if(defined($detailedOutput) && defined($transGeneRef)){
+    open(my $dp, ">", "$detailedOutput.lst") or die "ERROR: Cannot open $detailedOutput for SNV details\n";
+    print $dp $snvDetails;
+    close($dp);
   }
   #collect and sumamrize the results:
   my $tGeneSnpPosNo = 0;
@@ -272,6 +304,150 @@ sub printSnvDist{
   print "Total SNV Positions: $allSnpNo\n";
   print "\n";
 
+}
+
+
+#### sub-routines borrowed from intronSnvGene.pl (quick script for ENCODE poster 2013)
+# get annotations arranged in a chr, gene manner
+# the only difference from readTranscriptFile is that the final hash is indexed by gene names ($geneName) rather than $txStarts
+sub readTranscriptFileByGene
+{
+
+  #array of hashes
+  my @trans=();
+  for(my $i=0; $i<=$CHRNUM; $i++){
+    push @trans, {}; #empty initialization
+  }
+
+  #keep track of discarded chromosomes
+  my %discardedChrs = ();
+
+  my ($fileName)=@_;
+  open(my $fh, "<", $fileName) or die "Cannot open merged transcrimptome file: $fileName\n";
+  print "Reading the transcriptome file (final transcripts arranged by gene names)", $fileName, "\n"; 
+  
+  my $count = 0;
+  while(<$fh>){
+    $count++;
+    if(!($count%10000)){
+      #print $count, "\t";
+      #STDOUT->autoflush(1);#need to flush if STDOUT not attached to terminal
+    }
+    chomp;
+    my ($ID, $chrRaw, $strand, $txStart, $txEnd, $cdsStart, $cdsEnd, 
+    $exonCount, $exonStarts, $exonEnds, $geneName, $cdsStartStat, $cdsEndStat)
+    = split(/\t/, $_);# ID, chr, strand, txStart, txEnd, 
+    #cdsstart, cdsend, exoncount, exonstarts, 
+    # exonends, genename, cdsstartstat,cdsendstat
+    my $chrID = getChrID($chrRaw);
+    if(!($chrID=~/^\d+$/)){
+      if(!defined($discardedChrs{$chrID})){
+        $discardedChrs{$chrID}=1;
+      }else{ $discardedChrs{$chrID}+=1;  }
+      #print "$chrID\n"; 
+      #print "Not valid chr ID: $chrID\n"; 
+      next;
+    }
+    $ID = uc $ID; # to upper
+    #change 0-based to 1-based for all starts
+    $txStart+=1;
+    $cdsStart+=1;
+    my @allExonStarts = split(/,/, $exonStarts);
+    for(my $i=0; $i< @allExonStarts; $i++){
+      $allExonStarts[$i]+=1;
+    }
+    $exonStarts = join(",", @allExonStarts);
+    #but no need to add 1 for ends
+    $exonEnds = substr($exonEnds, 0, -1); #because there is an additional "," in the original file
+
+    my $isCoding = 1;
+    #if($geneName=~/noncoding/){  $isCoding = 0; }
+    if($cdsStart > $cdsEnd){ $isCoding = 0; }
+    #if($isCoding==0){   print "Non-coding: $ID, $geneName\n"; }
+    # currently skip calculating the 5UTR 3UTR and exon length here
+    $geneName = uc $geneName; 
+    $trans[$chrID]{$geneName}.=$txStart.";".$txEnd.";".$cdsStart.";".$cdsEnd.";".$exonStarts.";".$exonEnds.";".$ID.";".$isCoding.";".$strand."\t";
+  }
+  close($fh);
+
+  #set the indices (such that event starts are sorted) for chrs
+  my @trans_idx = ();
+
+  for(my $i=1; $i<=$CHRNUM; $i++){
+    #printChr($i); 
+    $trans_idx[$i] = [sort keys %{$trans[$i]}]; #now it's sorted by gene name.
+  }
+  #debug print
+  #my $chrToPrint = 4;
+  #printChr($chrToPrint); print "\n";
+  #foreach (@{$trans_idx[$chrToPrint]}){ print $_-1,"\n"; }
+  
+  #printDiscardedChrs(\%discardedChrs);  
+  
+  my %transList = (
+    'trans' => \@trans,
+    'trans_idx' => \@trans_idx,
+    'type' => 'transcripts (arranged by genes); not the one arranged by transcript starts in ASARP',
+  );
+  return \%transList;
+}
+
+# find the next exons given a position
+sub findNextExons{
+  my ($chr, $pos, $gene, $transGeneRef, $strand) = @_;
+  my $chrId = getChrID($chr);
+
+  my %prevE = (); #all previous exons
+  my %nextE = (); #all next exons
+  
+  my ($chrTransRef, $chrTransIdxRef) = getListByKeyChr($transGeneRef, 'trans', $chrId);
+  my %trans = %$chrTransRef; #chromosome specific
+
+  if(defined($trans{$gene})){
+    my @transcripts = split('\t', $trans{$gene});
+    #$trans[$chrID]{$geneName}.=$txStart.";".$txEnd.";".$cdsStart.";".$cdsEnd.";".$exonStarts.";".$exonEnds.";".$ID.";".$isCoding.";".$strand."\t"
+    for(@transcripts){
+      my ($txS, $txE, $cdsS, $cdsE, $exSs, $exEs, $id, $isCode, $strandTx) = split(';', $_);
+      if(defined($strand) && $strandTx ne $strand){
+        next;
+	#die "Strand inconsistent: $chr $pos $strand while $gene has transcript $id on $strandTx\n";
+      }
+      my @exStarts = split(',', $exSs);
+      my @exEnds = split(',', $exEs);
+      my ($loc, $unMatchFlag) = binarySearch(\@exStarts, $pos, 0, @exStarts-1, 'left');
+      #print "\n index $loc ($unMatchFlag) of pos $pos  from @exStarts\n";
+      
+      if(!$unMatchFlag){ #matches, that's not possible
+        die "$chr $pos should be an INTRONIC SNV, should not match any exons\n";
+      }else{
+        if($loc > 0 && $loc < @exStarts){
+	  my $key = "$exStarts[$loc-1],$exEnds[$loc-1]";
+	  if(defined($prevE{$key})){
+	   $prevE{$key} .= "\t$id";
+	  }else{
+	   $prevE{$key} = "$id";
+	  }
+	}
+	if($loc < @exStarts){
+	  my $key = "$exStarts[$loc],$exEnds[$loc]";
+	  if(defined($nextE{$key})){
+	   $nextE{$key} .= "\t$id";
+	  }else{
+	   $nextE{$key} = "$id";
+	  }
+	}
+      }
+    }
+  }else{
+    my $dieMsg = "$chr, $pos, $gene";
+    if(defined($strand)){
+      $dieMsg .=", $strand";
+    }
+    $dieMsg .= " not found\n";
+    die $dieMsg;
+  }
+
+  return (\%prevE, \%nextE);
 }
 
 =head1 NAME
