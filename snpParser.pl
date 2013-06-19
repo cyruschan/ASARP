@@ -270,7 +270,7 @@ sub snpVsTrans{
 	       #print $sPos,";".$snpInfoToAdd."\n";
 	       # now just store all genes at location $tPos, it will be amended by %geneMinTxStarts
 	       my $geneStub = $gene."\t";
-	       if(!defined($index{$tPos}) || !($index{$tPos}=~/$geneStub/)){
+	       if(!defined($index{$tPos}) || (index($index{$tPos}, "\t".$geneStub)==-1 && $index{$tPos} ne $geneStub )){ # not existing in the middle or beginning
 	         $index{$tPos} .= $gene."\t"; #gene at this exon start
 	       }
              }
