@@ -92,7 +92,7 @@ outputDetailsByType($output, "$specificType.ASE.txt", $iAse1, $iAse2, $iCom);
 
 print "SAMPLE1 $specificType ASE SNVs in SAMPLE2 ASE genes (not in SAMPLE1 ASE genes)\n";
 my ($ex1, $ex1Ase2, $ase2) = intersectHashes($exclGenesRef1, $aseGenesRef2);
-my ($noEx1Ase2) = hasRefNo($ex1Ase2); 
+my ($noEx1Ase2) = hashRefNo($ex1Ase2); 
 print "There are $noEx1Ase2\n";
 my %hs = %$ex1Ase2;
 for(keys %hs){
@@ -101,7 +101,7 @@ for(keys %hs){
 
 print "SAMPLE2 $specificType ASE SNVs in SAMPLE1 ASE genes (not in SAMPLE2 ASE genes)\n";
 my ($ex2, $ex2Ase1, $ase1) = intersectHashes($exclGenesRef2, $aseGenesRef1);
-my ($noEx2Ase1) = hasRefNo($ex2Ase1); 
+my ($noEx2Ase1) = hashRefNo($ex2Ase1); 
 print "There are $noEx2Ase1\n";
 my %hs2 = %$ex2Ase1;
 for(keys %hs2){

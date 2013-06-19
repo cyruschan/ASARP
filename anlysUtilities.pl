@@ -283,6 +283,8 @@ sub specificAsePipeline
   if(system($snvDistCmd)){
     die "FAILED to finish $snvDistCmd\n";
   }
+  print "\nClean up all non-powerful inermediate output files (which are empty): $nonPwr*\n";
+  system "rm $nonPwr*";
 
   # if strand-specific
   #$ordOut = $snvOrdOut.".plus";
@@ -297,11 +299,16 @@ sub specificAsePipeline
   print"\n\n";
 
   my %introns = ();
+  my $dtGnSnvsRef = undef;
   if(!$STRANDFLAG){ #nss
     my @snvs = readSpecificNoStrandInfo($aseSnvDistri, $specificType);
     for(@snvs){ $introns{$_} = 1; }
     my $ttlNo = @snvs;
     print "There are $ttlNo $specificType ASE SNVs\n";
+    
+    # the detailed ASE SNV results should be in: "$aseSnvDistri.lst"
+    ($dtGnSnvsRef) = readDetailedGeneSnvs("$aseSnvDistri.lst", $specificType, \%introns);
+  
   }else{ #strand-specific
     my @snvs = readSpecificNoStrandInfo("$aseSnvDistri.plus", $specificType); 
     for(@snvs){ $introns{"$_;+"} = 1; }
@@ -311,7 +318,23 @@ sub specificAsePipeline
     my $ttlNoMinus = @snvsRc;
     my $ttlNo = $ttlNoPlus + $ttlNoMinus;
     print "There are $ttlNo $specificType ASE SNVs ($ttlNoPlus + and $ttlNoMinus -)\n";
+    
+    my ($dtGnSnvsRefPlus) = readDetailedGeneSnvs("$aseSnvDistri.plus.lst", \%introns, $specificType);
+    my ($dtGnSnvsRefMinus) = readDetailedGeneSnvs("$aseSnvDistri.minus.lst", \%introns, $specificType);
+    my %dtHs = %$dtGnSnvsRefPlus;
+    my %dtHs2 = %$dtGnSnvsRefMinus;
+    # merging two hashes: believing that the genes wont overlap as the two gene sets should be on different strands.
+    @dtHs{ keys %dtHs2 } = values %dtHs2;
+    $dtGnSnvsRef = \%dtHs;
   }
+  my $dtOutput = "$aseSnvDistri.$specificType.lst"; 
+  print "Output genes hosting $specificType AS SNvs to $dtOutput\n";
+  open(my $dp, ">", $dtOutput) or die "ERROR: cannot opne $dtOutput\n";
+  my %dts = %$dtGnSnvsRef;
+  for(keys %dts){
+    print $dp "$_\n$dts{$_}\n";
+  }
+  close($dp);
   #return \%introns;
   
   print "\n[4]. Get ASE and ASARP results from $result and keep only $specificType results\n\n";
@@ -322,20 +345,19 @@ sub specificAsePipeline
   my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
 
   print "\n[5]. Get $specificType ASE SNVs *NOT* in ASE results (potentially useful for cross-sample comparisons)\n\n";
-  # the detailed ASE SNV results should be in: "$aseSnvDistri.lst"
-  my $detailedFile = "$aseSnvDistri.lst";
-  my ($dtGnSnvsRef) = readDetailedGeneSnvs($detailedFile, $specificType);
 
   print "Intersect of all $specificType ASE SNV hosting genes with ASE genes\n";
   my ($dtGnOnly, $dtAse, $aseOnly) = intersectHashes($dtGnSnvsRef, $aseGeneRef); # compare gene snvs with ase genes
   my ($dtNo, $dtAseNo, $aseNo) = hashRefNo($dtGnOnly, $dtAse, $aseOnly);
   print "$specificType: $dtNo\tcommon: $dtAseNo\tASE excl: $aseNo\n";
+
   return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef, $aseGeneRef, $dtGnOnly);
 }
 
 sub readDetailedGeneSnvs{
-  my ($input, $specificType) = @_;
+  my ($input, $filterRef, $specificType) = @_;
   if(!defined($specificType)){ $specificType = ""; } #"" is a wild-card here
+  my %introns = %$filterRef; # the only SNVs we want: key $chr;$pos or $chr;$pos;$strand
   my %dtSnvs = ();
   open(FP, $input) or die "ERROR: cannot open detailed SNV types in genes: $input\n"; 
   my @lines = <FP>;
@@ -343,12 +365,13 @@ sub readDetailedGeneSnvs{
   chomp @lines;
   for(@lines){
     my ($chr, $gene, $pos, $type) = split(/;/, $_);
-    if(index($type, "$specificType:") != -1){ # : is always there
+    my $strand = substr($type, -1, 1); #strand info can be used to check correctness
+    if($strand ne '+' && $strand ne '-'){
+      die "ERROR: unable to get strand info ($strand) from $type in $chr gene $gene\n";
+    }
+    # handles both nss and ss cases
+    if((defined($introns{"$chr;$pos"}) || defined($introns{"$chr;$pos;$strand"})) && index($type, "$specificType:") != -1){ # : is always there
       my $key = "$chr;$gene";
-      my $strand = substr($type, -1, 1);
-      if($strand ne '+' && $strand ne '-'){
-        die "ERROR: unable to get strand info ($strand) from $type in $chr gene $gene\n";
-      }
       if(!defined($dtSnvs{$key})){
         $dtSnvs{$key} = "$pos;$strand";
       }else{
