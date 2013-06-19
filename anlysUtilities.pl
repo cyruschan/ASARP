@@ -271,13 +271,14 @@ sub specificAsePipeline
 
   # run snp_distri.pl to get the SNV distributions
   my $aseSnvDistri = "$outputAse.ase_distri.list";
+  my $nonPwr = "$outputAse.nonpowerful_be_empty";
   print "\n[2]. Get SNV distributions of ASE SNVs from $aseSnvs and output the detailed list to $aseSnvDistri";
   if($STRANDFLAG){
     print ".plus and .minus";
   }
   print "\n(summary to $outputAse.distri_summary.txt)\n\n";
   # the input will be "$outputAse.ase"
-  my $snvDistCmd = "perl -I $iPath $iPath"."snp_distri.pl $outputAse.distri_summary.txt $aseSnvs $xiaoF $STRANDFLAG $POWCUTOFF $aseSnvDistri";
+  my $snvDistCmd = "perl -I $iPath $iPath"."snp_distri.pl $outputAse.distri_summary.txt $aseSnvs $xiaoF $STRANDFLAG $POWCUTOFF $aseSnvDistri $nonPwr 1"; #1 means details will be output to $aseSnvDistri.lst
   print "$snvDistCmd\n";
   if(system($snvDistCmd)){
     die "FAILED to finish $snvDistCmd\n";
@@ -320,7 +321,44 @@ sub specificAsePipeline
   my ($asarpGeneRef) = getAsarpAll("$result.gene.prediction");
   my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
 
-  return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef);
+  print "\n[5]. Get $specificType ASE SNVs *NOT* in ASE results (potentially useful for cross-sample comparisons)\n\n";
+  # the detailed ASE SNV results should be in: "$aseSnvDistri.lst"
+  my $detailedFile = "$aseSnvDistri.lst";
+  my ($dtGnSnvsRef) = readDetailedGeneSnvs($detailedFile, $specificType);
+
+  print "Intersect of all $specificType ASE SNV hosting genes with ASE genes\n";
+  my ($dtGnOnly, $dtAse, $aseOnly) = intersectHashes($dtGnSnvsRef, $aseGeneRef); # compare gene snvs with ase genes
+  my ($dtNo, $dtAseNo, $aseNo) = hashRefNo($dtGnOnly, $dtAse, $aseOnly);
+  print "$specificType: $dtNo\tcommon: $dtAseNo\tASE excl: $aseNo\n";
+  return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef, $aseGeneRef, $dtGnOnly);
+}
+
+sub readDetailedGeneSnvs{
+  my ($input, $specificType) = @_;
+  if(!defined($specificType)){ $specificType = ""; } #"" is a wild-card here
+  my %dtSnvs = ();
+  open(FP, $input) or die "ERROR: cannot open detailed SNV types in genes: $input\n"; 
+  my @lines = <FP>;
+  close(FP);
+  chomp @lines;
+  for(@lines){
+    my ($chr, $gene, $pos, $type) = split(/;/, $_);
+    if(index($type, "$specificType:") != -1){ # : is always there
+      my $key = "$chr;$gene";
+      my $strand = substr($type, -1, 1);
+      if($strand ne '+' && $strand ne '-'){
+        die "ERROR: unable to get strand info ($strand) from $type in $chr gene $gene\n";
+      }
+      if(!defined($dtSnvs{$key})){
+        $dtSnvs{$key} = "$pos;$strand";
+      }else{
+        $dtSnvs{$key} .= "\t$pos;$strand";
+      }
+    }
+  }
+  my $no = keys %dtSnvs;
+  print "There are in total $no $specificType SNVs in $input\n";
+  return \%dtSnvs;
 }
 
 sub getSpecificAsarp
