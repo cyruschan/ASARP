@@ -14,11 +14,21 @@ $| = 1;
 if(@ARGV < 2){
   print <<EOT;
   
-USAGE: perl $0 output_file config_file [optional: parameter_file]
+USAGE: perl $0 output_file config_file [optional: parameter_file [overwritten_p]]
 
-To get the ASE and Powerful SNVs from the input SNV file (in config_file) along with their Chi-Squared Goodness of Fit Test p-values
-The config_file (same for the ASARP pipeline) is used to obtain the input SNV file path. Other files/paths are read through and ignored.
-The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in the parameter_file (same for the ASARP pipelien). Other parameters are read through and ignored.
+To get the ASE and Powerful SNVs from the input SNV file (in config_file) along with 
+their Chi-Squared Goodness of Fit Test p-values
+The config_file (same for the ASARP pipeline) is used to obtain the input SNV file path. 
+Other files/paths are read through and ignored.
+OPTIONAL:
+The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in parameter_file 
+(same for the ASARP pipelien). Other parameters are read through and ignored.
+
+The extra optional parameter overwritten_p (if input, it must follow parameter_file)
+specifies a new p-value cutoff to overwrite the FDR control adjusted p-value cutoff
+when needed. According to our study, a relaxed FDR control works best for ASE/ASARP
+gene results. However, this may be too relaxing if one is interested in **individual**
+ASE SNVs.
 
 There will be two result files: 
 "output_file.ase" with the ASE SNVs (a subset of the powerful SNVs), and 
@@ -29,9 +39,17 @@ EOT
 }
 
 # input arguments: $outputFile--output, $configs--configuration file for input files, $params--configuration file for parameters
-my ($outputFile, $configs, $params) = getArgs(@ARGV); 
+my ($outputFile, $configs, $params, $overP) = getArgs(@ARGV); 
 my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
 my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
+
+if(defined($overP)){
+  if($overP <=0 || $overP > 1){
+    die "ERROR: invalid $overP: overwritten p-value threshold should be within (0, 1]\n";
+  }
+  print "NOTE: overwritten p-value threshold used: $overP\n\tSettings in $params will be ignored\n";
+  $SNVPCUTOFF = $overP;
+}
 
 # if strand-specific flag is set, need to get two separate SNV lists (+ and - respectively)
 # the extra Rc (reference complement) references are for - strand if $STRANDFLAG is set
@@ -55,7 +73,7 @@ if($STRANDFLAG){
 }
 
 # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
-if(defined($FDRCUTOFF)){
+if(defined($FDRCUTOFF) && !defined($overP)){
   print "Calculating the Chi-Squared Test p-value cutoff for FDR <= $FDRCUTOFF...\n";
   if(defined($SNVPCUTOFF)){
     print "NOTE: user-provided p-value in config: $SNVPCUTOFF is ignored.\n";

@@ -9,11 +9,11 @@ $| = 1;
 select(STDOUT);
 $| = 1;
 
-if(@ARGV < 10){
+if(@ARGV < 11){
 
   print <<EOT;
 
-USAGE: perl $0 specific_type specific_output1 config1 param1 result1 specific_output2 config2 param2 result2 output [asarp_path]
+USAGE: perl $0 specific_type ase_p specific_output1 config1 param1 result1 specific_output2 config2 param2 result2 output [asarp_path]
 
 This pipeline combines several perl scripts to analyze the specific ASE SNVs
 from two samples (datasets), especially in the context where the two samples 
@@ -23,6 +23,12 @@ In the input, 1, 2 indicate the corresponding in/output for samples (datasets)
 1 and 2, respectively. 
 
 specific_type	specific type of ASE SNVs to be anlayzed, e.g. 3'UTR or 5'UTR
+ase_p		a user set p-value cutoff for **individual** ASE SNVs. This 
+		is set because usually a more stringent threshold is desired
+		for investigating specific type of ASE SNVs, than for the gene
+		level ASE/ASARP results.
+		If ase_p is set to be 0 or >1, it will be ignored and then the
+		original param1, param2 will be used instead respectively.
 
 specific_output	the specific ASE snv intermediate output prefix
 		severval files with suffixes: .ase .ase_distri.list, etc.
@@ -48,9 +54,13 @@ EOT
 exit;
 }
 
-my ($specificType, $intron1, $config1, $param1, $result1, $intron2, $config2, $param2, $result2, $output, $iPath) = @ARGV;
+my ($specificType, $ase_p, $intron1, $config1, $param1, $result1, $intron2, $config2, $param2, $result2, $output, $iPath) = @ARGV;
 if(!defined($iPath)){
   $iPath = ".";
+}
+if($ase_p <=0 || $ase_p >1){
+  print "NOTE: ase_p $ase_p not valid: $param1 and $param2 settings will be used respectively\n";
+  $ase_p = undef;
 }
 if(substr($iPath, -1, 1) ne "/" ){
   $iPath .= "/"; #add the path slash
@@ -71,11 +81,23 @@ open(my $fp, ">", $output) or die "ERROR: cannot open output file: $output\n";
 
 print "\n$steps[0]\n";
 print $fp "$steps[0]\n"; # to output file
-my ($iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1, $aseGenesRef1, $exclGenesRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath);
+my ($intronRef1, $iAseGenesRef1, $iAseSnvsRef1, $iAsarpGenesRef1, $iAsarpSnvsRef1, $aseGenesRef1, $exclGenesRef1) = specificAsePipeline($intron1, $config1, $param1, $result1, $specificType, $iPath, $ase_p);
 
 print "\n$steps[1]\n";
 print $fp "$steps[1]\n"; # to output file
-my ($iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2, $aseGenesRef2, $exclGenesRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath);
+my ($intronRef2, $iAseGenesRef2, $iAseSnvsRef2, $iAsarpGenesRef2, $iAsarpSnvsRef2, $aseGenesRef2, $exclGenesRef2) = specificAsePipeline($intron2, $config2, $param2, $result2, $specificType, $iPath, $ase_p);
+
+my $outIn = "";
+$outIn .= "Intersection of introns\n";
+# focus purely on the intron intersection first
+my ($inNo1, $inNo2) = hashRefNo($intronRef1, $intronRef2);
+$outIn .= "SAMPLE1: $inNo1 SAMPLE2: $inNo2\n";
+my ($inRef1, $inCom, $inRef2) = intersectHashes($intronRef1, $intronRef2);
+my ($onlyIn1, $comIn, $onlyIn2) = hashRefNo($inRef1, $inCom, $inRef2);
+$outIn .= "SAMPLE1_ONLY\tSAMPLES_COM\tSAMPLE2_ONLY\n$onlyIn1\t$comIn\t$onlyIn2\n"; 
+
+print $outIn, "\n";
+print $fp $outIn, "\n";
 
 # now you can intersect what ever you want
 print "\n$steps[2]\n";
@@ -95,18 +117,18 @@ my ($ex1, $ex1Ase2, $ase2) = intersectHashes($exclGenesRef1, $aseGenesRef2);
 my ($noEx1Ase2) = hashRefNo($ex1Ase2); 
 print "There are $noEx1Ase2\n";
 my %hs = %$ex1Ase2;
-for(keys %hs){
-  print "$_\n$hs{$_}\n";
-}
+#for(keys %hs){
+#  print "$_\n$hs{$_}\n";
+#}
 
 print "SAMPLE2 $specificType ASE SNVs in SAMPLE1 ASE genes (not in SAMPLE2 ASE genes)\n";
 my ($ex2, $ex2Ase1, $ase1) = intersectHashes($exclGenesRef2, $aseGenesRef1);
 my ($noEx2Ase1) = hashRefNo($ex2Ase1); 
 print "There are $noEx2Ase1\n";
 my %hs2 = %$ex2Ase1;
-for(keys %hs2){
-  print "$_\n$hs2{$_}\n";
-}
+#for(keys %hs2){
+#  print "$_\n$hs2{$_}\n";
+#}
 
 $outAse .= "ASE SNV-level\n";
 my ($iAseNo1, $iAseNo2) = hashRefNo($iAseSnvsRef1, $iAseSnvsRef2);

@@ -252,7 +252,7 @@ sub intersectHashes
 ###################################################################################
 sub specificAsePipeline
 {
-  my ($outputAse, $configs, $params, $result, $specificType, $iPath) = @_;
+  my ($outputAse, $configs, $params, $result, $specificType, $iPath, $ase_p) = @_;
   #strand-specific setting is more related to file configs (data dependent)
   my ($snpF, $bedF, $rnaseqF, $xiaoF, $splicingF, $estF, $STRANDFLAG) = getRefFileConfig($configs); # input annotation/event files
   my ($POWCUTOFF, $SNVPCUTOFF, $FDRCUTOFF, $ASARPPCUTOFF, $NEVCUTOFFLOWER, $NEVCUTOFFUPPER, $ALRATIOCUTOFF) = getParameters($params); # parameters
@@ -261,8 +261,8 @@ sub specificAsePipeline
   my $aseSnvs = "$outputAse.ase";
   print "\n[1]. Get ASE SNVs and output them to $aseSnvs\n\n";
   my $aseSnvCmd = "perl -I $iPath $iPath"."aseSnvs.pl $outputAse $configs $params";
-  if(!defined($params)){
-    $aseSnvCmd .=" $params"; #optional parameter
+  if(defined($ase_p)){
+    $aseSnvCmd .=" $ase_p"; #optional parameter
   }
   print "$aseSnvCmd\n";
   if(system($aseSnvCmd)){
@@ -329,7 +329,7 @@ sub specificAsePipeline
   }
   my $dtOutput = "$aseSnvDistri.$specificType.lst"; 
   print "Output genes hosting $specificType AS SNvs to $dtOutput\n";
-  open(my $dp, ">", $dtOutput) or die "ERROR: cannot opne $dtOutput\n";
+  open(my $dp, ">", $dtOutput) or die "ERROR: cannot open $dtOutput\n";
   my %dts = %$dtGnSnvsRef;
   for(keys %dts){
     print $dp "$_\n$dts{$_}\n";
@@ -344,14 +344,14 @@ sub specificAsePipeline
   my ($asarpGeneRef) = getAsarpAll("$result.gene.prediction");
   my ($iAsarpGenesRef, $iAsarpSnvsRef) = getSpecificAsarp($asarpGeneRef, \%introns);
 
-  print "\n[5]. Get $specificType ASE SNVs *NOT* in ASE results (potentially useful for cross-sample comparisons)\n\n";
+  print "\n[5]. Get $specificType ASE SNVs *NOT* in ASE Gene results in this sample\n(potentially useful for cross-sample comparisons)\n\n";
 
   print "Intersect of all $specificType ASE SNV hosting genes with ASE genes\n";
   my ($dtGnOnly, $dtAse, $aseOnly) = intersectHashes($dtGnSnvsRef, $aseGeneRef); # compare gene snvs with ase genes
   my ($dtNo, $dtAseNo, $aseNo) = hashRefNo($dtGnOnly, $dtAse, $aseOnly);
-  print "$specificType: $dtNo\tcommon: $dtAseNo\tASE excl: $aseNo\n";
+  print "$specificType not ASE: $dtNo\tcommon: $dtAseNo\tASE not $specificType: $aseNo\n";
 
-  return ($iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef, $aseGeneRef, $dtGnOnly);
+  return (\%introns, $iAseGenesRef, $iAseSnvsRef, $iAsarpGenesRef, $iAsarpSnvsRef, $aseGeneRef, $dtGnOnly);
 }
 
 sub readDetailedGeneSnvs{
