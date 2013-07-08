@@ -438,6 +438,91 @@ sub addEventsByChr
 
 }
 
+#### sub-routines borrowed from intronSnvGene.pl (quick script for ENCODE poster 2013)
+# get annotations arranged in a chr, gene manner
+# the only difference from readTranscriptFile is that the final hash is indexed by gene names ($geneName) rather than $txStarts
+sub readTranscriptFileByGene
+{
+
+  #array of hashes
+  my @trans=();
+  for(my $i=0; $i<=$CHRNUM; $i++){
+    push @trans, {}; #empty initialization
+  }
+
+  #keep track of discarded chromosomes
+  my %discardedChrs = ();
+
+  my ($fileName)=@_;
+  open(my $fh, "<", $fileName) or die "Cannot open merged transcrimptome file: $fileName\n";
+  print "Reading the transcriptome file (final transcripts arranged by gene names)", $fileName, "\n"; 
+  
+  my $count = 0;
+  while(<$fh>){
+    $count++;
+    if(!($count%10000)){
+      #print $count, "\t";
+      #STDOUT->autoflush(1);#need to flush if STDOUT not attached to terminal
+    }
+    chomp;
+    my ($ID, $chrRaw, $strand, $txStart, $txEnd, $cdsStart, $cdsEnd, 
+    $exonCount, $exonStarts, $exonEnds, $geneName, $cdsStartStat, $cdsEndStat)
+    = split(/\t/, $_);# ID, chr, strand, txStart, txEnd, 
+    #cdsstart, cdsend, exoncount, exonstarts, 
+    # exonends, genename, cdsstartstat,cdsendstat
+    my $chrID = getChrID($chrRaw);
+    if(!($chrID=~/^\d+$/)){
+      if(!defined($discardedChrs{$chrID})){
+        $discardedChrs{$chrID}=1;
+      }else{ $discardedChrs{$chrID}+=1;  }
+      #print "$chrID\n"; 
+      #print "Not valid chr ID: $chrID\n"; 
+      next;
+    }
+    $ID = uc $ID; # to upper
+    #change 0-based to 1-based for all starts
+    $txStart+=1;
+    $cdsStart+=1;
+    my @allExonStarts = split(/,/, $exonStarts);
+    for(my $i=0; $i< @allExonStarts; $i++){
+      $allExonStarts[$i]+=1;
+    }
+    $exonStarts = join(",", @allExonStarts);
+    #but no need to add 1 for ends
+    $exonEnds = substr($exonEnds, 0, -1); #because there is an additional "," in the original file
+
+    my $isCoding = 1;
+    #if($geneName=~/noncoding/){  $isCoding = 0; }
+    if($cdsStart > $cdsEnd){ $isCoding = 0; }
+    #if($isCoding==0){   print "Non-coding: $ID, $geneName\n"; }
+    # currently skip calculating the 5UTR 3UTR and exon length here
+    $geneName = uc $geneName; 
+    $trans[$chrID]{$geneName}.=$txStart.";".$txEnd.";".$cdsStart.";".$cdsEnd.";".$exonStarts.";".$exonEnds.";".$ID.";".$isCoding.";".$strand."\t";
+  }
+  close($fh);
+
+  #set the indices (such that event starts are sorted) for chrs
+  my @trans_idx = ();
+
+  for(my $i=1; $i<=$CHRNUM; $i++){
+    #printChr($i); 
+    $trans_idx[$i] = [sort keys %{$trans[$i]}]; #now it's sorted by gene name.
+  }
+  #debug print
+  #my $chrToPrint = 4;
+  #printChr($chrToPrint); print "\n";
+  #foreach (@{$trans_idx[$chrToPrint]}){ print $_-1,"\n"; }
+  
+  #printDiscardedChrs(\%discardedChrs);  
+  
+  my %transList = (
+    'trans' => \@trans,
+    'trans_idx' => \@trans_idx,
+    'type' => 'transcripts (arranged by genes); not the one arranged by transcript starts in ASARP',
+  );
+  return \%transList;
+}
+
 # subroutine to read in the merged transcriptome annotation, i.e. xiaoF
 # ID, chr, strand, txStart, txEnd, cdsstart, cdsend, exoncount, exonstarts, 
 # exonends, genename, cdsstartstat,cdsendstat
