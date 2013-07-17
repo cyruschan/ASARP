@@ -66,7 +66,7 @@ if($strandFlag){ #need to handle the minus information as well
 my @dnaSnvs_idx = @$dnaSnvsIdxRef;
 if(@dnaSnvs_idx == 0){
   #speed up as no need to check the others
-  print "Skipped procesing SNVs with RNA reads as there are no DNA SNVs. Done\n";
+  print "Skipped procesing SNVs with RNA reads as there are no DNA SNVs. Finished with 0 SNVs\n";
   exit;
 }
 
