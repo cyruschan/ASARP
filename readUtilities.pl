@@ -191,11 +191,13 @@ sub procBlocks{
   my %allBlocks = ();
   my @blks = split(',', $block);
   for(@blks){
-    my ($blkS, $blkE) = split(':', $_);
-    if(defined($allBlocks{$blkS})){
-      $allBlocks{$blkS} .= "\t".$blkE;
-    }else{
-      $allBlocks{$blkS} = $blkE;
+    if($_ ne ''){
+      my ($blkS, $blkE) = split(':', $_);
+      if(defined($allBlocks{$blkS})){
+        $allBlocks{$blkS} .= "\t".$blkE;
+      }else{
+        $allBlocks{$blkS} = $blkE;
+      }
     }
   }
   my @blkStarts = sort{$a<=>$b} keys %allBlocks;

@@ -48,8 +48,9 @@ my ($blocksRef, $snvRef, $blocksRcRef, $snvRcRef) = parseSamReadsJ($chrToCheck, 
 # bedgraph handling
 #
 my ($bedRef, $bedIdxRef) = procBedgraph($chrToCheck, $blocksRef);
+my ($bedRcRef, $bedRcIdxRef) = (undef, undef);
 if($strandFlag){ #need to handle the minus information as well
-  my ($bedRcRef, $bedRcIdxRef) = procBedgraph($chrToCheck, $blocksRcRef);
+  ($bedRcRef, $bedRcIdxRef) = procBedgraph($chrToCheck, $blocksRcRef);
   outputBedgraph($chrToCheck, $outputBedgraph, $title, $strandFlag, $bedRef, $bedIdxRef, $bedRcRef, $bedRcIdxRef);
 }else{
   outputBedgraph($chrToCheck, $outputBedgraph, $title, $strandFlag, $bedRef, $bedIdxRef); # non-strand-specific
@@ -69,13 +70,13 @@ if(@dnaSnvs_idx == 0){
 my $ttlSnvs = 0;
 open(SP, ">", $outputSnvs) or die "ERROR: cannot open $outputSnvs to output candidate SNVs\n";
 if($strandFlag){ #need to handle the minus information as well
-  my ($rnaSnvs, $dCnt) = getSnvReads($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, '+');
-  my ($rnaSnvsRc, $dRcCnt) = getSnvReads($chrToCheck, $snvRcRef, $dnaSnvsRef, $dnaSnvsIdxRef, '-');
+  my ($rnaSnvs, $dCnt) = getSnvReadsJ($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, '+');
+  my ($rnaSnvsRc, $dRcCnt) = getSnvReadsJ($chrToCheck, $snvRcRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRcRef, $bedRcIdxRef, '-');
   print SP $rnaSnvs;
   print SP $rnaSnvsRc;
   $ttlSnvs += $dCnt + $dRcCnt;
 }else{
-  my ($rnaSnvs, $dCnt) = getSnvReads($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef);
+  my ($rnaSnvs, $dCnt) = getSnvReadsJ($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef);
   print SP $rnaSnvs;
   $ttlSnvs = $dCnt;
 }
@@ -326,14 +327,15 @@ sub addSnvInPairJ{
     #not all used
 
     for(my $j=0; $j<@locs; $j++){
+      my $val = "$alts[$j]\t$refs[$j]";
       if(defined($snv{$locs[$j]})){
-        if($alts[$j] ne $snv{$locs[$j]}){
-	  print "WARNING: INCONSISTENT SNV at $locs[$j]: $alts[$j] $snv{$locs[$j]}\n";
+        if($val ne $snv{$locs[$j]}){
+	  print "WARNING: INCONSISTENT SNV at $locs[$j]: $val diff from $snv{$locs[$j]}\n";
 	  delete $snv{$locs[$j]}; # inconsistent case
 	}
       }else{
         if(@discard > 0 && $discard[$poss[$j]-1]){ next; }
-        $snv{$locs[$j]} = "$alts[$j]\t$refs[$j]";
+        $snv{$locs[$j]} = $val;
       }
     }
   }
@@ -360,7 +362,7 @@ sub parseSamReadsJ
   my $blocksRc = '';
 
   for(my $cnt = 0; $cnt < $N; $cnt ++){
-    if($cnt%($INTRVL/10) == 0){ print "$cnt...";  }
+    if($cnt%($INTRVL) == 0){ print "$cnt...";  }
     #if($cnt > $INTRVL/10*4){ last; }
     my @attr = split('\t', $sam[$cnt]); # pair1
     my $strand = getStrandInRead($attr[1], $strandFlag);
@@ -438,7 +440,10 @@ sub procSnvJ{
   my $allSnvs = $$allSnvsRef;
   my @SnvArray = split('\n', $allSnvs);
   my %hs = ();
-  my @mask = @$maskRef;
+  my @mask = ();
+  if(defined($maskRef)){
+    @mask = @$maskRef;
+  }
   
   for(@SnvArray){
       my ($loc, $al, $refAl) = split(/\t/, $_);
@@ -479,8 +484,11 @@ sub procSnvJ{
 
 sub getSnvReadsJ{
 
-  my ($chr, $snvChrRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, $discardRef) = @_;
-
+  my ($chr, $snvChrRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, $strand, $discardRef) = @_;
+  if(!defined($strand)){  $strand = "";  }
+  else{
+    $strand = " $strand";
+  }
   my %dnaSnvs = %$dnaSnvsRef;
   my @dnaSnvs_idx = @$dnaSnvsIdxRef;
 
@@ -551,7 +559,7 @@ sub getSnvReadsJ{
 	}
         my $wrongCnt = $misCnt - $altCnt;
         if($altCnt == $maxAltCnt && $altCnt>$wrongCnt){ 
-          $snvStr .= join(" ", $chr, $dnaSnvs_idx[$si], $dAls, $dId, $refCnt.":".$maxAltCnt.":".$wrongCnt)."\n";
+          $snvStr .= join(" ", $chr, $dnaSnvs_idx[$si], $dAls, $dId, $refCnt.":".$maxAltCnt.":".$wrongCnt).$strand."\n";
 	  $dCnt++;
         }else{
 	  print "DISCARD: $chr:$dnaSnvs_idx[$si] alt $dAltAl rna count <= other alts: $altCnt <= $wrongCnt\n"; 
@@ -560,7 +568,7 @@ sub getSnvReadsJ{
     }else{
       # fully match, i.e. only the reference SNV appears here
       # $refCnt is just $cntBed here
-      $snvStr .= join(" ", $chr, $dnaSnvs_idx[$si], $dnaSnvs{$dnaSnvs_idx[$si]}, $cntBed.":0:0")."\n";
+      $snvStr .= join(" ", $chr, $dnaSnvs_idx[$si], $dnaSnvs{$dnaSnvs_idx[$si]}, $cntBed.":0:0").$strand."\n";
       $dCnt++;
     }
     $si++;
