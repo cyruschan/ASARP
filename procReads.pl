@@ -2,6 +2,7 @@
 use warnings;
 use strict;
 
+require "fileParser.pl"; # only to use binarySearch
 require "readUtilities.pl";
 # set autoflush for error and output
 select(STDERR);
@@ -9,508 +10,439 @@ $| = 1;
 select(STDOUT);
 $| = 1;
 
-if(@ARGV < 5){
-  print <<EOT;
-USAGE: perl $0 input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp bedgraph_title discarded_read_pos]
-
-NOTE: 	the read processing script is for Dr. Jae-Hyung Lee's
-	20-attribute SAM file output format, used in RNA-editing
-	or allele specific expression (ASE) studies
-
-input_sam_file 		SAM file input after duplicate removal (use rmDup.pl, and optionally mergeSam.pl)
-intput_snvs		input SNV list (without read counts)
-output_snvs		output SNV candidates with read counts
-output_bedgraph		output bedgraph file, see below for the details:
-			http://genome.ucsc.edu/goldenPath/help/bedgraph.html
-is_paired_end		0: single-end; 1: paired-end
-			For paired-end reads, all reads should be paired up, 
-			where pair-1 should be always followed by pair-2 in the next line.
-
-OPTIONAL [strongly recommended to be input]:
-is_strand_sp		0: non-strand specific (or no input); 
-			1: strand-specific with pair 1 **sense**;
-			2: strand-specific with pair 1 **anti-sense**
-			Be careful with the strand-specific setting as it will give totally opposite 
-			strand information if wrongly set.
-
-			The strand-specific option is used for strand-specific RNA-Seq data.
-			When set, specialized bedgraph files will be output (output_bedgraph)
-			where there is a 5th extra attribute specifying the strand: + or -
-			besides the standard ones: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
-			One can use grep and cut to get +/- strand only bedgraphs.
-
-OPTIONAL [if input, must be input in order following is_strand_sp]:
-bedgraph_title		a short title for the output bedgraph files (will be put in description of the header line)
-                        if there are spaces in between it should be quoted
-			e.g. "nbt.editing reads: distinct after dup removal"
-			if not input, "default" will be used as the short title
-
-discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.
-
-EOT
-  exit;
-}
-
-my ($samFile, $snvFile, $outputSnvs, $outputBedgraph, $pairEnded, $strandFlag, $title, $discardPos) = @ARGV;
-# handling empty title
-if(!defined($title)){
-  $title = "default"; #default
-}
-# handling undefined $strandFlag for backward compatibility
-if(!defined($strandFlag)){
-  print "WARNING: is_strand_sp should be input to specify whether the RNA-Seq data (input_sam_file) are strand specific.\nSet to be 0: non-strand specific for backward compatibility\n";
-  $strandFlag = 0;
-}elsif($strandFlag == 0){
-  print "NOTE: non-strand-specific (default)\n";
-}elsif($strandFlag == 1){
-  print "IMPORTANT NOTE: pair 1 is sense in the strand-specific setting\n";
-}elsif($strandFlag == 2){
-  print "IMPORTANT NOTE: pair 1 is anti-sense in the strand-specific setting\n";
-}else{
-  die "ERROR: have to set a specific strand-specific flag: 0/1/2; unkonwn flag set: $strandFlag\n";
-}
-
 our $INTRVL = 100000; #interval to output processed counts
+my $samType = "a standard SAM file with
+	10 attributes. You are recommended to use more efficient
+	tools such as samtools and bedtools for this task; or
+	to use procReadsJ.pl on the special jsam file introduced
+	by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
+	expression (ASE) studies";
+#my $samType = "Dr. Jae-Hyung Lee's
+#	20-attribute SAM file output format, used in RNA-editing
+#	or allele specific expression (ASE) studies";
+if(@ARGV < 6){
+  printUsage($samType);
+}
 
+#####################################################################
+# get parameters
+my ($chrToCheck, $samFile, $snvFile, $outputSnvs, $outputBedgraph, $pairEnded, $strandFlag, $title, $discardPos) = @ARGV;
+($title, $strandFlag) = parseArg($title, $strandFlag);
+
+# masking
 my @discard = ();
 if(defined($discardPos)){
+  print STDERR "WARNING: masking not tested in this version; ignored\n";
   @discard = readPosMask($discardPos);
 }
 
-print "Processing SAM file: $samFile...";
-open(FP, "<", $samFile) or die "ERROR: Can't open $samFile";
-my %snv = (); # to get the snv candidates
-my %blocks = (); # all the blocks
+#####################################################################
+# read DNA SNV list
+print "Processing input SNV list file of $chrToCheck: $snvFile...";
+my $dnaSnvList = readSnvList($snvFile, $chrToCheck);
+my ($dnaSnvsRef, $dnaSnvsIdxRef) = procDnaSnv(\$dnaSnvList, $chrToCheck);
 
-#strand-specific
-my %snvRc = ();
-my %blocksRc = ();
 
-my $cnt = 0;
-while(<FP>){
-  $cnt++;
-  if($cnt%$INTRVL == 0){ print "$cnt...";  }
-  my $pair1 = $_;
-  chomp $pair1;
-  my @attr = split('\t', $pair1);
-  # we need no. of matches (attr 14, incl. known snps) to further process
-  my ($id, $strand, $chr, $start, $block, $mismatches) = ($attr[0], $attr[1], $attr[2], $attr[3], $attr[11], $attr[13]); #read quality rather than mapping quality is used
-  my $snvToAdd = "";
-  # handle the strand info
-  if($strand & 16){ # i.e. 0x10 according to SAM format: http://samtools.sourceforge.net/SAM1.pdf
-    $strand = '-';
-    if(defined($strandFlag) && $strandFlag == 2){ # pair 1 is anti-sense
-      $strand = '+'; #flip pair 1's strand
-    }
-  }else{
-    $strand = '+'; 
-    if(defined($strandFlag) && $strandFlag == 2){ # pair 1 is anti-sense
-      $strand = '-'; #flip pair 1's strand
-    }
-  }
-  if($mismatches > 0){ #we can record SNV candidates
-    # attr 16-20
-    $snvToAdd .= "$attr[15]\t$attr[16]\t$attr[17]\t$attr[18]\t$attr[19]\n";
-  }
-  if(@discard > 0){
-    my $readLen = length($attr[9]); #read length
-    $block = maskBlock($block, $readLen, \@discard); 
-  }
-  if($pairEnded){ #get pair2
-    my $pair2 = <FP>;
-    if(defined($pair2)){
-      chomp $pair2;
-      my @attr2 = split('\t', $pair2);
-      my ($id2, $strand2, $chr2, $start2, $block2, $mismatches2) = ($attr2[0], $attr2[1], $attr2[2], $attr2[3], $attr2[11], $attr2[13]);
-      if($chr ne $chr2){ 
-	die "ERROR: reads have to be in pairs in the same chromosome: $id in $chr different from $id2 in $chr2 at line $cnt\n";
-      }
-      # add back the check for id and id2: they should be identical or differ only with the last 2 characters, typically: /1 and /2
-      if($id ne $id2){
-        my $idLen = length($id)-2; # ignoring the last 2 characters
-        my $id1p = substr($id, 0, $idLen);
-	my $id2p = substr($id2, 0, $idLen);
-	if($id1p ne $id2p){
-	  die "ERROR: reads have to be in pairs: $id in $chr differ from $id2 in $chr2 (more than the last 2 characters) at line $cnt\n";
-	}
-      
-      }
-      if($mismatches2 > 0){
-        $snvToAdd .= "$attr2[15]\t$attr2[16]\t$attr2[17]\t$attr2[18]\t$attr2[19]\n";
-      }
-      if(@discard > 0){
-        my $readLen2 = length($attr[9]);
-        $block .= ",".maskBlock($block2, $readLen2, \@discard);
-      }else{
-        $block .= ",".$block2;
-      }
-    }else{
-      print "ERROR: missing pair 2 in $chr at line $cnt\n"; exit;
-    }
-  }
+#####################################################################
+# parsing input sam file
+#my ($samRef) = readSamFileJ($samFile);
+my ($samRef) = readSamFile($samFile);
+my ($blocksRef, $snvRef, $blocksRcRef, $snvRcRef) = parseSamReads($chrToCheck, $samRef, $pairEnded, $strandFlag); 
 
-  # get all the (masked) blocks
-  if(!$strandFlag || $strand eq '+'){ #non-strand specific or +; following pair1
-    $snv{$chr} .= $snvToAdd;
-    if(!defined($blocks{$chr})){
-      $blocks{$chr} = $block;
-    }
-    else{
-      $blocks{$chr} .= ",".$block;
-    }
-  }else{ # - strand
-    $snvRc{$chr} .= $snvToAdd; #strand-specific: -; following pair1!
-    if(!defined($blocksRc{$chr})){
-      $blocksRc{$chr} = $block;
-    }
-    else{
-      $blocksRc{$chr} .= ",".$block;
-    }
-  }
-}
-close (FP);
-my $unit = 'lines';
-if($pairEnded){	$unit = 'pairs'; }
-print " $cnt $unit. Done.\n";
-
-my @allChrsInSam = keys %blocks;
-if(@allChrsInSam > 1){
-  die "ERROR: the SAM file should contain reads from only one chromosome: @allChrsInSam\n";
-}
-
-print "Processing input SNV list file: $snvFile...";
-my %snvList = ();
-my $dSnvCnt = 0;
-my $dSnvChrCnt = 0;
-open(SNP, "<", $snvFile) or die "ERROR: Can't open $snvFile\n";
-while(<SNP>){
-  chomp;
-  $dSnvCnt++;
-  if($dSnvCnt%$INTRVL == 0){ print "$dSnvCnt...";  }
-  my ($chr, $pos, $alleles, $id) = split(' ', $_);
-  if(@allChrsInSam == 0){ # no sam file
-    last; # go to the last step
-  }
-  if($chr ne $allChrsInSam[0]){
-    next; #ignore all other chromosomes to save time
-  }
-  my $str = join(" ", $pos, $alleles, $id);
-  if(defined($snvList{$chr})){
-    $snvList{$chr} .= "\t".$str;
-  }else{
-    $snvList{$chr} .= $str;
-  }
-  $dSnvChrCnt++;
-}
-close(SNP);
-if(@allChrsInSam>0){
-  print " $dSnvCnt SNVs ($dSnvChrCnt kept for $allChrsInSam[0]). Done.\n";
+#####################################################################
+# bedgraph handling
+#
+my ($bedRef, $bedIdxRef) = procBedgraph($chrToCheck, $blocksRef);
+if($strandFlag){ #need to handle the minus information as well
+  my ($bedRcRef, $bedRcIdxRef) = procBedgraph($chrToCheck, $blocksRcRef);
+  outputBedgraph($chrToCheck, $outputBedgraph, $title, $strandFlag, $bedRef, $bedIdxRef, $bedRcRef, $bedRcIdxRef);
 }else{
-  print "WARNING: no data in the SAM file: $samFile\n";
+  outputBedgraph($chrToCheck, $outputBedgraph, $title, $strandFlag, $bedRef, $bedIdxRef); # non-strand-specific
+}
+#####################################################################
+# get all SNV reads from the string "snv", bedgraph is not used anymore
+
+# quick termination case
+my @dnaSnvs_idx = @$dnaSnvsIdxRef;
+if(@dnaSnvs_idx == 0){
+  #speed up as no need to check the others
+  print "Skipped procesing SNVs with RNA reads as there are no DNA SNVs. Done\n";
+  exit;
 }
 
-#print "SNVs in chromosomes\n";
-#for(keys %snvList){
-#  my @chrSnvs = split('\t', $snvList{$_});
-#  print "$_: ".(scalar @chrSnvs)."\n";
-#}
-
-#############################################################
+# output SNVs
 my $ttlSnvs = 0;
-# sort all the block starts and make pile-ups
-for my $chr (keys %blocks){
-  print "Processing $chr mapped blocks and bedgraph...\n";
-  my ($blkRef, $blkIdxRef) = procBlocks($blocks{$chr});
-  my ($bedRef, $bedIdxRef) = procBeds($blkRef, $blkIdxRef, $chr);
-  my @bedgraph = @$bedRef;
-  my @bedgraph_idx = @$bedIdxRef;
-
-  my @bedgraphRc = ();
-  my @bedgraphRc_idx = ();
-  if($strandFlag){ #need to handle the minus information as well
-    print "\nstrand-specific set: additional - blocks and bedgraph are processed...\n";
-    my ($blkRcRef, $blkRcIdxRef) = procBlocks($blocksRc{$chr});
-    my ($bedRcRef, $bedIdxRcRef) = procBeds($blkRcRef, $blkRcIdxRef, $chr);
-    @bedgraphRc = @$bedRcRef;
-    @bedgraphRc_idx = @$bedIdxRcRef;
-    
-  }
-
-  ####################################################################
-  # output bedgraph
-  open(BP, ">", $outputBedgraph) or die "ERROR: cannot open $outputBedgraph to output bedgraph\n";
-  # output bedgraph for this chromosome
-  my $addDescr = "$title; ";
-  # get the track opt first
-  my ($dummyChr, $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
-  my $bedFirstPos = $bedgraph_idx[0];
-  if($strandFlag){
-    $addDescr .= "strand-specific: the extra field is strand";
-    my ($dummyChr2, $dummyS2, $bedLastPos2) = split(" ", $bedgraphRc[-1]);
-    if(defined($bedLastPos2) && $bedLastPos2 > $bedLastPos ){
-      $bedLastPos = $bedLastPos2;
-    }
-    if($bedgraphRc_idx[0] < $bedFirstPos){
-      $bedFirstPos = $bedgraphRc_idx[0];
-    }
-  }
-  my $trackRange = "$chr:".($bedFirstPos+1).":".$bedLastPos; #start converted back to 1-based for chr range in UCSC
-  my $trackOpt = "track type=bedGraph name=\"reads_$chr\" description=\"$trackRange $addDescr\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
-  print BP $trackOpt;
-  my $bedCnt = 0;
-  print "Outputting bedgraph file...";
-  if($strandFlag){
-    print "\nstrand-specific set: additional - lines are output in the bedgraph...\n";
-    for(@bedgraph){
-      print BP $_." +\n"; #strand added
-      $bedCnt++;
-      if($bedCnt%$INTRVL == 0){ print "$bedCnt...";  }
-    }
-    for(@bedgraphRc){
-      print BP $_." -\n"; #strand added
-      $bedCnt++;
-      if($bedCnt%$INTRVL == 0){ print "$bedCnt...";  }
-    }
-
-  }else{ # non-strand specific
-    for(@bedgraph){
-      print BP $_."\n";
-      $bedCnt++;
-      if($bedCnt%$INTRVL == 0){ print "$bedCnt...";  }
-    }
-  }
-  close(BP);
-  print " $bedCnt lines. Done.\n";
-
-  if($strandFlag){
-    print "Outputting standard 4-attribute bedgraph files ($outputBedgraph.plus and .minus), one for each strand...";
-    open(PP, ">", "$outputBedgraph.plus") or die "ERROR: cannot open $outputBedgraph.plus to output bedgraph\n";
-    my ($bpp1, $bpp2) = (0, 1); 
-    if(@bedgraph_idx >0){
-      $bpp1 = $bedgraph_idx[0];
-      my ($dummyChr, $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
-      $bpp2 = $bedLastPos;
-    } 
-    my $plusRange = "$chr:".($bpp1+1).":".$bpp2; #start converted back to 1-based for chr range in UCSC
-    print PP "track type=bedGraph name=\"reads_".$chr."_plus\" description=\"$plusRange $title; + strand only\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
-    for(@bedgraph){
-      print PP $_."\n"; #strand added
-    }
-    close(PP);
-    
-    
-    open(MP, ">", "$outputBedgraph.minus") or die "ERROR: cannot open $outputBedgraph.minus to output bedgraph\n";
-    my ($bmp1, $bmp2) = (0, 1); 
-    if(@bedgraphRc_idx >0){
-      $bmp1 = $bedgraphRc_idx[0];
-      my ($dummyChr2, $dummyS2, $bedLastPos2) = split(" ", $bedgraphRc[-1]);
-      $bmp2 = $bedLastPos2;
-    } 
-    my $minusRange = "$chr:".($bmp1+1).":".$bmp2; #start converted back to 1-based for chr range in UCSC
-    print MP "track type=bedGraph name=\"reads_".$chr."_minus\" description=\"$minusRange $title; - strand only\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
-    for(@bedgraphRc){
-      print MP $_."\n"; #strand added
-    }
-    close(MP);
-    print " ".(scalar @bedgraph)." + lines and ".(scalar @bedgraphRc)." - lines. Done. \n";
-
-  }
-  ####################################################################
-  
-  print "Processing $chr genomic SNVs...";
-  my @dnaSnvVals = ();
-  if(defined($snvList{$chr})){
-    @dnaSnvVals = split('\t', $snvList{$chr});
-  }
-  my %dnaSnvs = ();
-  for(@dnaSnvVals){
-    my ($pos, $als, $id) = split(' ', $_);
-    $dnaSnvs{$pos} = $als." ".$id;
-  }
-  my @dnaSnvs_idx = sort{$a <=> $b} keys %dnaSnvs;
-  my $dnaSnvNo = keys %dnaSnvs;
-  print " $dnaSnvNo SNVs. Done.\n";
-  ####################################################################
-  
-  print "Processing $chr candidate SNVs (mismatches)...\n";
-  if(@dnaSnvs_idx == 0){
-    #speed up as no need to check the others
-    print "Skipped the rest as no matched SNVs. Done\n";
-    next;
-  }
-
-  # for strand-specific version, need to process them separately
-  
-  # output SNVs
-  open(SP, ">", $outputSnvs) or die "ERROR: cannot open $outputSnvs to output candidate SNVs\n";
-  my ($snvStr, $snvRcStr) = ('', '');
-  my ($dCnt, $dRcCnt) = (0, 0);
-  ($snvStr, $dCnt) = getSnvReads($chr, \$snv{$chr}, \%dnaSnvs, \@dnaSnvs_idx, \@bedgraph, \@bedgraph_idx, \@discard);
-  if($strandFlag){
-    print "\nstrand-specific set: additional - SNVs are output in the snv file...\n";
-    ($snvRcStr, $dRcCnt) = getSnvReads($chr, \$snvRc{$chr}, \%dnaSnvs, \@dnaSnvs_idx, \@bedgraphRc, \@bedgraphRc_idx, \@discard);
-    # need to merge the SNVs from forward and backward strands
-    my @snvsAll = split(/\n/, $snvStr);
-    my @snvsAllRc = split(/\n/, $snvRcStr);
-
-    for(@snvsAll){
-      print SP "$_ +\n";
-    }
-    for(@snvsAllRc){
-      print SP "$_ -\n";
-    }
-  }else{
-    print SP $snvStr; #no strand-specific info at the end
-  
-  }
-  close(SP);
+open(SP, ">", $outputSnvs) or die "ERROR: cannot open $outputSnvs to output candidate SNVs\n";
+if($strandFlag){ #need to handle the minus information as well
+  my ($rnaSnvs, $dCnt) = getSnvReads($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, '+');
+  my ($rnaSnvsRc, $dRcCnt) = getSnvReads($chrToCheck, $snvRcRef, $dnaSnvsRef, $dnaSnvsIdxRef, '-');
+  print SP $rnaSnvs;
+  print SP $rnaSnvsRc;
   $ttlSnvs += $dCnt + $dRcCnt;
+}else{
+  my ($rnaSnvs, $dCnt) = getSnvReads($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef);
+  print SP $rnaSnvs;
+  $ttlSnvs = $dCnt;
 }
-print "\nFinished with $cnt read $unit and $ttlSnvs SNVs\n";
+close(SP);
 
+print "\nFinished with $ttlSnvs SNVs\n";
+
+
+########################################################################################################################################
 ##########################################################################
-#		sub-routines
+#		sub-routines (standard SAM file)
 ##########################################################################
 
-# simply process the block (which may contain sub-blocks) into the blocks hash
-# input:	the block to be merged
-# output:	reference to the hash of blocks
-# output:	reference to the index array of the block starts
-sub procBlocks{
-  my ($block) = @_; 
-  my %allBlocks = ();
-  my @blks = split(',', $block);
-  for(@blks){
-    my ($blkS, $blkE) = split(':', $_);
-    if(defined($allBlocks{$blkS})){
-      $allBlocks{$blkS} .= "\t".$blkE;
+## read sam file and cut most of the useless attributes out
+sub readSamFile{
+
+  my ($samFile) = @_;
+  my @sam = ();
+
+  my $cnt = 0;
+  print "Processing SAM file: $samFile and counting SNV reads...";
+  open(FP, "<", $samFile) or die "ERROR: Can't open $samFile";
+  while(<FP>){
+    chomp $_;
+    my @attr = split('\t', $_);
+    $sam[$cnt]  = join("\t", $attr[0], $attr[1], $attr[2], $attr[3], $attr[5], $attr[9]); # id strand chr start cigar and read: good enough
+    ++$cnt;
+    if($cnt%($INTRVL*10) == 0){ print "$cnt...";  }
+  }
+  close (FP);
+  my $unit = 'lines';
+  print " $cnt $unit. Done.\n";
+
+  return \@sam;
+}
+
+sub parseSamReads
+{
+  my ($chrToCheck, $samRef, $pairEnded, $strandFlag) = @_;
+  print "Processing the reads to get blocks and raw SNV statistics...\n";
+  
+  my @sam = @$samRef;
+  my $N = @sam; # no. of reads
+
+  my $snv = ''; # to get the snv candidates
+  my $blocks = ''; # all the blocks
+  #strand-specific: -
+  my $snvRc = '';
+  my $blocksRc = '';
+
+  for(my $cnt = 0; $cnt < $N; $cnt ++){
+    if($cnt%($INTRVL/10) == 0){ print "$cnt...";  }
+    #if($cnt > $INTRVL/10*4){ last; }
+    my @attr = split('\t', $sam[$cnt]); # pair1
+    my $strand = getStrandInRead($attr[1], $strandFlag);
+
+    my %snvInPair = (); my $sipRef = \%snvInPair;
+    # standard sam format;	alternative: # jsam: JH's sam file  ($sipRef, my $block) = addSnvInPairJ($sipRef, \@attr);   #my $block = $attr[13];
+    ($sipRef, my $block) = addSnvInPair($sipRef, \@attr, $dnaSnvsIdxRef, \@discard); 
+  
+    # paired-end RNA-Seq cases; strand-specific is also handled here
+    my @attr2 = ();
+    if($pairEnded){ #get pair2
+      ++$cnt;
+      if(!defined($sam[$cnt])){ # pair2
+       die "ERROR: missing pair 2 in $chrToCheck at line $cnt\n";
+      }
+      my @attr2 = split('\t', $sam[$cnt]); # pair2
+      checkPairId($attr[0], $attr2[0], $cnt);
+      checkPairChr($attr[2], $attr2[2], $cnt);
+      #standard sam format;	alternative: #jsam: #($sipRef, my $block2) = addSnvInPairJ($sipRef, \@attr2);   #my $block2 = $attr2[13];
+      ($sipRef, my $block2) = addSnvInPair($sipRef, \@attr2, $dnaSnvsIdxRef, \@discard);
+   
+      # if pair2 is sense ($strandFlag == 2) and strand eq '+', pair1 position is larger than pair2!
+      # if pair1 is sense ($strandFlag == 1) and strand eq '-', pair1 position is larger than pair2!
+      if(($strandFlag == 2 && $strand eq '+') || ($strandFlag == 1 && $strand eq '-') || ($strandFlag ==0 && $strand eq '-')){
+         #non-strand specific: - here means antisense
+         $block = mergeBlockInPair($block2, $block, $attr[3]); #p2 p1
+      }else{ # incl. $strandFlag == 0
+         $block = mergeBlockInPair($block, $block2, $attr2[3]); # p1 p2
+      }
+    }
+    #flaten the snvs in pair
+    my $snvToAdd = "";
+    my %sip = %$sipRef;
+    for(keys %sip){
+      $snvToAdd .= "$_\t$sip{$_}\n"; # location and allele
+    }
+
+    # get all the (masked) blocks and snvs for future processing
+    if(!$strandFlag || $strand eq '+'){ #non-strand specific or +; following pair1
+      $snv .= $snvToAdd;
+      if($blocks eq ''){
+        $blocks = $block;
+      }else{
+        $blocks .= ",".$block;
+      }
+    }else{ # - strand
+      $snvRc .= $snvToAdd; #strand-specific: -; following pair1!
+      if($blocksRc eq ''){
+        $blocksRc = $block;
+      }
+      else{
+        $blocksRc .= ",".$block;
+      }
+    }
+  }
+
+  #print "$snv\n$snvRc\n";
+
+  return (\$blocks, \$snv, \$blocksRc, \$snvRc);
+}
+
+
+sub getSnvReads{
+  my ($chr, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, $strand) = @_;
+  my $snv = $$snvRef; #just a string
+  my $dCnt = 0;
+  my $rnaSnvs = ""; # final output with reference allele, alt allele and wrong nt
+  if(defined($strand)){
+    $strand = " $strand"; # for the output format
+  }else{ $strand = "";	} # empty string
+  print "Processing".$strand." SNVs to get RNA read counts...\n";
+  my %rawSnvsA = ();
+  my %rawSnvsC = ();
+  my %rawSnvsG = ();
+  my %rawSnvsT = ();
+
+  my %dnaSnvs = %$dnaSnvsRef;
+  my @dnaSnvs_idx = @$dnaSnvsIdxRef;
+  
+  my @snvs = split(/\n/, $snv); # flat snv string into array
+  for(@snvs){
+    # get the raw statistics
+    if($_ ne ''){
+      my ($loc, $al) = split(/\t/, $_);
+      if($al eq 'A'){
+        $rawSnvsA{$loc} += 1;
+      }elsif($al eq 'C'){
+        $rawSnvsC{$loc} += 1;
+      }elsif($al eq 'G'){
+        $rawSnvsG{$loc} += 1;
+      }elsif($al eq 'T'){
+        $rawSnvsT{$loc} += 1;
+      }else{
+        die "ERROR: unrecognized allele: $al at $loc\n";
+      }
+    }
+  }
+
+  my %rawSnvs = (
+  'A' => \%rawSnvsA,
+  'C' => \%rawSnvsC,
+  'G' => \%rawSnvsG,
+  'T' => \%rawSnvsT,
+  );
+  my @alpha = qw(A C G T);
+  for my $loc (@dnaSnvs_idx){
+    # get the reference and alternative for further categorization
+    #print "$dnaSnvs{$loc}\n";
+    my ($als, $id) = split(" ", $dnaSnvs{$loc});
+    my ($ref, $alt) = split('>', $als);
+    my $refCnt = getRawSnvAl(\%rawSnvs, $loc, $ref); 
+    my $altCnt = getRawSnvAl(\%rawSnvs, $loc, $alt);
+    if($refCnt || $altCnt){ # either of them should be != 0
+      my $wrgCnt = 0;
+      for(@alpha){
+        if($_ ne $ref && $_ ne $alt){
+          $wrgCnt += getRawSnvAl(\%rawSnvs, $loc, $_);
+	}
+      }
+      # only when there is no wt, or wt < alt
+      if(!$wrgCnt || $wrgCnt < $altCnt){
+        $rnaSnvs .= "$chr $loc $dnaSnvs{$loc} $refCnt:$altCnt:$wrgCnt".$strand."\n"; # strand automatically handled
+	#print "$rnaSnvs\n";
+	$dCnt += 1;
+      }else{
+	print "WARNING: DISCARD SNV $dnaSnvs{$loc} as alt count <= other nts: $altCnt <= $wrgCnt\n"; 
+      }
+    }
+    
+  }
+  return ($rnaSnvs, $dCnt);
+}
+
+sub getRawSnvAl
+{
+  my ($ref, $loc, $al) = @_;
+  my %hs = %$ref;
+  if(defined($hs{$al})){
+    my %als = %{$hs{$al}};
+    if(defined($als{$loc})){
+      return $als{$loc};
+    }
+  }
+  return 0;
+}
+
+# parse the CIGAR string to get block information
+sub parseCigar{
+  my ($start, $cigar) = @_;
+  my $position = $start;
+  my $block = '';
+  while ($cigar !~ /^$/){
+    # handle only the matched parts
+    if ($cigar =~ /^([0-9]+[MIDSN])/){
+      my $cigar_part = $1;
+      if ($cigar_part =~ /(\d+)M/){
+        if($block ne ''){ #already some blocks
+	  $block .= ",";
+	}
+	$block .= "$position:";
+        $position += $1;
+	my $end = $position - 1;
+	$block .= "$end";
+      } elsif ($cigar_part =~ /(\d+)N/){
+        $position += $1; # skipped positions
+      } else { die "ERROR: CIGAR not supported: $cigar\n"; }
+      #} elsif ($cigar_part =~ /(\d+)I/){
+      #} elsif ($cigar_part =~ /(\d+)D/){
+      #} elsif ($cigar_part =~ /(\d+)S/){
+      $cigar =~ s/$cigar_part//;
     }else{
-      $allBlocks{$blkS} = $blkE;
+      die "ERROR: CIGAR not supported: $cigar\n";
     }
   }
-  my @blkStarts = sort{$a<=>$b} keys %allBlocks;
-  return (\%allBlocks, \@blkStarts);
+  return $block;
 }
 
-# mask (i.e. eliminate some parts of) the blocks according to the read position mask
-# Assumption: the block lengths should add up to the read length (i.e. no in-dels)
-# input:	a block in its original string form in the sam file ("a:b,c:d...")
-# input:	the reference to the position mask
-# output:	masked block in its string form ("a:b,c:d...")
-sub maskBlock{
-  my ($block, $readLen, $maskRef) = @_;
-  my @mask = @$maskRef;
-  my $ttlBlkLen = 0; #for checking in-dels
-  #print "maskBlock\norg: $block\n";
-  my @blks = split(',', $block);
-  my @newBlks = ();
-  my $readOffset = 0;
-  for(@blks){
+# this is for the general SAM files (not using extra attributes)
+# add SNV (attributes of the original SAM file) to the read pair list
+sub addSnvInPair{
+  my ($ref, $ref2, $dnaSnvIdxRef, $discardRef) = @_;
+  my %snv = %$ref;
+  my @attr = @$ref2;
+  my @dnaSnvsIdx = @$dnaSnvIdxRef;
+  #my %dnaSnvs = %$dnaSnvRef;
+  my $n = @dnaSnvsIdx;
+  my @discard = ();
+  if(defined($discardRef)){	 @discard = @$discardRef;	}
+  my $start = $attr[3];
+  my $cigar = $attr[4];
+  my $block = parseCigar($start, $cigar);
+  #print "$cigar, $block | $attr[11]\n";
+  my $snvToAdd = "";
+
+  my @blocks = split(',', $block);
+  my $rePos = 0; # relative position
+  for(@blocks){
     my ($s, $e) = split(':', $_);
-    my $len = $e-$s+1;
-    #print "analyzing $s:$e, len $len\n";
-    $ttlBlkLen += $len;
-    my $ts = $s; #temp start for broken blocks
-    my $i = 0;
-    for($i = 0; $i+$readOffset < @mask && $i<$len; $i++){
-      if($mask[$i+$readOffset]){ # break point appears
-        my $break = $s+$i;
-        #print "break at $break (pos $i+$readOffset)\n"; 
-        #check if it is a non-empty sub-block
-        if($ts <= $break-1){
-          push(@newBlks, $ts.":".($break-1));
-        }
-        #set the next s, so the skipped position is exactly $break
-        $ts = $break+1;
+#=pod    
+    my ($lBound, $lUnMatch) = binarySearch($dnaSnvsIdxRef, $s, 0, $n-1, 'left');
+    for(my $j = $lBound; $dnaSnvsIdx[$j]<= $e; $j++){ #snv is more sparse!
+      my $pos = $dnaSnvsIdx[$j];
+      my $readPos = $rePos + $pos-$s; # 0-based
+      if(!defined($discard[$readPos]) || !$discard[$readPos]){ # not discarded
+	  my $al = substr($attr[5], $readPos, 1);
+	  if(defined($snv{$pos})){ # existing
+	    if($snv{$pos} ne $al){
+	      print "WARNING: INCONSISTENT SNV at $pos: $snv{$pos} $al\n";
+	    }
+	  }else{
+	    $snv{$pos} = $al; #\t$qual\n"; # add new
+	  }
       }
+
     }
-    # have to handle the left-overs
-    if($ts<=$e){ #there are left-overs
-      push(@newBlks, $ts.":".$e);
-    }
-    $readOffset += $len; #this block is over
-  }
-  #print "new: ", join(',', @newBlks), "\n";
-  #print "Read len: $ttlBlkLen\n";
-  if($ttlBlkLen != $readLen){ die "ERROR: wrong total block length: $ttlBlkLen (read length $readLen)\n"; }
-  return join(',', @newBlks);
-}
+    $rePos += $e-$s+1; # next block
+#=cut
 
-# process bedgraph (non-strand specific)
-# input:	the references to the blocks and their indices
-# output:	the references to the begraph and its index 
-sub procBeds{
-
-  my ($blkRef, $blkIdxRef, $chr) = @_;
-
-  my %thisChrBlks = %$blkRef;
-  my @blkStarts = @$blkIdxRef;
-  my $blkNo = @blkStarts;
-  print " $blkNo block starts. Done.\n";
-
-  #print "Processing $chr bedgraph...";
-  my @bedgraph = (); #bedgraph content in increasing order
-  my @bedgraph_idx = (); #sorted index array of the bedgraph
-
-  my $left4Next = ""; #those parts running into the next block
-  for(my $i=0; $i<$blkNo; $i++){
-    my $thisStart = $blkStarts[$i];
-    my $nextStart = -1;
-    if($i<$blkNo-1){ #if not the last one, there still a next start
-      $nextStart = $blkStarts[$i+1]; 
-    }
-    # get the previous left-overs
-    if($left4Next ne ""){
-      $thisChrBlks{$thisStart} .= "\t".$left4Next;
-      # $left4Next can be cleared up to here
-      $left4Next = "";
-    }
-    my @thisEnds = split("\t", $thisChrBlks{$thisStart});
-    @thisEnds = sort{$a<=>$b} @thisEnds; #sort all the ends
-
-    my $pileupNo = @thisEnds;
-    my $s = $thisStart-1; #make it zero-based to be consistent with bedgraph
-    for(my $j = 0; $j < $pileupNo; $j++){
-      #$nextStart == -1 means the last block, and i need to handle it without left-overs
-      if($nextStart != -1 && $thisEnds[$j] >= $nextStart){ # i won't do it
-        # dump left-overs to the next guy whenever possible
-	if($left4Next eq ""){
-	  $left4Next = $thisEnds[$j];
-	}else{
-          $left4Next .= "\t".$thisEnds[$j];
-	}
-	$thisEnds[$j] = $nextStart-1; # i will handle up to here
-      } 
-
-      #ok, it's my responsibiity to handle it
-      if($s == $thisEnds[$j]){
-        next; #i.e. there are two blks with the same ends, and it's already counted
-      }
-      #if the first pileup is an extension to the previous one: prv end = this start, counts equal
-      if($j == 0 && @bedgraph>0){
-        #extendable from the previous
-	my ($pChr, $pS, $pE, $pCnt) = split(' ', $bedgraph[-1]); #chr start end count
-	if($pE == $s && $pCnt == $pileupNo){
-	  pop @bedgraph; #need to update the previous one
-	  pop @bedgraph_idx; #idex needs the pop as well
-	  $s = $pS; #extend the start (use the previous one)
+=pod
+    for my $pos ($s .. $e){
+      if(defined($dnaSnvs{$pos})){ # a snv position
+        #++$c;
+        # check if there is any problem with the SNV first
+	if(!defined($discard[$rePos]) || !$discard[$rePos]){ # not discarded
+	  my $al = substr($attr[5], $rePos, 1);
+	  if(defined($snv{$pos})){ # existing
+	    if($snv{$pos} ne $al){
+	      print "WARNING: INCONSISTENT SNV at $_: $snv{$_} $al\n";
+	    }
+	  }else{
+	    $snv{$pos} = $al; #\t$qual\n"; # add new
+	    print "SNV $pos: $al\n";
+	  }
 	}
       }
-      #the start needs to be zero-based
-      push(@bedgraph, "$chr $s $thisEnds[$j] ".($pileupNo-$j));
-      push(@bedgraph_idx, $s); #the start as the index
-      $s = $thisEnds[$j]; # the next start converted to zero-based: +1 then -1
+      ++$rePos;
     }
+=cut
+
   }
-
-  return (\@bedgraph, \@bedgraph_idx);
-
+  #handling of discarded position
+  if(@discard > 0){ # need to handle discarded positions
+      my $readLen = length($attr[5]);
+      $block = maskBlock($block, $readLen, $discardRef);
+  }
+  return (\%snv, $block);
 }
 
+########################################################################################################################################
+##########################################################################
+#		sub-routines (JSAM version)
+##########################################################################
+
+
+## read jsam file and cut most of the useless attributes out
+sub readSamFileJ{
+
+  my ($samFile) = @_;
+  my @sam = ();
+
+  my $cnt = 0;
+  print "Processing SAM file: $samFile and counting SNV reads...";
+  open(FP, "<", $samFile) or die "ERROR: Can't open $samFile";
+  while(<FP>){
+    #if($cnt > $INTRVL/100*4){ exit; }
+    chomp $_;
+    my @attr = split('\t', $_);
+    $sam[$cnt]  = join("\t", $attr[0], $attr[1], $attr[2], $attr[3], $attr[11], $attr[13], $attr[15], $attr[16], $attr[17]); # id strand chr start blocks mismatch_cnt loc(s) ref_allele(s) alt_allele(s): good enough
+    ++$cnt;
+    if($cnt%($INTRVL*10) == 0){ print "$cnt...";  }
+  }
+  close (FP);
+  my $unit = 'lines';
+  print " $cnt $unit. Done.\n";
+
+  return \@sam;
+}
+
+
+# this is specifically for JH's SAM file (with extra attributes)
+# add JH's SNV (attribute 13, 15-19) to the read pair list
+sub addSnvInPairJ{
+  my ($ref, $ref2) = @_;
+  my %snv = %$ref;
+  my @attr = @$ref2;
+  
+  # we need no. of matches (attr 14, incl. known snps) to further process
+  #my ($id, $strand, $chr, $start, $block, $mismatches) = ($attr[0], $attr[1], $attr[2], $attr[3], $attr[11], $attr[13]); #read quality rather than mapping quality is used
+  if($attr[5]){ # need to consider match
+    my @locs = split(' ', $attr[6]); #genome locations
+    #my @refs = split(' ', $attr[7]); #reference alleles
+    my @alts = split(' ', $attr[8]); #alternative alleles
+    # all not used
+
+    for(my $j=0; $j<@locs; $j++){
+      if(defined($snv{$locs[$j]})){
+        if($alts[$j] ne $snv{$locs[$j]}){
+	  print "WARNING: INCONSISTENT SNV at $locs[$j]: $alts[$j] $snv{$locs[$j]}\n";
+	  delete $snv{$locs[$j]}; # inconsistent case
+	}
+      }else{
+        $snv{$locs[$j]} = $alts[$j];
+      }
+    }
+  }
+  return (\%snv, $attr[4]); # the block
+}
+
+  
+#######################################################################################################################################
 # process SNV candidates collected from Jae-Hyung's SAM attributes
 # input:	the reference to the string containing all raw information of SNVs
 # input:	the reference to the position mask
@@ -520,7 +452,7 @@ sub procBeds{
 #   column 18: all mismatch read sequences, separated by space " " (sequence on + strand of genome)
 #   column 19: all mismatch read qualities, speparated by space " "
 #   column 20: all mismatch positions in the read (relative to the read sequence which is already converted to + strand of genome sequence), seprated by space " "
-sub procSnv{
+sub procSnvJ{
   my ($allSnvsRef, $maskRef) = @_;
   my $allSnvs = $$allSnvsRef;
   my @SnvArray = split('\n', $allSnvs);
@@ -534,18 +466,18 @@ sub procSnv{
     my @coords = split(' ', $coord);
     my @refAls = split(' ', $refAl);
     my @misAls = split(' ', $misAl);
-    my @quals = split(' ', $qual);
-    my @poss = split(' ', $pos);
+    #my @quals = split(' ', $qual);
+    #my @poss = split(' ', $pos);
 
     my $no = @coords;
     for(my $i = 0; $i < $no; $i++){
-      my $qScr = ord($quals[$i]) - 33;
+      #my $qScr = ord($quals[$i]) - 33;
       my $loc = $coords[$i];
 
-      if($poss[$i]-1 <@mask && $mask[$poss[$i]-1]){ #sorry, 0-based for CSers, internally
-        print "Skip mismatch [ref: $refAls[$i] alt: $misAls[$i]] at $loc as position $poss[$i] of the read is masked\n";
-        next; # if the position is in the mask, skip it (note mask is 0-based)
-      }
+      #if($poss[$i]-1 <@mask && $mask[$poss[$i]-1]){ #sorry, 0-based for CSers, internally
+      #  print "Skip mismatch [ref: $refAls[$i] alt: $misAls[$i]] at $loc as position $poss[$i] of the read is masked\n";
+      #  next; # if the position is in the mask, skip it (note mask is 0-based)
+      #}
       if(!defined($hs{$loc})){
         my %snv =
         (
@@ -586,8 +518,10 @@ sub procSnv{
 # process the SNVs and get their read counts
 # input: references to RNA SNVs, DNA SNVs, bedgraph [discard list] and their indices
 # output: the string containing all SNVs with reads and the count
+# jsam version: JH's sam format. Extra fields are included 
+# (no reference allele information directly available, need to use bedgraph to infer)
 
-sub getSnvReads{
+sub getSnvReadsJ{
 
   my ($chr, $snvChrRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, $discardRef) = @_;
 
@@ -600,7 +534,7 @@ sub getSnvReads{
   my $snvStr = ""; #result to be return
 
   # here we can forget about the blocks and focus on the pileups (bedgraph)
-  my ($snvRef) = procSnv($snvChrRef, $discardRef); 
+  my ($snvRef) = procSnvJ($snvChrRef, $discardRef); 
   my %snvs = %$snvRef;
   my $rSnvNo = keys %snvs;
   print " $rSnvNo SNV locations. Done.\n";
