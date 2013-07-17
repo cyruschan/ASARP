@@ -64,7 +64,7 @@ sub readSnvList
   my ($snvFile, $chrToCheck) = @_;
   my $INTRVL = 100000;
   my $snvList = "";
-  my ($dSnvCnt, $cSnvCnt) = 0;
+  my ($dSnvCnt, $cSnvCnt) = (0, 0);
   open(SNP, "<", $snvFile) or die "ERROR: Can't open $snvFile\n";
   while(<SNP>){
     chomp;
