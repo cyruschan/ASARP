@@ -88,12 +88,11 @@ sub readSnvList
 # convert the dnaSnvList (a string) into the hash
 sub procDnaSnv{
 
-  my ($ref, $chr) = @_;
-  my $snvList = $$ref; 
+  my ($snvList, $chr) = @_;
   ####################################################################
   
   print "Processing $chr genomic SNVs...";
-  my @dnaSnvVals = split('\t', $snvList);
+  my @dnaSnvVals = split('\t', $$snvList);
   my %dnaSnvs = ();
   for(@dnaSnvVals){
     my ($pos, $als, $id) = split(' ', $_);
@@ -195,10 +194,9 @@ sub mergeBlockInPair
 # output:	reference to the hash of blocks
 # output:	reference to the index array of the block starts
 sub procBlocks{
-  my ($blockRef) = @_; 
-  my $block = $$blockRef;
+  my ($block) = @_; 
   my %allBlocks = ();
-  my @blks = split(',', $block);
+  my @blks = split(',', $$block);
   for(@blks){
     if($_ ne ''){
       my ($blkS, $blkE) = split(':', $_);
@@ -262,11 +260,10 @@ sub maskBlock{
 # output:	the references to the begraph and its index 
 sub procBeds{
 
-  my ($blkRef, $blkIdxRef, $chr) = @_;
+  my ($blkRef, $blkStarts, $chr) = @_;
 
   my %thisChrBlks = %$blkRef;
-  my @blkStarts = @$blkIdxRef;
-  my $blkNo = @blkStarts;
+  my $blkNo = @{$blkStarts};
   print " $blkNo block starts. Done.\n";
 
   #print "Processing $chr bedgraph...";
@@ -275,10 +272,10 @@ sub procBeds{
 
   my $left4Next = ""; #those parts running into the next block
   for(my $i=0; $i<$blkNo; $i++){
-    my $thisStart = $blkStarts[$i];
+    my $thisStart = $$blkStarts[$i];
     my $nextStart = -1;
     if($i<$blkNo-1){ #if not the last one, there still a next start
-      $nextStart = $blkStarts[$i+1]; 
+      $nextStart = $$blkStarts[$i+1]; 
     }
     # get the previous left-overs
     if($left4Next ne ""){

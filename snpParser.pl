@@ -72,7 +72,7 @@ sub initSnp{
     my $infoKept = $pos."\t".$alleles."\t".$snpName."\t".$refAl."\t".$altAl.";";
     #print "Ref: $refAl, Alt: $altAl, Total: $totalAl\n";
     if($totalAl>=$powCount){ #powerful snp
-      print "[$refAl, $altAl]\n";
+      #print "[$refAl, $altAl]\n";
       #use the R object to make a Chi-squared goodness-of-fit test
       $R->set('x', [$refAl, $altAl]);
       $R->run('p = chisq.test(x)$p.value'); #default expected dist is c(0.5, 0.5)

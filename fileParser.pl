@@ -1128,14 +1128,14 @@ sub checkSupportedType{
 # assumption: the values in the list are unique
 # binary search for insert (or location), including left, right insert (location) cases
 sub binarySearch{
-  my ($listRef, $x, $imin, $imax, $type) = @_;
+  my ($arr, $x, $imin, $imax, $type) = @_;
   $type = uc $type;
-  my @arr = @$listRef;
+  #my @arr = @$listRef;
   while($imin <= $imax){
     my $midPoint = int(($imin+$imax)/2);
-    if($arr[$midPoint] < $x){
+    if($$arr[$midPoint] < $x){
       $imin = $midPoint+1;
-    }elsif($arr[$midPoint] > $x){
+    }elsif($$arr[$midPoint] > $x){
       $imax = $midPoint-1;
     }else{ # a match
       if($type eq 'right'){
@@ -1145,9 +1145,9 @@ sub binarySearch{
       }
     }
   }
-  #this means $imin = $imax+1, and neither $arr[$imin] or $arr[$imax] equals $x
-  if($imax<0){ return (0, 1); } # $arr[$imax] when imax == -1 has a different meaning in Perl!!
-  if($arr[$imax] < $x){ return ($imin, 1);  }
+  #this means $imin = $imax+1, and neither $$arr[$imin] or $$arr[$imax] equals $x
+  if($imax<0){ return (0, 1); } # $$arr[$imax] when imax == -1 has a different meaning in Perl!!
+  if($$arr[$imax] < $x){ return ($imin, 1);  }
   return ($imax, 1);
 
 }

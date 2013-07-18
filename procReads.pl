@@ -133,7 +133,7 @@ sub parseSamReads
 
   for(my $cnt = 0; $cnt < $N; $cnt ++){
     if($cnt%($INTRVL) == 0){ print "$cnt...";  }
-    #if($cnt > $INTRVL/10*4){ last; }
+    #if($cnt > $INTRVL/100*4){ last; }
     my @attr = split('\t', $sam[$cnt]); # pair1
     my $strand = getStrandInRead($attr[1], $strandFlag);
 
@@ -313,18 +313,16 @@ sub parseCigar{
 # this is for the general SAM files (not using extra attributes)
 # add SNV (attributes of the original SAM file) to the read pair list
 sub addSnvInPair{
-  my ($ref, $ref2, $dnaSnvIdxRef, $discardRef) = @_;
+  my ($ref, $attr, $dnaSnvsIdx, $discardRef) = @_;
   my %snv = %$ref;
-  my @attr = @$ref2;
-  my @dnaSnvsIdx = @$dnaSnvIdxRef;
   #my %dnaSnvs = %$dnaSnvRef;
-  my $n = @dnaSnvsIdx;
+  my $n = @{$dnaSnvsIdx};
   my @discard = ();
   if(defined($discardRef)){	 @discard = @$discardRef;	}
-  my $start = $attr[3];
-  my $cigar = $attr[4];
+  my $start = $$attr[3];
+  my $cigar = $$attr[4];
   my $block = parseCigar($start, $cigar);
-  #print "$cigar, $block | $attr[11]\n";
+  #print "$cigar, $block | $$attr[11]\n";
   my $snvToAdd = "";
 
   my @blocks = split(',', $block);
@@ -332,12 +330,12 @@ sub addSnvInPair{
   for(@blocks){
     my ($s, $e) = split(':', $_);
 #=pod    
-    my ($lBound, $lUnMatch) = binarySearch($dnaSnvsIdxRef, $s, 0, $n-1, 'left');
-    for(my $j = $lBound; $dnaSnvsIdx[$j]<= $e; $j++){ #snv is more sparse!
-      my $pos = $dnaSnvsIdx[$j];
+    my ($lBound, $lUnMatch) = binarySearch($dnaSnvsIdx, $s, 0, $n-1, 'left');
+    for(my $j = $lBound; $$dnaSnvsIdx[$j]<= $e; $j++){ #snv is more sparse!
+      my $pos = $$dnaSnvsIdx[$j];
       my $readPos = $rePos + $pos-$s; # 0-based
       if(!defined($discard[$readPos]) || !$discard[$readPos]){ # not discarded
-	  my $al = substr($attr[5], $readPos, 1);
+	  my $al = substr($$attr[5], $readPos, 1);
 	  if(defined($snv{$pos})){ # existing
 	    if($snv{$pos} ne $al){
 	      print "WARNING: INCONSISTENT SNV at $pos: $snv{$pos} $al\n";
@@ -375,7 +373,7 @@ sub addSnvInPair{
   }
   #handling of discarded position
   if(@discard > 0){ # need to handle discarded positions
-      my $readLen = length($attr[5]);
+      my $readLen = length($$attr[5]);
       $block = maskBlock($block, $readLen, $discardRef);
   }
   return (\%snv, $block);
