@@ -226,7 +226,7 @@ sub getSnvReads{
       }elsif($al eq 'T'){
         $rawSnvsT{$loc} += 1;
       }else{
-        die "ERROR: unrecognized allele: $al at $loc\n";
+        print STDERR "WARNING: unrecognized allele: $al at $loc\n";
       }
     }
   }
