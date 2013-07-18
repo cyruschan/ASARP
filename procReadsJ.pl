@@ -360,6 +360,10 @@ sub getSnvReadsJ{
       }
       else{
         my $refCnt = $cntBed - $misCnt;
+	if($refCnt < 0){
+	  print STDERR "ERROR: there are complicating overlapping read pairs at $dnaSnvs_idx[$si], making the total read count and reference count ($refCnt) inaccurate\n";
+	  $refCnt = 0;
+	}
 	my $altCnt = 0;
 	if(defined($snvHs{$dAltAl})){  
 	  $altCnt = $snvHs{$dAltAl};  

@@ -152,8 +152,10 @@ sub mergeBlockInPair
 {
   my ($bk1, $bk2, $start2) = @_;
   my @blocks1 = split(',', $bk1); # blocks for pair 1
+  #my @blocks2 = split(',', $bk2);
   my $output = "";
   my ($lastStart1, $end1) = split(':', $blocks1[-1]); # last block
+  #my ($start2, $firstEnd2) = split(':', $blocks2[0]); # first block
   if($end1 < $start2){
     if($bk1 ne ''){	$output .= $bk1;	}
     if($bk2 ne ''){	$output .= ",$bk2";	}
@@ -165,17 +167,24 @@ sub mergeBlockInPair
       if($s >= $start2){
         pop @blocks1;
       }else{ #$s < $start2
-        pop @blocks1;
-        if($e >= $start2){ # $s <= $end1
+        if($e >= $start2){ # $s <$start2 <= $end1
+          pop @blocks1;
           push @blocks1, join(':', $s, $start2-1);
         }
+	# else $e < $start2, all of them are safe
 	last;
       }
     }
   }
   if(@blocks1 >0){
     $output .= join(",", @blocks1);
-    if($bk2 ne ''){ $output .=",$bk2";	}
+  }
+  if($bk2 ne ''){ 
+    if($output ne ''){
+      $output .=",$bk2";
+    }else{
+      $output = $bk2;
+    }
   }
   #print "merged: $output\n";
   return $output;
