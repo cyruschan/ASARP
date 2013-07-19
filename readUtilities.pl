@@ -155,11 +155,13 @@ sub mergeBlockInPair
   my $output = "";
   my $output2 = "";
   my ($lastStart1, $end1) = split(':', $blocks1[-1]); # last block
+  my $isOverlap = 0;
   if($end1 < $start2){
     if($bk1 ne ''){	$output .= $bk1;	}
     if($bk2 ne ''){	$output .= ",$bk2";	}
-    return $output;
+    return ($output, $isOverlap);
   }else{ # get the overlap part and return them
+    $isOverlap = 1;
     #print "\noverlap: $bk1; $bk2\n";
     my ($offset) = split(':', $blocks1[0]); # the smallest offset
     my ($lastStart2, $end) = split(':', $blocks2[-1]); # the final end
@@ -206,7 +208,7 @@ sub mergeBlockInPair
 
     #print "merged: $output2\n";
   }
-  return $output2;
+  return ($output2, $isOverlap);
 }
 
 # simply process the block (which may contain sub-blocks) into the blocks hash

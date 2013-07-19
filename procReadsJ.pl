@@ -165,6 +165,7 @@ sub parseSamReadsJ
   
   my @sam = @$samRef;
   my $N = @sam; # no. of reads
+  my $O = 0; #overlap count
 
   my $snv = ''; # to get the snv candidates
   my $blocks = ''; # all the blocks
@@ -200,12 +201,14 @@ sub parseSamReadsJ
    
       # if pair2 is sense ($strandFlag == 2) and strand eq '+', pair1 position is larger than pair2!
       # if pair1 is sense ($strandFlag == 1) and strand eq '-', pair1 position is larger than pair2!
+      my $isOverlap = 0;
       if(($strandFlag == 2 && $strand eq '+') || ($strandFlag == 1 && $strand eq '-') || ($strandFlag ==0 && $strand eq '-')){
          #non-strand specific: - here means antisense
-         $block = mergeBlockInPair($block2, $block, $attr[3]); #p2 p1
+         ($block, $isOverlap) = mergeBlockInPair($block2, $block, $attr[3]); #p2 p1
       }else{ # incl. $strandFlag == 0
-         $block = mergeBlockInPair($block, $block2, $attr2[3]); # p1 p2
+         ($block, $isOverlap) = mergeBlockInPair($block, $block2, $attr2[3]); # p1 p2
       }
+      $O += $isOverlap;
     }
     #flaten the snvs in pair
     my $snvToAdd = "";
@@ -243,6 +246,7 @@ sub parseSamReadsJ
     }
   }
   print "Done.\n";
+  print "OVERLAP_READS\t$O\t".sprintf("%d\t%.3f\n", $N/2, $O/($N/2));
   #print "$snv\n$snvRc\n";
 
   return (\$blocks, \$snv, \$dels, \$blocksRc, \$snvRc, \$delsRc);
