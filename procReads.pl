@@ -12,9 +12,8 @@ $| = 1;
 
 our $INTRVL = 100000; #interval to output processed counts
 my $samType = "a standard SAM file with
-	10 attributes. You are recommended to use more efficient
-	tools such as samtools and bedtools for this task; or
-	to use procReadsJ.pl on the special jsam file introduced
+	10 attributes. You can also samtools and bedtools; or
+	to use procReadsJ.pl on the special jsam files introduced
 	by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
 	expression (ASE) studies";
 #my $samType = "Dr. Jae-Hyung Lee's
@@ -189,6 +188,7 @@ sub parseSamReads
     }
   }
 
+  print "Done.\n";
   #print "$snv\n$snvRc\n";
 
   return (\$blocks, \$snv, \$blocksRc, \$snvRc);
@@ -208,6 +208,7 @@ sub getSnvReads{
   my %rawSnvsC = ();
   my %rawSnvsG = ();
   my %rawSnvsT = ();
+  my %rawSnvsN = (); # N also appears
 
   my %dnaSnvs = %$dnaSnvsRef;
   my @dnaSnvs_idx = @$dnaSnvsIdxRef;
@@ -225,6 +226,8 @@ sub getSnvReads{
         $rawSnvsG{$loc} += 1;
       }elsif($al eq 'T'){
         $rawSnvsT{$loc} += 1;
+      }elsif($al eq 'N'){
+        $rawSnvsN{$loc} += 1;
       }else{
         print STDERR "WARNING: unrecognized allele: $al at $loc\n";
       }
@@ -236,8 +239,9 @@ sub getSnvReads{
   'C' => \%rawSnvsC,
   'G' => \%rawSnvsG,
   'T' => \%rawSnvsT,
+  'N' => \%rawSnvsN,
   );
-  my @alpha = qw(A C G T);
+  my @alpha = qw(A C G T N);
   for my $loc (@dnaSnvs_idx){
     # get the reference and alternative for further categorization
     #print "$dnaSnvs{$loc}\n";
@@ -258,7 +262,7 @@ sub getSnvReads{
 	#print "$rnaSnvs\n";
 	$dCnt += 1;
       }else{
-	print "WARNING: DISCARD SNV $dnaSnvs{$loc} as alt count <= other nts: $altCnt <= $wrgCnt\n"; 
+	print "WARNING: DISCARD: $chrToCheck:$loc alt $alt rna count <= other nts: $altCnt <= $wrgCnt\n"; 
       }
     }
     
@@ -304,7 +308,7 @@ sub parseCigar{
       #} elsif ($cigar_part =~ /(\d+)S/){
       $cigar =~ s/$cigar_part//;
     }else{
-      die "ERROR: CIGAR not supported: $cigar\n";
+      die "ERROR: CIGAR type not yet supported: $cigar\n";
     }
   }
   return $block;
@@ -339,6 +343,7 @@ sub addSnvInPair{
 	  if(defined($snv{$pos})){ # existing
 	    if($snv{$pos} ne $al){
 	      print "WARNING: INCONSISTENT SNV at $pos: $snv{$pos} $al\n";
+	      delete $snv{$pos};
 	    }
 	  }else{
 	    $snv{$pos} = $al; #\t$qual\n"; # add new
@@ -348,27 +353,6 @@ sub addSnvInPair{
     }
     $rePos += $e-$s+1; # next block
 #=cut
-
-=pod
-    for my $pos ($s .. $e){
-      if(defined($dnaSnvs{$pos})){ # a snv position
-        #++$c;
-        # check if there is any problem with the SNV first
-	if(!defined($discard[$rePos]) || !$discard[$rePos]){ # not discarded
-	  my $al = substr($attr[5], $rePos, 1);
-	  if(defined($snv{$pos})){ # existing
-	    if($snv{$pos} ne $al){
-	      print "WARNING: INCONSISTENT SNV at $_: $snv{$_} $al\n";
-	    }
-	  }else{
-	    $snv{$pos} = $al; #\t$qual\n"; # add new
-	    print "SNV $pos: $al\n";
-	  }
-	}
-      }
-      ++$rePos;
-    }
-=cut
 
   }
   #handling of discarded position
@@ -383,9 +367,9 @@ __END__
 
 =head1 NAME
 
-procReads.pl -- Processing a duplicate-removed SAM file (L<rmDup>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.
+procReads.pl -- Processing a duplicate-removed SAM file (L<rmDup>) of a chromosome to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.
 
-The new procReads.pl supports strand-specific RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.
+The new procReads.pl supports strand-specific paired-end RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.
 
 =head1 SYNOPSIS
 
@@ -393,7 +377,7 @@ This is part of the full pre-processing:
 
 =over 6
 
-1. rmDup (removing PCR duplicates for SAM files in Dr. JH Lee's format)
+1. rmDup (removing PCR duplicates for SAM files in Dr. JH Lee's format; samtools/bedtools can be used for standard SAM files)
 
 2. mergeSam (merging SAM files if there are independent duplicates)
 
@@ -407,12 +391,15 @@ USAGE:
 
 NOTE:
 
-the read processing script is for Dr. Jae-Hyung Lee's
-20-attribute SAM file output format, used in RNA-editing
-or allele specific expression (ASE) studies
+the read processing script is for a standard SAM file with
+10 attributes. You can also samtools and bedtools; or
+to use procReadsJ.pl on the special jsam files introduced
+by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
+expression (ASE) studies
 
 ARGUMENTS:
 
+ chr			chromosome to be investigated (correspond to the input_sam_file)
  input_sam_file		SAM file input after duplicate removal (use rmDup.pl)
  intput_snvs		input SNV list (without read counts)
  output_snvs		output SNV candidates with read counts

@@ -14,8 +14,8 @@ our $INTRVL = 100000; #interval to output processed counts
 my $samType = "Dr. Jae-Hyung Lee's
 	20-attribute SAM file output format, used in RNA-editing
 	or allele specific expression (ASE) studies. If you use
-	standard 10-attribute SAM files, you can use samtools,
-	bedtools or procReads.pl (not efficient but self-contained)";
+	standard 10-attribute SAM files, you can use procReads.pl
+	provided in this pipeline, samtools or bedtools";
 if(@ARGV < 6){
   printUsage($samType);
 }
@@ -42,7 +42,7 @@ my ($dnaSnvsRef, $dnaSnvsIdxRef) = procDnaSnv(\$dnaSnvList, $chrToCheck);
 #####################################################################
 # parsing input sam file
 my ($samRef) = readSamFileJ($samFile);
-my ($blocksRef, $snvRef, $blocksRcRef, $snvRcRef) = parseSamReadsJ($chrToCheck, $samRef, $pairEnded, $strandFlag); 
+my ($blocksRef, $snvRef, $delRef, $blocksRcRef, $snvRcRef, $delRcRef) = parseSamReadsJ($chrToCheck, $samRef, $pairEnded, $strandFlag); 
 
 #####################################################################
 # bedgraph handling
@@ -70,13 +70,13 @@ if(@dnaSnvs_idx == 0){
 my $ttlSnvs = 0;
 open(SP, ">", $outputSnvs) or die "ERROR: cannot open $outputSnvs to output candidate SNVs\n";
 if($strandFlag){ #need to handle the minus information as well
-  my ($rnaSnvs, $dCnt) = getSnvReadsJ($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, '+');
-  my ($rnaSnvsRc, $dRcCnt) = getSnvReadsJ($chrToCheck, $snvRcRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRcRef, $bedRcIdxRef, '-');
+  my ($rnaSnvs, $dCnt) = getSnvReadsJ($chrToCheck, $snvRef, $delRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, '+');
+  my ($rnaSnvsRc, $dRcCnt) = getSnvReadsJ($chrToCheck, $snvRcRef, $delRcRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRcRef, $bedRcIdxRef, '-');
   print SP $rnaSnvs;
   print SP $rnaSnvsRc;
   $ttlSnvs += $dCnt + $dRcCnt;
 }else{
-  my ($rnaSnvs, $dCnt) = getSnvReadsJ($chrToCheck, $snvRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef);
+  my ($rnaSnvs, $dCnt) = getSnvReadsJ($chrToCheck, $snvRef, $delRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef);
   print SP $rnaSnvs;
   $ttlSnvs = $dCnt;
 }
@@ -120,17 +120,17 @@ sub readSamFileJ{
 # 0	1    2	  3	4 	5	6	    7   	8 		9	10
 # id strand chr start read-len blocks mismatch_cnt loc(s) ref_allele(s) alt_allele(s) relative_pos: good enough
 sub addSnvInPairJ{
-  my ($ref, $ref2, $discardRef) = @_;
+  my ($ref, $attr, $discardRef) = @_;
   my %snv = %$ref;
-  my @attr = @$ref2;
   my @discard = ();
+  my $del = '';
   if(defined($discardRef)){	 @discard = @$discardRef;	}
   
-  if($attr[6]){ # need to consider match
-    my @locs = split(' ', $attr[7]); #genome locations
-    my @refs = split(' ', $attr[8]); #reference alleles
-    my @alts = split(' ', $attr[9]); #alternative alleles
-    my @poss = split(' ', $attr[10]); #alternative alleles
+  if($$attr[6]){ # need to consider match
+    my @locs = split(' ', $$attr[7]); #genome locations
+    my @refs = split(' ', $$attr[8]); #reference alleles
+    my @alts = split(' ', $$attr[9]); #alternative alleles
+    my @poss = split(' ', $$attr[10]); #alternative alleles
     #not all used
 
     for(my $j=0; $j<@locs; $j++){
@@ -139,6 +139,10 @@ sub addSnvInPairJ{
         if($val ne $snv{$locs[$j]}){
 	  print "WARNING: INCONSISTENT SNV at $locs[$j]: $val diff from $snv{$locs[$j]}\n";
 	  delete $snv{$locs[$j]}; # inconsistent case
+	  if($del ne ''){
+	    $del .= "\t";
+	  }
+	  $del .= "$locs[$j]";
 	}
       }else{
         if(@discard > 0 && $discard[$poss[$j]-1]){ next; }
@@ -148,9 +152,9 @@ sub addSnvInPairJ{
   }
   #handling of discarded position
   if(@discard > 0){ # need to handle discarded positions
-      $attr[5] = maskBlock($attr[5], $attr[4], $discardRef);
+      $$attr[5] = maskBlock($$attr[5], $$attr[4], $discardRef);
   }
-  return (\%snv, $attr[5]); # the block
+  return (\%snv, $$attr[5], $del); # the block
 }
 
 
@@ -164,9 +168,11 @@ sub parseSamReadsJ
 
   my $snv = ''; # to get the snv candidates
   my $blocks = ''; # all the blocks
+  my $dels = '';
   #strand-specific: -
   my $snvRc = '';
   my $blocksRc = '';
+  my $delsRc = '';
 
   for(my $cnt = 0; $cnt < $N; $cnt ++){
     if($cnt%($INTRVL) == 0){ print "$cnt...";  }
@@ -180,6 +186,7 @@ sub parseSamReadsJ
   
     # paired-end RNA-Seq cases; strand-specific is also handled here
     my @attr2 = ();
+    my $del = "";
     if($pairEnded){ #get pair2
       ++$cnt;
       if(!defined($sam[$cnt])){ # pair2
@@ -188,8 +195,8 @@ sub parseSamReadsJ
       my @attr2 = split('\t', $sam[$cnt]); # pair2
       checkPairId($attr[0], $attr2[0], $cnt);
       checkPairChr($attr[2], $attr2[2], $cnt);
-      #jsam: 
-      ($sipRef, my $block2) = addSnvInPairJ($sipRef, \@attr2);   #my $block2 = $attr2[13];
+      #jsam: $del only happen when pair reads overlap and SNV is inconsistent 
+      ($sipRef, my $block2, $del) = addSnvInPairJ($sipRef, \@attr2);   #my $block2 = $attr2[13];
    
       # if pair2 is sense ($strandFlag == 2) and strand eq '+', pair1 position is larger than pair2!
       # if pair1 is sense ($strandFlag == 1) and strand eq '-', pair1 position is larger than pair2!
@@ -210,6 +217,11 @@ sub parseSamReadsJ
     # get all the (masked) blocks and snvs for future processing
     if(!$strandFlag || $strand eq '+'){ #non-strand specific or +; following pair1
       $snv .= $snvToAdd;
+      if($dels eq ''){
+        $dels .= $del;
+      }else{
+        $dels .= "\t$del";
+      }
       if($blocks eq ''){
         $blocks = $block;
       }else{
@@ -217,6 +229,11 @@ sub parseSamReadsJ
       }
     }else{ # - strand
       $snvRc .= $snvToAdd; #strand-specific: -; following pair1!
+      if($delsRc eq ''){
+        $delsRc .= $del;
+      }else{
+        $delsRc .= "\t$del";
+      }
       if($blocksRc eq ''){
         $blocksRc = $block;
       }
@@ -225,10 +242,10 @@ sub parseSamReadsJ
       }
     }
   }
-
+  print "Done.\n";
   #print "$snv\n$snvRc\n";
 
-  return (\$blocks, \$snv, \$blocksRc, \$snvRc);
+  return (\$blocks, \$snv, \$dels, \$blocksRc, \$snvRc, \$delsRc);
 }
 
   
@@ -291,7 +308,14 @@ sub procSnvJ{
 
 sub getSnvReadsJ{
 
-  my ($chr, $snvChrRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, $strand, $discardRef) = @_;
+  my ($chr, $snvChrRef, $delRef, $dnaSnvsRef, $dnaSnvsIdxRef, $bedRef, $bedIdxRef, $strand, $discardRef) = @_;
+
+  my %dels = ();
+  if($$delRef ne ''){
+    my @array = split(/\t/, $$delRef);
+    for(@array){ $dels{$_} += 1; }
+  }
+
   if(!defined($strand)){  $strand = "";  }
   else{
     $strand = " $strand";
@@ -360,8 +384,13 @@ sub getSnvReadsJ{
       }
       else{
         my $refCnt = $cntBed - $misCnt;
+	if(defined($dels{$dnaSnvs_idx[$si]}) && $dels{$dnaSnvs_idx[$si]}){
+	  $refCnt -= $dels{$dnaSnvs_idx[$si]};
+	  #print "NOTE: adjust reference count by $dels{$dnaSnvs_idx[$si]} overlapping reads with inconsistent SNVs recorded at $dnaSnvs_idx[$si]\n";
+	}
 	if($refCnt < 0){
-	  print STDERR "ERROR: there are complicating overlapping read pairs at $dnaSnvs_idx[$si], making the total read count and reference count ($refCnt) inaccurate\n";
+	  print STDERR "ERROR: there are complicating overlapping read pairs at $dnaSnvs_idx[$si], making the total read count and reference count ($refCnt) inaccurate; check the original SAM file for overlapping read pairs and inconsistent SNVs\n";
+	  exit;
 	  $refCnt = 0;
 	}
 	my $altCnt = 0;
@@ -397,9 +426,7 @@ __END__
 
 =head1 NAME
 
-procReads.pl -- Processing a duplicate-removed SAM file (L<rmDup>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.
-
-The new procReads.pl supports strand-specific RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.
+procReadsJ.pl -- Processing a duplicate-removed JSAM file (L<rmDup>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline. See L<procReads> for the version on standard SAM files.
 
 =head1 SYNOPSIS
 
@@ -417,129 +444,19 @@ This is part of the full pre-processing:
 
 USAGE:
 
- perl procReads.pl input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]
+ perl procReadsJ.pl chr input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]
 
 NOTE:
 
 the read processing script is for Dr. Jae-Hyung Lee's
 20-attribute SAM file output format, used in RNA-editing
-or allele specific expression (ASE) studies
+or allele specific expression (ASE) studies. If you use
+standard 10-attribute SAM files, you can use procReads.pl
+provided in this pipeline, samtools or bedtools
 
-ARGUMENTS:
-
- input_sam_file		SAM file input after duplicate removal (use rmDup.pl)
- intput_snvs		input SNV list (without read counts)
- output_snvs		output SNV candidates with read counts
- output_bedgraph	output bedgraph file, see below for the details:
-			http://genome.ucsc.edu/goldenPath/help/bedgraph.html
- is_paired_end		0: single-end; 1: paired-end
-			For paired-end reads, all reads should be paired up, 
-			where pair-1 should be always followed by pair-2 in the next line.
-
-
-OPTIONAL [strongly recommended to be input]:
-
- is_strand_sp		0: non-strand specific (or no input); 
-			1: strand-specific with pair 1 **sense**;
-			2: strand-specific with pair 1 **anti-sense**
-			Be careful with the strand-specific setting as it will give totally opposite 
-			strand information if wrongly set.
-
-			The strand-specific option is used for strand-specific RNA-Seq data.
-			When set, specialized bedgraph files will be output (output_bedgraph)
-			where there is a 5th extra attribute specifying the strand: + or -
-			besides the standard ones: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
-			One can use grep and cut to get +/- strand only bedgraphs.
-
-OPTIONAL [if input, must be input in order following is_strand_sp]:
-
- bedgraph_title		a short title for the output bedgraph files (will be put in description of the header line)
-                        if there are spaces in between it should be quoted
-			e.g. "nbt.editing reads: distinct after dup removal"
-			if not input, "default" will be used as the short title
-
- discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.
-
-=head1 DESCRIPTION
-
-=head2 INPUT
-
-C<input_sam_file> should contain only 1 chromosome, and it should be in Dr. Jae-Hyung Lee's SAM format (check out http://www.ncbi.nlm.nih.gov/pubmed/21960545 for more details)
-
-The SNP list should be in a format like this:
-
- chr1 20129 C>T rs12354148 2:0:0
- chr1 118617 T>C na 1:0:0
- chr1 237763 G>A rs79665216 1:0:0
- chr1 565508 G>A rs9283150 0:1:0
-
-Each line is space separated, with
-
- chromosome
- location 
- ref_allele>alt_allele 
- dbSnp_id 
- [read_counts ref:alt:others]
-
-Only the first 4 fields will be parsed so
-C<read_counts> are not needed and ignored which are from DNA genomic sequencing.
-
-To avoid unnecessary computational time to read SNVs of other chrosomes than the one in C<inptu_sam_file>, it is suggested to keep SNVs of the same chromosome in one seperate file.
-
-=head2 OUTPUT
-
-By default, the strand specific flag C<is_strand_sp> is unset, and the C<inptu_sam_file> strand information is considered unreliable and not used. The output files are standard bedgraph files http://genome.ucsc.edu/goldenPath/help/bedgraph.html with space as the dilimiter, and SNV files with the following format:
-
-Each line is space separated, with
-
- chromosome
- location 
- ref_allele>alt_allele 
- dbSnp_id 
- read_counts ref:alt:wrnt
-
-Note that C<read_counts> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. C<ref> indicates the read count of the reference allele, C<alt> the alternative allele, C<wrnt> (wrong nt) indicates other alleles neither ref nor alt. It is required that C<alt> > C<wrnt>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples would look like:
-
- chr10 1046712 G>A rs2306409 50:39:0
- chr10 1054444 A>G rs11253567 2:0:0
- chr10 1055866 A>T rs4880751 1:2:1
- chr10 1055949 G>A rs12355506 7:2:0
- chr10 1055968 G>A rs72478237 6:5:0
- chr10 1060218 G>A rs3207775 42:37:0
-
-When C<is_strand_sp> is set, the program outputs bedgraph and SNV files with the extra last strand attributes. Output SNV examples would look like:
-
- chr10 1046712 G>A rs2306409 30:23:0 +
- chr10 1055866 A>T rs4880751 1:2:0 +
- chr10 1055949 G>A rs12355506 2:0:0 +
- chr10 1055968 G>A rs72478237 2:2:0 +
- chr10 1060218 G>A rs3207775 27:22:0 +
- ...
- chr10 1046712 G>A rs2306409 20:16:0 -
- chr10 1054444 A>G rs11253567 2:0:0 -
- chr10 1055949 G>A rs12355506 5:2:0 -
- chr10 1055968 G>A rs72478237 4:3:0 -
- chr10 1060218 G>A rs3207775 15:15:0 -
-
-As a result, one SNV may appear twice if it has valid ref:alt:wrnt read counts on both + and - strands. In the example above, one can have more accurate information for the RNA read counts, especially when there are genes on the opposite strands.
-
-The output bedgraph lines would look like:
-
- chr10 181481 181482 7 +
- chr10 181482 181483 9 +
- chr10 181483 181499 10 +
- ...
- chr10 181479 181482 5 -
- chr10 181482 181483 8 -
- chr10 181483 181499 9 -
- ...
-
-Note that all + lines are output before any - lines output. While the 5th strand attribute is not specified in the bedgraph standard, 
-two additional bedgraph files are output, with suffixes .plus and .minus, to provide the + and - only standard bedgraph tracks respectively.
+The complete documentation with the same arguments and usage can be found in L<procReads>
+The only difference between procReadsJ.pl and procReads.pl is that they work on jsam and 
+standard sam (jsam also treated as standard sam) files respectively.
 
 =head1 SEE ALSO
 

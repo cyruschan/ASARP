@@ -151,42 +151,62 @@ sub mergeBlockInPair
 {
   my ($bk1, $bk2, $start2) = @_;
   my @blocks1 = split(',', $bk1); # blocks for pair 1
-  #my @blocks2 = split(',', $bk2);
+  my @blocks2 = split(',', $bk2);
   my $output = "";
+  my $output2 = "";
   my ($lastStart1, $end1) = split(':', $blocks1[-1]); # last block
-  #my ($start2, $firstEnd2) = split(':', $blocks2[0]); # first block
   if($end1 < $start2){
     if($bk1 ne ''){	$output .= $bk1;	}
     if($bk2 ne ''){	$output .= ",$bk2";	}
     return $output;
   }else{ # get the overlap part and return them
     #print "\noverlap: $bk1; $bk2\n";
-    for(my $j=@blocks1-1; $j>=0; $j--){
-      my ($s, $e) = split(':', $blocks1[$j]);
-      if($s >= $start2){
-        pop @blocks1;
-      }else{ #$s < $start2
-        if($e >= $start2){ # $s <$start2 <= $end1
-          pop @blocks1;
-          push @blocks1, join(':', $s, $start2-1);
-        }
-	# else $e < $start2, all of them are safe
-	last;
+    my ($offset) = split(':', $blocks1[0]); # the smallest offset
+    my ($lastStart2, $end) = split(':', $blocks2[-1]); # the final end
+    if($offset > $start2){ $offset = $start2; }
+    if($end < $end1){ $end = $end1; }
+
+    my @bIndi = (); # block position indicator
+    for(my $j=0; $j<$end-$offset+1; $j++){
+      $bIndi[$j] = 0;
+    }
+    my $len = @bIndi;
+    for(@blocks1){
+      my ($s, $e) = split(':', $_);
+      for($s..$e){  $bIndi[$_-$offset] = 1; }
+    }
+    for(@blocks2){
+      my ($s, $e) = split(':', $_);
+      for($s..$e){  $bIndi[$_-$offset] = 1; }
+    }
+    my ($f, $start) = (0, 0); #flag
+    for(my $j=0; $j<@bIndi; $j++){
+      if(!$f){
+        if($bIndi[$j]){
+          $f = 1;
+	  $start = $j+$offset;
+	}
+      }else{
+        if(!$bIndi[$j]){
+	  my $bkEnd = $j-1+$offset;
+	  #ready to output
+	  if($output2 ne ''){
+	    $output2 .= ",$start:$bkEnd";
+	  }else{ $output2 = "$start:$bkEnd"; }
+	  $f = 0; # unseet flag
+	}
       }
     }
-  }
-  if(@blocks1 >0){
-    $output .= join(",", @blocks1);
-  }
-  if($bk2 ne ''){ 
-    if($output ne ''){
-      $output .=",$bk2";
-    }else{
-      $output = $bk2;
+    if($f){
+      my $bkEnd = @bIndi+$offset-1;
+      if($output2 ne ''){
+        $output2 .= ",$start:$bkEnd";
+      }else{ $output2 = "$start:$bkEnd"; }
     }
+
+    #print "merged: $output2\n";
   }
-  #print "merged: $output\n";
-  return $output;
+  return $output2;
 }
 
 # simply process the block (which may contain sub-blocks) into the blocks hash
