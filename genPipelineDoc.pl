@@ -10,19 +10,26 @@ my $menuContent = "";
 genTitleFrame();
 genIndexFrameset();
 
+#######################################################
 # all sections (and in order)
 my @sections = qw (INTRO PREPROCESS ASARP ANALYSIS CORE-SUB);
 my %layout = ();
-for(@sections){
-  $layout{$_} = {};
-}
 
-# all pre-processing scripts
-my @pres = qw( rmDup mergeSam procReads );
+#######################################################
+# Section 1: introduction
+#my @intro = qw( Introduction Publication );
+#$layout{"INTRO"} = \@intro;
+
+#######################################################
+# Section 2: all pre-processing scripts
+my @pres = qw( rmDup mergeSam procReads procReadsJ mergeSnvs );
 for(@pres){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
 $layout{"PREPROCESS"} = \@pres; # in order
+
+#######################################################
+# Section 3: all ASARP applications
 # main program, all application scripts
 my @apps = qw( asarp aseSnvs snp_distri );
 for(@apps){
@@ -30,6 +37,8 @@ for(@apps){
 }
 $layout{"ASARP"} = \@apps; # in order
 
+#######################################################
+# Section 4: all core parts
 ## core sub-routines (code)
 # all source code
 my @source = qw( fileParser snpParser );
@@ -44,11 +53,18 @@ for(@const){
 my @cores = (@const, @source);
 $layout{"CORE-SUB"} = \@cores; # in order
 
+
+
+#######################################################
 # menu page
-genMenuPage(\@pres, \@apps, \@source, \@const);
+genMenuPage(\@sections, \%layout);
+
+#######################################################
+#		Sub 				      #
+#######################################################
 
 sub genMenuPage{
-  my ($preRef, $appRef, $srcRef, $conRef) = @_;
+  my ($secRef, $hsRef) = @_;
 
   open(FP, ">", "doc/menu.html") or die "Can't write menu.html";
   print FP <<"EOMENU";
@@ -63,26 +79,20 @@ sub genMenuPage{
     <div class='pod'>
 
 EOMENU
-  
-  my %hs = (
-   "PRES" => $preRef, 
-   "APPS" => $appRef,
-   "CODE" => $srcRef,
-   "CONST" => $conRef,
-  );
-  my %hsNames = (
-    "PRES" => "Pre-processing",
-    "APPS" => "Applications",
-    "CODE" => "Core Subs",
-    "CONST" => "Constants",
-  );
+  my @sections = @$secRef;
+  my %hs = %$hsRef; 
+  for(@sections){
+    print "generating $_\n";
+    print FP "\n\t<h1>$_</h1>\n\t<ul>\n";
 
-  for(keys %hs){
-    print FP "\n\t<h1>$hsNames{$_}</h1>\n\t<ul>\n";
-
-    my @names = @{$hs{$_}};
-    for(@names){
-      print FP "\t\t<li><a href='$_.html'>$_</a></li>\n";
+    if(defined($hs{$_})){
+      my @names = @{$hs{$_}};
+      for(@names){
+        print "$_\t";
+        print FP "\t\t<li><a href='$_.html'>$_</a></li>\n";
+      } print "\n";
+    }else{
+       print FP "<li>Coming Soon</li>\n";
     }
     print FP "\t</ul>\n";
   }

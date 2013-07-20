@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.014002 [linux]">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.010001 [linux]">
 <title>
 procReads
 </title>
@@ -24,23 +24,26 @@ procReads
 </div>
 <div class='pod'>
 <a name='NAME'></a><h1>NAME</h1>
-<p>procReads.pl -- Processing a duplicate-removed SAM file (<i><a href='rmDup.html'>rmDup</a></i>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.</p>
-<p>The new procReads.pl supports strand-specific RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.</p>
+<p>procReads.pl -- Processing a duplicate-removed SAM file (<i><a href='rmDup.html'>rmDup</a></i>) of a chromosome to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline.</p>
+<p>The new procReads.pl supports strand-specific paired-end RNA-Seq data (i.e. the SAM file strand information is reliable) for more accurate results.</p>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
 <p>This is part of the full pre-processing:</p>
 <ul>
-<p>1. rmDup (removing PCR duplicates for SAM files in Dr. JH Lee's format)</p>
+<p>1. rmDup (removing PCR duplicates for SAM files (including Dr. JH Lee's SAM format); samtools/bedtools can be used for standard SAM files)</p>
 <p>2. mergeSam (merging SAM files if there are independent duplicates)</p>
 <p>3. <b>procReads</b> (processing SAM files to get SNV read counts and generate bedgraph files)</p>
 </ul>
 <p>USAGE:</p>
 <pre> perl procReads.pl input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]</pre>
 <p>NOTE:</p>
-<p>the read processing script is for Dr. Jae-Hyung Lee's
-20-attribute SAM file output format, used in RNA-editing
-or allele specific expression (ASE) studies</p>
+<p>the read processing script is for a standard SAM file with
+11 attributes. You can also samtools and bedtools; or
+to use procReadsJ.pl on the special jsam files introduced
+by Dr. Jae-Hyung Lee for RNA-editin and allele specific
+expression (ASE) studies</p>
 <p>ARGUMENTS:</p>
-<pre> input_sam_file		SAM file input after duplicate removal (use rmDup.pl)
+<pre> chr			chromosome to be investigated (correspond to the input_sam_file)
+ input_sam_file		SAM file input after duplicate removal (use rmDup.pl)
  intput_snvs		input SNV list (without read counts)
  output_snvs		output SNV candidates with read counts
  output_bedgraph	output bedgraph file, see below for the details:

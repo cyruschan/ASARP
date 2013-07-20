@@ -93,7 +93,7 @@ This is part of the full pre-processing:
 
 =over 6
 
-1. rmDup (removing PCR duplicates for SAM files in Dr. JH Lee's format)
+1. rmDup (removing PCR duplicates for SAM files (including Dr. JH Lee's SAM format))
 
 2. B<mergeSam> (merging SAM files if there are independent duplicates)
 

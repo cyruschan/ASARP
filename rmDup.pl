@@ -12,8 +12,8 @@ $| = 1;
 if(@ARGV < 3){
   print <<EOT;
 USAGE: perl $0 input_sam_file output_sam_file is_paired_end [discarded_read_pos]
-NOTE: 	the duplicate removal script is for Dr. Jae-Hyung Lee's
-	20-attribute SAM file output format, used in RNA-editing
+NOTE: 	the duplicate removal script is for standard SAM and Dr. Jae-Hyung Lee's
+	20-attribute SAM file output formats, used in RNA-editing
 	or allele specific expression (ASE) studies
 
 is_paired_end		0: single-end; 1: paired-end
@@ -50,7 +50,12 @@ while(<FP>){
   chomp $pair1;
   my @attr = split('\t', $pair1);
   my ($id, $strand, $chr, $start, $quality) = ($attr[0], $attr[1], $attr[2], $attr[3], $attr[10]); #read quality rather than mapping quality is used
-  my $key = $attr[11]; #attribute 12 is the region blocks separated by ','
+  my $key;
+  if(!defined($attr[11])){ #standard SAM
+   $key = parseCigar($start, $attr[5]);
+  }else{
+   $key = $attr[11]; #attribute 12 is the region blocks separated by ','
+  }
   my $value = $pair1;
 
   if($pairEnded){ #get pair2
@@ -66,7 +71,11 @@ while(<FP>){
 	exit;
       }else{
         # they should be combined into a pair
-        $key .= ",".$attr2[11];	#region blocks separated by ','
+        if(!defined($attr[11])){ #standard SAM
+          $key .= ",".parseCigar($start2, $attr[5]);
+        }else{
+          $key .= ",".$attr[11]; #attribute 12 is the region blocks separated by ','
+        }
 	$value .= "\n".$pair2;
 	$quality .= $quality2;
       }
@@ -187,7 +196,7 @@ This is part of the full pre-processing:
 
 =over 6
 
-1. B<rmDup> (removing PCR duplicates for SAM files in Dr. JH Lee's format)
+1. B<rmDup> (removing PCR duplicates for SAM files (including Dr. JH Lee's SAM format); samtools/bedtools can be used for standard SAM files)
 
 2. mergeSam (merging SAM files if there are independent duplicates)
 
@@ -202,8 +211,8 @@ USAGE:
 
 NOTE:
 
-the duplicate removal script is for Dr. Jae-Hyung Lee's
-20-attribute SAM file output format, used in RNA-editing
+the duplicate removal script is for standard SAM and Dr. Jae-Hyung Lee's
+20-attribute SAM file output formats, used in RNA-editing
 or allele specific expression (ASE) studies
 
 ARGUMENTS:
@@ -222,7 +231,7 @@ OPTIONAL:
 
 =head1 DESCRIPTION
 
-C<input_sam_file> should contain only 1 chromosome, and it should be in Dr. Jae-Hyung Lee's SAM format (check out http://www.ncbi.nlm.nih.gov/pubmed/21960545 for more details)
+C<input_sam_file> should contain only 1 chromosome, and it should be in standard SAM format or Dr. Jae-Hyung Lee's SAM format (check out http://www.ncbi.nlm.nih.gov/pubmed/21960545 for more details)
 
 =head1 SEE ALSO
 

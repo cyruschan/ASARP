@@ -451,6 +451,42 @@ sub outputBedgraph{
 
 }
 
+
+##
+# merge SNVs of different chromosomes into one SNV list
+# the equivalent can be achieved using cat and grep commands
+# for strand-specific cases '+$' and '\-$' can get all SNVs from the
+# + and - strands respectively
+# USAGE perl $0 prefix suffix output [isSS]
+# prefix	the folder path and prefix string for all chr* SNV files
+# 		e.g. "/home/N.A+/" for all chr* SNVs in that folder
+# suffix	the suffix after chr[1..22/X/Y/M]
+# output	the output file name for the merged SNVs
+# 		note that output.plus and output.minus are by-product
+# 		outputs for + and - strands for strand-specific cases
+# 		make sure the output and chr* SNV file names do not conflict
+# OPTIONAL
+# isStrand	set 1 if the SNV files are strand-specific
+sub mergeSnvs
+{
+  my ($prefix, $suffix, $output, $isStranded) = @_;
+  my $cmd = "cat $prefix"."chr*$suffix";
+  my $cmdO = ""; # output command
+  if(defined($isStranded) && $isStranded == 1){
+    my $cmdP = "$cmd | grep '+\$' >$output.plus ";
+    my $cmdM = "$cmd | grep '\\-\$' >$output.minus ";
+    print "Handling + and - SNVs:\n$cmdP\n$cmdM\n";
+    system($cmdP) == 0 or print "$cmdP failed\n";
+    system($cmdM) == 0 or print "$cmdM failed\n";
+    $cmdO = "cat $output.plus $output.minus > $output";
+  }else{
+    $cmdO = "$cmd > $output";
+  }
+  print "Outputting merged SNVs to $output\n";
+  system($cmdO) == 0 or die "$cmdO failed\n";
+  print "Finished merging\n";
+}
+
 sub printUsage{
 
   my ($samType) = @_;

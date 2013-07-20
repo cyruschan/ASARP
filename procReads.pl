@@ -12,7 +12,7 @@ $| = 1;
 
 our $INTRVL = 100000; #interval to output processed counts
 my $samType = "a standard SAM file with
-	10 attributes. You can also samtools and bedtools; or
+	11 attributes. You can also samtools and bedtools; or
 	to use procReadsJ.pl on the special jsam files introduced
 	by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
 	expression (ASE) studies";
@@ -381,7 +381,7 @@ This is part of the full pre-processing:
 
 =over 6
 
-1. rmDup (removing PCR duplicates for SAM files in Dr. JH Lee's format; samtools/bedtools can be used for standard SAM files)
+1. rmDup (removing PCR duplicates for SAM files (including Dr. JH Lee's SAM format); samtools/bedtools can be used for standard SAM files)
 
 2. mergeSam (merging SAM files if there are independent duplicates)
 
@@ -396,7 +396,7 @@ USAGE:
 NOTE:
 
 the read processing script is for a standard SAM file with
-10 attributes. You can also samtools and bedtools; or
+11 attributes. You can also samtools and bedtools; or
 to use procReadsJ.pl on the special jsam files introduced
 by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
 expression (ASE) studies
