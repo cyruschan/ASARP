@@ -361,8 +361,8 @@ sub outputBedgraph{
   my ($chr, $outputBedgraph, $title, $strandFlag, $bedRef, $bedIdxRef, $bedRcRef, $bedRcIdxRef) = @_;
   my @bedgraph = @$bedRef;
   my @bedgraph_idx = @$bedIdxRef;
-  my @bedgraphRc = @$bedRcRef;
-  my @bedgraphRc_idx = @$bedRcIdxRef;
+  my @bedgraphRc = (); if(defined($bedRcRef)){ @bedgraphRc =  @$bedRcRef; }
+  my @bedgraphRc_idx = (); if(defined($bedRcIdxRef)){ @bedgraphRc_idx =  @$bedRcIdxRef; }
 
 
   ####################################################################
