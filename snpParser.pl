@@ -6,6 +6,8 @@ require 'bedHandler.pl';
 
 use MyConstants qw( $CHRNUM $supportedList $supportedTags $asarpTags );
 
+# the setting of the p-value scheme
+our $NEWP = 1; # 0: unset (i.e. using the old version); 1: set
 # the sub routines to process snps
 # input
 #	$snpFile	the snp file name (path)
@@ -351,7 +353,10 @@ sub processASEWithNev
 {
   my ($snpRef, $geneSnpRef, $snpEventsNevRef, $snvPValueCutoff, $asarpPValueCutoff, $alleleRatioCutoff) = @_;
   my %ss = %$snpEventsNevRef;
-
+  if(!$NEWP){
+    my $msg = "WARNING: this is the old version ASARP p-value scheme (published in NAR) for evaluating the new version. In practice the new version should be used!\n";
+    print $msg; print STDERR $msg;
+  }
   #basic statistics for powerful SNVs and genes
   my ($aseSnvCnt, $powSnvCnt, $non0AseGeneCnt, $powGeneCnt) = (0, 0, 0, 0);
   my ($aseSnvStr, $powSnvStr) = ('', '');
@@ -620,6 +625,7 @@ sub processASEWithNev
      }
      
      #print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n" if(keys %pValueSnpHash > 0); 
+if($NEWP){ # disable all new p-value scheme post-filtering
      # first to keep necessary information only: for Bonferroni correction, this step can be skipped 
      for(keys %pValueSnpHash){
        #print "$_\t";
@@ -693,7 +699,12 @@ sub processASEWithNev
      $asarpGenes[$i] = \%newAsarpGeneHash; # updated by Correction
      $asarpControls[$i] = \%asarpGeneControls; # updated by Correction (in place)
      $asarpSnps[$i] = \%newAsarpSnpHash; # updated by Correction
-
+}else{ # old Gang's version in NAR
+     $aseGenes[$i] = \%aseGeneHash; #not affected
+     $asarpGenes[$i] = \%asarpGeneHash; # old one
+     $asarpControls[$i] = \%asarpGeneControls; # updated by Correction (in place)
+     $asarpSnps[$i] = \%asarpSnpHash; # old one
+} # end of the old p-value scheme
   }
   $R->stop;
 
