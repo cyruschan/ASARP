@@ -29,9 +29,15 @@ output_folder	all the merged prefix*.suffix files will be put to that
 
 NOTE: 	files matching folder/prefix*.suffix will be
 	enumerated for merging, where "folder" is one element
-	in the folder_list. Note the added / and *. in between
+	in the folder_list. Note the added / and *. in between.
+	
 	The files are simply merged and not sorted.
 
+EXAMPLE: If one wants to merge all "proc_chr*.rmdup.sam" files under
+	 data/rep1, data/rep2, data/rep3 (list stored in "rep.lst") 
+	 and output the merged files to folder "data.merged", 
+	 mergeSam.pl should be run as follows:
+	 perl mergeSam.pl rep.lst proc_chr rmdup.sam dadta.merged
 EOT
   exit;
 }
@@ -123,9 +129,18 @@ NOTE:
 
 files matching folder/prefix*.suffix will be
 enumerated for merging, where "folder" is one element
-in the folder_list. Note the added / and *. in between
+in the folder_list. Note the added / and *. in between.
+
 The files are simply merged and not sorted.
 
+EXAMPLE: 
+
+If one wants to merge all "proc_chr*.rmdup.sam" files under
+data/rep1, data/rep2, data/rep3 (list stored in "rep.lst") 
+and output the merged files to folder "data.merged", 
+mergeSam.pl should be run as follows:
+
+ perl mergeSam.pl rep.lst proc_chr rmdup.sam dadta.merged
 
 =head1 SEE ALSO
 

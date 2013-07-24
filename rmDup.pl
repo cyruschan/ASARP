@@ -65,20 +65,17 @@ while(<FP>){
       chomp $pair2;
       my @attr2 = split('\t', $pair2);
       my ($id2, $strand2, $chr2, $start2, $quality2) = ($attr2[0], $attr2[1], $attr2[2], $attr2[3], $attr2[10]);
-      if($chr ne $chr2){  #not checking ids #($id ne $id2 || $chr ne $chr2){
-	print "ERROR: reads have to be in pairs in the same chromosome: $id in $chr different from $id2 in $chr2 at line $cnt\n";
-	#print "ERROR: reads have to be in pairs: $id in $chr different from $id2 in $chr2 at line $cnt\n";
-	exit;
+      checkPairId($id, $id2, $cnt);
+      checkPairChr($chr, $chr2, $cnt);
+      
+      # they should be combined into a pair
+      if(!defined($attr2[11])){ #standard SAM
+        $key .= ",".parseCigar($start2, $attr2[5]);
       }else{
-        # they should be combined into a pair
-        if(!defined($attr[11])){ #standard SAM
-          $key .= ",".parseCigar($start2, $attr[5]);
-        }else{
-          $key .= ",".$attr[11]; #attribute 12 is the region blocks separated by ','
-        }
-	$value .= "\n".$pair2;
-	$quality .= $quality2;
+        $key .= ",".$attr2[11]; #attribute 12 is the region blocks separated by ','
       }
+      $value .= "\n".$pair2;
+      $quality .= $quality2;
     }else{
       print "ERROR: missing pair 2 in $chr at line $cnt\n"; exit;
     }
@@ -120,8 +117,16 @@ while(<FP>){
 close(FP);
 print "$cnt lines\n";
 print "Duplicates in total: $dup\n";
-print "Total pairs: ".($cnt/2)."\n";
-printf "Duplicate Percentage: %.2f %%\n", ($dup/($cnt/2)*100);
+my $total = $cnt;
+my $unit = 'reads';
+if($pairEnded){
+  $unit = 'pairs';
+  $total = $cnt/2;
+}
+print "Total $unit $total\n";
+if($total){
+printf "Duplicate Percentage: %.2f %%\n", ($dup/$total*100);
+}else{ print "Duplicate Percentage: N/A\n"; }
 
 # write to the output sam file
 open (OP, ">", $output) or die "ERROR: Cannot open $output for writing\n";

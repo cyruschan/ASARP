@@ -625,7 +625,7 @@ sub processASEWithNev
      }
      
      #print "# new p-value scheme candidate post-filtering:\n pValue candidates:\n" if(keys %pValueSnpHash > 0); 
-if($NEWP){ # disable all new p-value scheme post-filtering
+if($NEWP){ # enable all new p-value scheme post-filtering
      # first to keep necessary information only: for Bonferroni correction, this step can be skipped 
      for(keys %pValueSnpHash){
        #print "$_\t";
