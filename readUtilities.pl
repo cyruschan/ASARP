@@ -452,6 +452,37 @@ sub outputBedgraph{
 }
 
 
+# parse the CIGAR string to get block information
+sub parseCigar{
+  my ($start, $cigar) = @_;
+  my $position = $start;
+  my $block = '';
+  while ($cigar !~ /^$/){
+    # handle only the matched parts
+    if ($cigar =~ /^([0-9]+[MIDSN])/){
+      my $cigar_part = $1;
+      if ($cigar_part =~ /(\d+)M/){
+        if($block ne ''){ #already some blocks
+	  $block .= ",";
+	}
+	$block .= "$position:";
+        $position += $1;
+	my $end = $position - 1;
+	$block .= "$end";
+      } elsif ($cigar_part =~ /(\d+)N/){
+        $position += $1; # skipped positions
+      } else { die "ERROR: CIGAR not supported: $cigar\n"; }
+      #} elsif ($cigar_part =~ /(\d+)I/){
+      #} elsif ($cigar_part =~ /(\d+)D/){
+      #} elsif ($cigar_part =~ /(\d+)S/){
+      $cigar =~ s/$cigar_part//;
+    }else{
+      die "ERROR: CIGAR type not yet supported: $cigar\n";
+    }
+  }
+  return $block;
+}
+
 ##
 # merge SNVs of different chromosomes into one SNV list
 # the equivalent can be achieved using cat and grep commands
