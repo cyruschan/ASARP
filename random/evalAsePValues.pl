@@ -90,7 +90,7 @@ for(keys %realAse){
     $toOutputP .= "$chr $gene $p\n";
   }
 }
-print $toOutputP;
+#print $toOutputP;
 print "Overall AllASE Gene FDR estimated: ";
 printf "%.4f\n", $fdrCnt/$pCnt;
 print "Overall ind ASE SNV FDR estimated: ";

@@ -113,7 +113,7 @@ for(keys %pHash){
   }
   if($pFlag){ $toOutputP .= "$geneToOut\n";  }
 }
-print $toOutputP;
+#print $toOutputP;
 
 print "Overall estimated FDR (of output ASARP Genes)\n";
 for(keys %pCnt){

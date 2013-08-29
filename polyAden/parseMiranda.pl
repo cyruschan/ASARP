@@ -350,6 +350,9 @@ sub compareScoreEnergy{
     if($avgCnt){ $avgMFE /= $avgCnt;  }
     if($bgCnt){ $bgMFE /= $bgCnt;  }
 
+    #### debug
+    $avgMFE = $maxMFE;
+
     if(defined($refhs{$maxMir})){ # it indicates that $alths{$maxMir} is also defined
       print "maxMFE: $maxMir $maxMFE: $ref;$refCnt:$refhs{$maxMir} -- $alt;$altCnt:$alths{$maxMir}\n";
     }else{ print "No maxMFE cases for $ref, $alt\n"; }
