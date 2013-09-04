@@ -147,7 +147,8 @@ for my $key (keys %ans){
 close(CP);
 
 #compareEnergy(\%ans);
-my $kdFile = "/home/cyruschan/asarp_perl/U87.DroshaKD/Dro.snvs/U87.DroshaKD.snv.lst";
+#my $kdFile = "/home/cyruschan/asarp_perl/U87.DroshaKD/Dro.snvs/U87.DroshaKD.snv.lst";
+my $kdFile = "/home/cyruschan/asarp_perl/gm12878/N.A+/snv.ss.S/N.A+.snv.lst";
 my ($outInfo) = compareScoreEnergy(\%ans, $kdFile, $ENRGTH, $MFETH);
 
 open(SP, ">", $out) or die "ERROR: cannot output results to $out\n";
@@ -256,9 +257,9 @@ sub compareScoreEnergy{
         print "Test ($refCnt, $altCnt), ($kdRefCnt, $kdAltCnt)\np-value: $pValue\n";
       }else{
         $insig += 1;
-	next;
+	#next;
       }
-    }else{ print "$key not found in Drosha KD\n\n"; next; }
+    }else{ print "$key not found in Drosha KD\n\n";  } #next; }
     #else{ next; }
     $scs{"$ref;$refCnt"} = 0; #score
     $scs{"$alt;$altCnt"} = 0; #score
@@ -351,7 +352,7 @@ sub compareScoreEnergy{
     if($bgCnt){ $bgMFE /= $bgCnt;  }
 
     #### debug
-    $avgMFE = $maxMFE;
+    #$avgMFE = $maxMFE;
 
     if(defined($refhs{$maxMir})){ # it indicates that $alths{$maxMir} is also defined
       print "maxMFE: $maxMir $maxMFE: $ref;$refCnt:$refhs{$maxMir} -- $alt;$altCnt:$alths{$maxMir}\n";
