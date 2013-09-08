@@ -4,11 +4,11 @@ use strict;
 use warnings;
 require "mirnaParser.pl"; # needs rc
 
-if(@ARGV < 6){
+if(@ARGV < 7){
 
   print <<EOT;
 
-USAGE: perl $0 ASAT_fasta miRanda_result output ext_miRanda_out energy_th percent_th [mirSVR_results]
+USAGE: perl $0 ASAT_fasta miRanda_result ctrl_snv_path output ext_miRanda_out energy_th percent_th [mirSVR_results]
 
 ASAT_fasta	the merged fasta file containing all fasta sequences with the reference and alternative alleles from the ASAT results
 		The fasta identifier information is important and used in the script
@@ -25,6 +25,8 @@ ASAT_fasta	the merged fasta file containing all fasta sequences with the referen
 
 miRanda_result	the combined miRanda results for all ASAT cases predicted from ASAT_fasta
 
+ctrl_snv_path	the path to the control SNV files (each with reads for both alleles)
+
 output		the output result file
 ext_miRanda_out	the compact extracted results from miRanda_result, with 2 different suffixes of ext_miRanda_out
 		.extlst (extracted list containing miRanda miRNA targets only)
@@ -40,7 +42,7 @@ EOT
   exit;
 }
 
-my ($asatin, $in, $out, $miRandaExt, $ENRGTH, $MFETH, $mirSVR) = @ARGV;
+my ($asatin, $in, $kdFile, $out, $miRandaExt, $ENRGTH, $MFETH, $mirSVR) = @ARGV;
 
 my $miRnaOut = $miRandaExt.".extlst";
 #my $short = $miRandaExt.".shrtlst";
@@ -140,6 +142,28 @@ for my $key (keys %ans){
   my %hs = %{$ans{$key}};
   my $m = keys %hs;
   for my $al (keys %hs){
+    # new: store only the best energy for each miRNA
+    my %ens = ();
+    my %scs = ();
+    my @mirs = split(/\n/, $hs{$al});
+    for(@mirs){
+      my ($mirna, $sc, $eng) = split(/\t/, $_);
+      if(!defined($ens{$mirna})){
+        $ens{$mirna} = $eng;
+	$scs{$mirna} = $sc;
+      }else{
+        print "dup: $mirna $sc $eng\n";
+	if($eng < $ens{$mirna}){
+	  $ens{$mirna} = $eng;
+	  $scs{$mirna} = $sc;
+	}
+      }
+    }
+    my $filtered = '';
+    for(keys %ens){
+      $filtered .= "$_\t$scs{$_}\t$ens{$_}\n";
+    }
+    $hs{$al} = $filtered;
     print CP "$al\n$hs{$al}";
   }
   print CP "\n";
@@ -148,7 +172,7 @@ close(CP);
 
 #compareEnergy(\%ans);
 #my $kdFile = "/home/cyruschan/asarp_perl/U87.DroshaKD/Dro.snvs/U87.DroshaKD.snv.lst";
-my $kdFile = "/home/cyruschan/asarp_perl/gm12878/N.A+/snv.ss.S/N.A+.snv.lst";
+#my $kdFile = "/home/cyruschan/asarp_perl/gm12878/N.A+/snv.ss.S/N.A+.snv.lst";
 my ($outInfo) = compareScoreEnergy(\%ans, $kdFile, $ENRGTH, $MFETH);
 
 open(SP, ">", $out) or die "ERROR: cannot output results to $out\n";
@@ -211,7 +235,7 @@ sub compareScoreEnergy{
   # Create a communication bridge with R and start R
   my $R = Statistics::R->new();
   my ($sig, $insig) = (0, 0); #significant and insignificant counts
-  my $TH = 1; #0.05; #0.05; #0.05; #0.05; # p-value threshold
+  my $TH = 0.05; #0.05; #0.05; #0.05; # p-value threshold
 
   my ($scY, $scN, $enY, $enN, $seY, $seN) = (0, 0, 0, 0, 0, 0);
   for my $key (keys %ans){
@@ -223,8 +247,6 @@ sub compareScoreEnergy{
     #print "$key\n";
     my ($chr, $gene, $pos, $id, $als, $cnts, $at) = split(';', $key);
     my $std = '+';
-    my $kd = qx(grep $pos $kdSnv);
-    #print "$kd\n";
     my ($ref, $alt) = split('>', $als);
     my ($refCnt, $altCnt) = split(':', $cnts);
     if(index($at, 'AT:3-')!= -1 || index($at, 'ASE:3-')!= -1){
@@ -232,6 +254,8 @@ sub compareScoreEnergy{
       $alt = rc($alt); #reverse complement
       $std = '-';
     }
+    my $kd = qx(grep $pos $kdSnv);
+    #print "$kd\n";
     my @kds = split(/\n/, $kd);
     my $kdStr = '';
     for(@kds){
@@ -253,13 +277,13 @@ sub compareScoreEnergy{
       # p-value check
       if($pValue <= $TH){
         $sig += 1;
-	print "$key\n$kdStr\n";
-        print "Test ($refCnt, $altCnt), ($kdRefCnt, $kdAltCnt)\np-value: $pValue\n";
       }else{
         $insig += 1;
 	#next;
       }
-    }else{ print "$key not found in Drosha KD\n\n";  } #next; }
+      #print "$key\n$kdStr\n";
+      #print "Test ($refCnt, $altCnt), ($kdRefCnt, $kdAltCnt)\np-value: $pValue\n";
+    }else{ print "$key not found in control $kdSnv\n\n";  } #next; }
     #else{ next; }
     $scs{"$ref;$refCnt"} = 0; #score
     $scs{"$alt;$altCnt"} = 0; #score
@@ -316,7 +340,10 @@ sub compareScoreEnergy{
     }
     my $maxMFE = 0;
     my $maxMir = '';
-    my ($avgMFE, $avgCnt, $bgMFE, $bgCnt) = (0, 0, 0, 0); #average MEF
+    my ($avgMFE, $avgCnt, $bgMFE, $bgCnt, $bgPlus, $bgMinus, $pCnt, $mCnt, $finalMFE) = (0, 0, 0, 0, 0, 0, 0, 0, 0); #average MEF
+    my @bgList = (); # the background set list
+    my @bgListP = (); # the background set list
+    my @bgListM = (); # the background set list
     #my ($refmir, $altmir) = ('', '');
     # fill in the highest possilbe minimal energy
     for(keys %refhs){
@@ -331,7 +358,9 @@ sub compareScoreEnergy{
       # normalized diff:
       my $norm = abs($refhs{$_});
       if(abs($alths{$_}) < $norm){ $norm = abs($alths{$_}); } # normalization over the smaller one
-      my $diff = ($refhs{$_} - $alths{$_})/$norm; #normalized diff
+      my $diff = ($refhs{$_} - $alths{$_});
+      # no normalization now #
+      #$diff /= $norm; #normalized diff
       # a new filter: energy scores cannot be too low for both alleles
       #print "$_ diff: $diff = ref $refhs{$_} - alt $alths{$_}\n";
       if(abs($diff) > abs($maxMFE)  && ($refhs{$_} <= $ENRGTH || $alths{$_} <= $ENRGTH))
@@ -340,24 +369,83 @@ sub compareScoreEnergy{
       } # only when they are <= threshold
       if(abs($diff) >= $MFETH  && ($refhs{$_} <= $ENRGTH || $alths{$_} <= $ENRGTH))
       {
+        #print "$key pass: \n$refhs{$_} and $alths{$_}: $diff\n";
         $avgMFE += $diff; $avgCnt += 1; 
       }
       # all are considered as background
       if(abs($diff) >= $MFETH)
       {
         $bgMFE += $diff; $bgCnt += 1;
+	push @bgList, "$diff ";
+	if($diff < 0){
+	  $bgMinus += $diff; $mCnt += 1;
+	  push @bgListM, "$diff ";
+	}else{
+	  $bgPlus += $diff; $pCnt += 1;
+	  push @bgListP, "$diff ";
+	}
       }
     }
     if($avgCnt){ $avgMFE /= $avgCnt;  }
-    if($bgCnt){ $bgMFE /= $bgCnt;  }
-
+    if($bgCnt){ $bgMFE /= $bgCnt;  
+      # calculate sample std
+    }
     #### debug
     #$avgMFE = $maxMFE;
+    #$avgMFE = $bgMFE; #use background
+    
+    #normaliz background
+    if(abs($bgPlus)>0 || abs($bgMinus)>0){
+      if($bgPlus){ $bgPlus /= $pCnt; }
+      if($bgMinus){ $bgMinus /= $mCnt; }
 
+    }else{
+      next;
+    }
+    
+    my $stdev = getStdev(\@bgList, $bgMFE);
+    my $stdP = getStdev(\@bgListP, $bgPlus);
+    my $stdM = getStdev(\@bgListM, $bgMinus);
+
+
+    #my $crit = (abs($bgPlus + $bgMinus) - ($stdP+$stdM)); # average distance > sum of stdev
+    #if($crit > 0 ){
+    if($avgMFE*($bgMFE) > 0){
+    #my $FOLD = 1.5;
+    #if(defined($refhs{$maxMir}) && 
+    #if(
+    #(abs($bgPlus)/(abs($bgMinus)+0.1) >= $FOLD && $avgMFE > 0)
+    #|| 
+    #(abs($bgPlus)/(abs($bgMinus)+0.1) <= 1/$FOLD && $avgMFE < 0)){ 
+    ##abs($avgMFE) >abs($bgMFE)+ $stdev  && $avgMFE*$bgMFE >0){ # && abs($avgMFE) > abs($bgMFE)){ # + $stdev){
+      $finalMFE = $avgMFE; #$bgPlus;
+      #if(abs($bgMinus) > $bgPlus){
+      #  $finalMFE = $bgMinus;
+      #}
+      # sign check
+      if($finalMFE * ($refCnt - $altCnt) > 0){
+        print "Correct!\n";
+	$enY += 1;
+      }elsif($finalMFE * ($refCnt - $altCnt) < 0){
+        print "Incorrect!\n";
+	$enN += 1;
+      }
+    }
+    else{
+      #print "Skipped\n";
+      next;
+    }
     if(defined($refhs{$maxMir})){ # it indicates that $alths{$maxMir} is also defined
-      print "maxMFE: $maxMir $maxMFE: $ref;$refCnt:$refhs{$maxMir} -- $alt;$altCnt:$alths{$maxMir}\n";
-    }else{ print "No maxMFE cases for $ref, $alt\n"; }
+      print "$key\nmaxMFE: $maxMir $maxMFE: $ref;$refCnt:$refhs{$maxMir} -- $alt;$altCnt:$alths{$maxMir}\n";
+      print "avgMFE: $avgMFE from $avgCnt; bg: $bgMFE from $bgCnt\n"; #@bgList; std: $stdev\n";
+      print "bgPlus: $bgPlus ($stdP from $pCnt); bgMinus: $bgMinus ($stdM from $mCnt)\n";
+    }else{ #print "No maxMFE cases for $ref, $alt\n"; 
+      next;
+    }
+    
 
+    
+    next;
 =cut
     if($refCnt > $altCnt){ # reference > alt
       if($maxMFE >0){ $enY += 1; print "Yes\n\n"; }
@@ -370,7 +458,7 @@ sub compareScoreEnergy{
 
     my $case = join("\t", $chr, $gene, $std, $pos, $id, $at, $avgMFE, "$ref;$refCnt>$alt;$altCnt", $maxMir)."\n";
     if($refCnt > $altCnt){ # reference > alt
-      if($avgMFE >=$MFETH){ 
+      if($avgMFE >=$MFETH){ # i.e. >0 and >= $MFETH 
         print $case;
 	$outStr .= "Y\t$case";
         $enY += 1; #print "Yes\n\n"; 
@@ -378,7 +466,7 @@ sub compareScoreEnergy{
       elsif($avgMFE <= -$MFETH){ 
 	$outStr .= "N\t$case";
         $enN += 1; 
-      }# print "No\n\n";}
+      }
     }elsif($refCnt < $altCnt){
       if($avgMFE <= -$MFETH){ 
         #print "avgMFE: $avgMFE: $ref;$refCnt -- $alt;$altCnt\n";
@@ -450,3 +538,26 @@ sub compareScoreEnergy{
   return $outStr;
 }
 
+sub getStdev{
+  my ($ref, $avg) = @_;
+  my @list = @$ref;
+  my $n = @list;
+  if($n <= 1){ return 0; }
+  if(!defined($avg)){ # need to calculate here
+    my $x = 0;
+    for(@list){
+      $x += $_;
+    }
+    $avg = $x/$n; # average
+  }
+  $n = $n - 1; # sample Stdev
+  my $sd = 0;
+  for(@list){
+    $sd += ($_ - $avg)*($_ - $avg);
+  }
+  if($n > 0){
+    return sqrt($sd/$n);
+  }
+  return 0;
+
+}
