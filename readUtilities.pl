@@ -500,7 +500,7 @@ sub parseCigar{
 # isStrand	set 1 if the SNV files are strand-specific
 sub mergeSnvs
 {
-  my ($prefix, $suffix, $output, $isStranded) = @_;
+  my ($prefix, $suffix, $isMono, $output, $isStranded) = @_;
   my $cmd = "cat $prefix"."chr*$suffix";
   my $cmdO = ""; # output command
   if(defined($isStranded) && $isStranded == 1){
@@ -515,6 +515,32 @@ sub mergeSnvs
   }
   print "Outputting merged SNVs to $output\n";
   system($cmdO) == 0 or die "$cmdO failed\n";
+
+  if($isMono){
+    my ($n, $x) = (0, 0);
+    print "Removing mono-allelic SNVs (when genotype is unknown and dbSNPs are used)\n";
+    my $newout = '';
+    open(RE, $output) or die "ERROR: cannot open merged SNV file: $output\n";
+    while(<RE>){
+      chomp;
+      my ($chr, $pos, $als, $id, $reads) = split(' ', $_); 
+      my ($ref, $alt, $wrt) = split(':', $reads);
+      if($ref > 9 && $alt > 9){
+        $newout .= "$_\n"; # added
+	$n += 1;
+      }else{
+        $x += 1;
+      }
+    }
+    close(RE);
+    
+    print "$n SNVs kept; $x mono-allelic SNVs removed\n";
+    print "Overwriting $output\n";
+    open(WR, ">", $output) or die "ERROR: cannot overwrite SNV file: $output\n";
+    print WR $newout;
+    close(WR);
+  }
+
   print "Finished merging\n";
 }
 

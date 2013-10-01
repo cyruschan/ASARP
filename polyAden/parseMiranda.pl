@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use Statistics::R; #interact with R
 require "mirnaParser.pl"; # needs rc
 
 if(@ARGV < 7){
@@ -373,7 +374,7 @@ sub compareScoreEnergy{
         $avgMFE += $diff; $avgCnt += 1; 
       }
       # all are considered as background
-      if(abs($diff) >= $MFETH)
+      if(abs($diff) >= $MFETH) # && ($refhs{$_} <= $ENRGTH || $alths{$_} <= $ENRGTH))
       {
         $bgMFE += $diff; $bgCnt += 1;
 	push @bgList, "$diff ";
@@ -390,6 +391,7 @@ sub compareScoreEnergy{
     if($bgCnt){ $bgMFE /= $bgCnt;  
       # calculate sample std
     }
+
     #### debug
     #$avgMFE = $maxMFE;
     #$avgMFE = $bgMFE; #use background
@@ -407,10 +409,25 @@ sub compareScoreEnergy{
     my $stdP = getStdev(\@bgListP, $bgPlus);
     my $stdM = getStdev(\@bgListM, $bgMinus);
 
+    #my @bgListMAbs = ();
+    #for(@bgListM){
+    #  push @bgListMAbs, abs($_);
+    #}
+    #if($pCnt == 0 || $mCnt == 0){
+    #  next;
+    #}
+    #my $sign = rankSumTest(\@bgListP, \@bgListMAbs);
+
 
     #my $crit = (abs($bgPlus + $bgMinus) - ($stdP+$stdM)); # average distance > sum of stdev
     #if($crit > 0 ){
-    if($avgMFE*($bgMFE) > 0){
+    #my $foldchange = abs(($bgPlus*$pCnt+0.01)/($bgMinus*$mCnt+0.01));
+    #if($foldchange >= 2 || $foldchange <= 0.5) 
+    #if(($pCnt-$mCnt)*($bgPlus*$pCnt+$bgMinus*$mCnt) > 0 && ($pCnt-$mCnt)*$avgMFE >0) # double-consistency
+    #if(($bgPlus+$bgMinus)*$avgMFE >0) # double-consistency
+    #if($sign) #($pCnt-$mCnt)*($bgPlus+$bgMinus) > 0)# && ($pCnt-$mCnt)*$avgMFE >0) # double-consistency
+    if($avgMFE)  #*($bgMFE) > 0) # && abs($bgMFE)>=abs($bgMFE) + $stdev)
+    {
     #my $FOLD = 1.5;
     #if(defined($refhs{$maxMir}) && 
     #if(
@@ -418,7 +435,8 @@ sub compareScoreEnergy{
     #|| 
     #(abs($bgPlus)/(abs($bgMinus)+0.1) <= 1/$FOLD && $avgMFE < 0)){ 
     ##abs($avgMFE) >abs($bgMFE)+ $stdev  && $avgMFE*$bgMFE >0){ # && abs($avgMFE) > abs($bgMFE)){ # + $stdev){
-      $finalMFE = $avgMFE; #$bgPlus;
+      $finalMFE = $avgMFE; #$pCnt-$mCnt; #($bgPlus*$pCnt+$bgMinus*$mCnt); #$pCnt-$mCnt; #$avgMFE; #$bgPlus;
+      #$finalMFE = -1 if ($foldchange <= 0.5);
       #if(abs($bgMinus) > $bgPlus){
       #  $finalMFE = $bgMinus;
       #}
@@ -561,3 +579,32 @@ sub getStdev{
   return 0;
 
 }
+
+sub rankSumTest{
+
+  my ($aRef, $bRef) = @_;
+  my $flag = 0;
+  my $PVAL = 0.05; 
+  # Create a communication bridge with R and start R
+  my $R = Statistics::R->new();
+  $R->run("x <-c(".join(",", @$aRef).")");
+  $R->run("y <-c(".join(",", @$bRef).")");
+  #my $out = $R->run("wilcox.test(x, y, \"greater\")");
+  #print "$out\n";
+  $R->run('p = wilcox.test(x, y, "greater")$p.value');
+  my $pValue = $R->get('p');
+  if($pValue <= $PVAL){
+    $flag = 1;
+  }else{
+    $R->run('p2 = wilcox.test(x, y, "less")$p.value');
+    my $pValue2 = $R->get('p2');
+    if($pValue <= $PVAL){
+      $flag = -1;
+    }
+  }
+  $R->stop;
+
+  return $flag;
+}
+
+
