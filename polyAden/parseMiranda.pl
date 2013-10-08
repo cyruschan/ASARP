@@ -86,6 +86,7 @@ while(<FP>){
 	my ($chr, $gene, $pos, $id, $als, $cnts, $at, $inPos, $al, $cnt) = split(';', $mS);
 
         my $flag = filterWithMirSVR($chr, $gene, $pos, $miRNA, $mirSVR);
+	#if($Sc < 80){ $flag = 0; }
 	if($flag){
 	  #print " ($miS, $mS, $Sc, $enrg, $miRg, $mRg: $mFrom, $mTo, $aliLen)\n ($chr, $gene, $pos, $id, $als, $cnts, $at, $inPos, $al, $cnt)\n";
 	  if($inPos <= $mTo && $inPos >= $mFrom){
@@ -143,6 +144,7 @@ for my $key (keys %ans){
   my %hs = %{$ans{$key}};
   my $m = keys %hs;
   for my $al (keys %hs){
+#=cut  
     # new: store only the best energy for each miRNA
     my %ens = ();
     my %scs = ();
@@ -153,7 +155,7 @@ for my $key (keys %ans){
         $ens{$mirna} = $eng;
 	$scs{$mirna} = $sc;
       }else{
-        print "dup: $mirna $sc $eng\n";
+        #print "dup: $mirna $sc $eng\n";
 	if($eng < $ens{$mirna}){
 	  $ens{$mirna} = $eng;
 	  $scs{$mirna} = $sc;
@@ -165,6 +167,7 @@ for my $key (keys %ans){
       $filtered .= "$_\t$scs{$_}\t$ens{$_}\n";
     }
     $hs{$al} = $filtered;
+#=cut
     print CP "$al\n$hs{$al}";
   }
   print CP "\n";
@@ -239,6 +242,26 @@ sub compareScoreEnergy{
   my $TH = 0.05; #0.05; #0.05; #0.05; # p-value threshold
 
   my ($scY, $scN, $enY, $enN, $seY, $seN) = (0, 0, 0, 0, 0, 0);
+
+  # clustering to get the new energy threshold
+  my @alle = (); # all energies
+  for my $key (keys %ans){
+    my %hs = %{$ans{$key}};
+    for my $al (keys %hs){ # sub-key
+      my @vals = split(/\n/, $hs{$al});
+      for(@vals){
+        my ($miR, $sc, $enrg) = split(/\t/, $_);
+	push @alle, abs($enrg); # just cluster energies
+      }  
+    }
+  }
+  my ($ce0, $ce1) = gCluster(1, abs($ENRGTH), \@alle);
+  my $ENRGTH2 = $ENRGTH; #(-$ce1+$ENRGTH)/2; #+abs($ENRGTH))/2; #$ENRGTH;
+  my $MFETH2 = abs($ce0-$ce1); #$MFETH;
+  if($MFETH2 < $MFETH){
+    $MFETH2 = $MFETH;
+  }
+
   for my $key (keys %ans){
     my %hs = %{$ans{$key}};
     my $m = keys %hs; # should be 1 or 2
@@ -280,12 +303,10 @@ sub compareScoreEnergy{
         $sig += 1;
       }else{
         $insig += 1;
-	#next;
       }
       #print "$key\n$kdStr\n";
       #print "Test ($refCnt, $altCnt), ($kdRefCnt, $kdAltCnt)\np-value: $pValue\n";
     }else{ print "$key not found in control $kdSnv\n\n";  } #next; }
-    #else{ next; }
     $scs{"$ref;$refCnt"} = 0; #score
     $scs{"$alt;$altCnt"} = 0; #score
     $ens{"$ref;$refCnt"} = 0; #energy
@@ -353,6 +374,7 @@ sub compareScoreEnergy{
     for(keys %alths){
       if(!defined($refhs{$_})){ $refhs{$_} = -1; }
     }
+
     for(keys %refhs){
       # # now alths{$_} must be defined
 
@@ -364,17 +386,17 @@ sub compareScoreEnergy{
       #$diff /= $norm; #normalized diff
       # a new filter: energy scores cannot be too low for both alleles
       #print "$_ diff: $diff = ref $refhs{$_} - alt $alths{$_}\n";
-      if(abs($diff) > abs($maxMFE)  && ($refhs{$_} <= $ENRGTH || $alths{$_} <= $ENRGTH))
+      if(abs($diff) > abs($maxMFE)  && ($refhs{$_} <= $ENRGTH2 || $alths{$_} <= $ENRGTH2))
       {
         $maxMFE = $diff; $maxMir = $_;	
       } # only when they are <= threshold
-      if(abs($diff) >= $MFETH  && ($refhs{$_} <= $ENRGTH || $alths{$_} <= $ENRGTH))
+      if(abs($diff) >= $MFETH2) #  && ($refhs{$_} <= $ENRGTH2 || $alths{$_} <= $ENRGTH2))
       {
         #print "$key pass: \n$refhs{$_} and $alths{$_}: $diff\n";
         $avgMFE += $diff; $avgCnt += 1; 
       }
       # all are considered as background
-      if(abs($diff) >= $MFETH) # && ($refhs{$_} <= $ENRGTH || $alths{$_} <= $ENRGTH))
+      if(abs($diff) >= $MFETH2) # && ($refhs{$_} <= $ENRGTH2 || $alths{$_} <= $ENRGTH2))
       {
         $bgMFE += $diff; $bgCnt += 1;
 	push @bgList, "$diff ";
@@ -426,7 +448,7 @@ sub compareScoreEnergy{
     #if(($pCnt-$mCnt)*($bgPlus*$pCnt+$bgMinus*$mCnt) > 0 && ($pCnt-$mCnt)*$avgMFE >0) # double-consistency
     #if(($bgPlus+$bgMinus)*$avgMFE >0) # double-consistency
     #if($sign) #($pCnt-$mCnt)*($bgPlus+$bgMinus) > 0)# && ($pCnt-$mCnt)*$avgMFE >0) # double-consistency
-    if($avgMFE)  #*($bgMFE) > 0) # && abs($bgMFE)>=abs($bgMFE) + $stdev)
+    if($bgPlus*$bgMinus == 0) #$avgMFE)  #*($bgMFE) > 0) # && abs($bgMFE)>=abs($bgMFE) + $stdev)
     {
     #my $FOLD = 1.5;
     #if(defined($refhs{$maxMir}) && 
@@ -435,7 +457,7 @@ sub compareScoreEnergy{
     #|| 
     #(abs($bgPlus)/(abs($bgMinus)+0.1) <= 1/$FOLD && $avgMFE < 0)){ 
     ##abs($avgMFE) >abs($bgMFE)+ $stdev  && $avgMFE*$bgMFE >0){ # && abs($avgMFE) > abs($bgMFE)){ # + $stdev){
-      $finalMFE = $avgMFE; #$pCnt-$mCnt; #($bgPlus*$pCnt+$bgMinus*$mCnt); #$pCnt-$mCnt; #$avgMFE; #$bgPlus;
+      $finalMFE = $avgMFE; #$bgPlus+$bgMinus; #$avgMFE; #$pCnt-$mCnt; #($bgPlus*$pCnt+$bgMinus*$mCnt); #$pCnt-$mCnt; #$avgMFE; #$bgPlus;
       #$finalMFE = -1 if ($foldchange <= 0.5);
       #if(abs($bgMinus) > $bgPlus){
       #  $finalMFE = $bgMinus;
@@ -460,89 +482,6 @@ sub compareScoreEnergy{
     }else{ #print "No maxMFE cases for $ref, $alt\n"; 
       next;
     }
-    
-
-    
-    next;
-=cut
-    if($refCnt > $altCnt){ # reference > alt
-      if($maxMFE >0){ $enY += 1; print "Yes\n\n"; }
-      elsif($maxMFE <0){ $enN += 1; print "No\n\n";}
-    }elsif($refCnt < $altCnt){
-      if($maxMFE <0){ $enY += 1; print "Yes\n\n";}
-      elsif($maxMFE >0){ $enN += 1; print "No\n\n";}
-    }
-=cut
-
-    my $case = join("\t", $chr, $gene, $std, $pos, $id, $at, $avgMFE, "$ref;$refCnt>$alt;$altCnt", $maxMir)."\n";
-    if($refCnt > $altCnt){ # reference > alt
-      if($avgMFE >=$MFETH){ # i.e. >0 and >= $MFETH 
-        print $case;
-	$outStr .= "Y\t$case";
-        $enY += 1; #print "Yes\n\n"; 
-      }
-      elsif($avgMFE <= -$MFETH){ 
-	$outStr .= "N\t$case";
-        $enN += 1; 
-      }
-    }elsif($refCnt < $altCnt){
-      if($avgMFE <= -$MFETH){ 
-        #print "avgMFE: $avgMFE: $ref;$refCnt -- $alt;$altCnt\n";
-        print $case;
-	$outStr .= "Y\t$case";
-        $enY += 1; #print "Yes\n\n";
-      }
-      elsif($avgMFE >= $MFETH){
-	$outStr .= "N\t$case";
-        $enN += 1; 
-      }# print "No\n\n";}
-    }
-    next;
-
-    # comparison:
-    if($refCnt > $altCnt){ # reference > alt
-      # compare score
-      if($scs{"$ref;$refCnt"} < $scs{"$alt;$altCnt"}){ # Y: larger count smaller score
-        $scY += 1;
-      }elsif($scs{"$ref;$refCnt"} > $scs{"$alt;$altCnt"}){ # N: larger count larger score
-        $scN += 1;
-      }
-      # compare energy
-      if($ens{"$ref;$refCnt"} > $ens{"$alt;$altCnt"}){ # Y: larger count higher energy
-        $enY += 1;
-      }elsif($ens{"$ref;$refCnt"} < $ens{"$alt;$altCnt"}){ # N: larger count lower energy
-        $enN += 1;
-      }
-      # compare score and energy
-      if($scs{"$ref;$refCnt"} < $scs{"$alt;$altCnt"} && $ens{"$ref;$refCnt"} > $ens{"$alt;$altCnt"}){ # Y: larger count smaller score, higher energy
-        $seY += 1;
-	#print "$key\n$kd\n$details\n";
-
-      }elsif($scs{"$ref;$refCnt"} > $scs{"$alt;$altCnt"} && $ens{"$ref;$refCnt"} < $ens{"$alt;$altCnt"}){ # N: larger count larger score, smaller energy
-        $seN += 1;
-      }
-    }elsif($refCnt < $altCnt){
-      # compare score
-      if($scs{"$ref;$refCnt"} > $scs{"$alt;$altCnt"}){ # Y: larger count smaller score
-        $scY += 1;
-      }elsif($scs{"$ref;$refCnt"} < $scs{"$alt;$altCnt"}){ # N: larger count larger score
-        $scN += 1;
-      }
-      # compare energy
-      if($ens{"$ref;$refCnt"} < $ens{"$alt;$altCnt"}){ # Y: larger count higher energy
-        $enY += 1;
-      }elsif($ens{"$ref;$refCnt"} > $ens{"$alt;$altCnt"}){ # N: larger count lower energy
-        $enN += 1;
-      }
-      # compare score and energy
-      if($scs{"$ref;$refCnt"} > $scs{"$alt;$altCnt"} && $ens{"$ref;$refCnt"} < $ens{"$alt;$altCnt"}){ # Y: larger count smaller score, higher energy
-        $seY += 1;
-	#print "$key\n$kd\n$details\n";
-      }elsif($scs{"$ref;$refCnt"} < $scs{"$alt;$altCnt"} && $ens{"$ref;$refCnt"} > $ens{"$alt;$altCnt"}){ # N: larger count larger score, smaller energy
-        $seN += 1;
-      }
-    }
-    print "$key\n$kd\n$details\n";
 
   }
   $R->stop;
@@ -608,3 +547,44 @@ sub rankSumTest{
 }
 
 
+sub gCluster{
+
+  my ($c0, $c1, $listRef) = @_;
+
+  my $ITERATION = 50;
+  my @list = @$listRef;
+  my $lin = @list;
+  print "Clustring $lin elements: init: c0: $c0; c1: $c1\n";
+
+    # guided clustering:
+    #my ($c0, $c1) = (1, abs($ENRGTH));
+    my ($c0n, $c1n) = (0,0); #counts
+    for(my $j = 1; $j <= $ITERATION; $j++){
+      #batch mode clustering
+      my ($oc0, $oc1) = ($c0, $c1); # old centroids
+      ($c0, $c1) = (0, 0); # new centroids
+      ($c0n, $c1n) = (0,0); #counts
+      
+      for my $can (@list){
+          #my $can = abs($refhs{$_} - $alths{$_});
+          my ($d0, $d1) = (abs($can-$oc0), abs($can-$oc1));
+          if($d0 < $d1){
+	    $c0 += $can;
+	    $c0n += 1;
+          }else{
+	    $c1 += $can;
+	    $c1n += 1;
+          }
+      }
+      # compute centroids
+      $c0 /= $c0n if ($c0n >0);
+      $c1 /= $c1n if ($c1n >0);
+      #check onvergence:
+      if(abs($c0-$oc0)+abs($c1-$oc1) <= 0.05){
+        print STDERR "converged at $j: c0: $c0 -> $oc0 c1: $c1 -> $oc1 \n";
+	last;
+      }
+    }
+
+  return ($c0, $c1); # the new larger centroid
+}
