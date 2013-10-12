@@ -518,14 +518,14 @@ sub mergeSnvs
 
   if($isMono){
     my ($n, $x) = (0, 0);
-    print "Removing mono-allelic SNVs (when genotype is unknown and dbSNPs are used)\n";
+    print "Removing SNVs with any allele < $isMono reads (e.g. when genotype is unknown and dbSNPs are used)\n";
     my $newout = '';
     open(RE, $output) or die "ERROR: cannot open merged SNV file: $output\n";
     while(<RE>){
       chomp;
       my ($chr, $pos, $als, $id, $reads) = split(' ', $_); 
       my ($ref, $alt, $wrt) = split(':', $reads);
-      if($ref > 9 && $alt > 9){
+      if($ref >= $isMono && $alt > $isMono){
         $newout .= "$_\n"; # added
 	$n += 1;
       }else{
