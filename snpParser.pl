@@ -2047,10 +2047,12 @@ sub printSnpEventsResultsByType
 # a sub-routine to work-around the I/O problem between R and Statistics::R
 sub passListToR
 {
-  my ($R, $pRef, $rVar) = @_;
+  my ($R, $pRef, $rVar, $noSort) = @_;
   
   my @pList = @$pRef;
-  @pList = sort{$a<=>$b}@pList; #sorted
+  if(!defined($noSort) || $noSort ne 'nosort'){
+    @pList = sort{$a<=>$b}@pList; #sorted
+  }
   my $pSize = @pList;
   
   #$R->set("$rVar", \@pList);

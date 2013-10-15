@@ -503,6 +503,12 @@ sub mergeSnvs
   my ($prefix, $suffix, $isMono, $output, $isStranded) = @_;
   my $cmd = "cat $prefix"."chr*$suffix";
   my $cmdO = ""; # output command
+ 
+  # add allelic ratios, coverage for histogram and scatter plots
+  my @rto = (); # allelic ratios
+  my @cov = (); # coverage
+  # add total ref and alt read counts for the binomial test
+  my ($refcnt, $altcnt) = (0, 0);
   if(defined($isStranded) && $isStranded == 1){
     my $cmdP = "$cmd | grep '+\$' >$output.plus ";
     my $cmdM = "$cmd | grep '\\-\$' >$output.minus ";
@@ -516,17 +522,24 @@ sub mergeSnvs
   print "Outputting merged SNVs to $output\n";
   system($cmdO) == 0 or die "$cmdO failed\n";
 
-  if($isMono){
+  if(1){ #$isMono){
     my ($n, $x) = (0, 0);
-    print "Removing SNVs with any allele < $isMono reads (e.g. when genotype is unknown and dbSNPs are used)\n";
+    if($isMono){
+      print "Removing SNVs with any allele < $isMono reads (e.g. when genotype is unknown and dbSNPs are used)\n";
+    }
     my $newout = '';
     open(RE, $output) or die "ERROR: cannot open merged SNV file: $output\n";
     while(<RE>){
       chomp;
       my ($chr, $pos, $als, $id, $reads) = split(' ', $_); 
       my ($ref, $alt, $wrt) = split(':', $reads);
-      if($ref >= $isMono && $alt > $isMono){
+      if($ref >= $isMono && $alt >= $isMono){
         $newout .= "$_\n"; # added
+	# push to ratios and coverage
+	$refcnt += $ref;
+	$altcnt += $alt;
+	push @rto, $ref/($ref+$alt);
+	push @cov, $ref+$alt;
 	$n += 1;
       }else{
         $x += 1;
@@ -542,6 +555,7 @@ sub mergeSnvs
   }
 
   print "Finished merging\n";
+  return (\@rto, \@cov, $refcnt, $altcnt);
 }
 
 sub printUsage{
