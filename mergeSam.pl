@@ -108,6 +108,7 @@ This is part of the full pre-processing:
 =back
 
 USAGE: 
+
  perl mergeSam.pl folder_list prefix suffix output_folder
 
 ARGUMENTS:

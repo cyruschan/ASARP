@@ -13,13 +13,13 @@ asarp
 <li><a href='#NAME'>NAME</a></li>
 <li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
 <ul>
+<li><a href='#OUTPUTS'>OUTPUTS</a></li>
 <li><a href='#-I USAGE'>-I USAGE</a></li>
 </ul>
 <li><a href='#DESCRIPTION'>DESCRIPTION</a></li>
 <ul>
-<li><a href='#TERMINOLOGY'>TERMINOLOGY</a></li>
 <li><a href='#OVERVIEW'>OVERVIEW</a></li>
-<li><a href='#The ASARP Pipeline'>The ASARP Pipeline</a></li>
+<li><a href='#TERMINOLOGY'>TERMINOLOGY</a></li>
 </ul>
 <li><a href='#REQUIREMENT'>REQUIREMENT</a></li>
 <li><a href='#SEE ALSO'>SEE ALSO</a></li>
@@ -29,13 +29,20 @@ asarp
 </div>
 <div class='pod'>
 <a name='NAME'></a><h1>NAME</h1>
-<p>asarp.pl -- The new and improved ASARP pipeline to discover ASE/ASARP genes/SNVs, wchih now supports strand-specific RNA-Seq data.</p>
+<p>asarp.pl -- The new and improved ASARP pipeline to discover ASE/ASARP genes/SNVs, which now supports strand-specific RNA-Seq data.</p>
 <p>For details of the older version, refer to the paper:
 <i>Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104</i> and its Supplementary Materials. Link: <a href='http://nar.oxfordjournals.org/content/40/13/e104' target='_blank'>nar.oxfordjournals.org</a></p>
 <p><img src='img/Intro.png' border=0></p>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
 <pre> perl asarp.pl output_file config_file [optional: parameter_file] </pre>
 <p><b>NEW</b>: the ASARP pipeline now supports strand-specific RNA-Seq data (which can be processed by the new pre-processing script: <i><a href='procReads.html'>procReads</a></i>. One can set the optional strand-specific flag in the cnofig file. IMPORTANT: the strand-specific option does not work correctly on non-strand-specific data.</p>
+<p>ARGUMENTS:</p>
+<pre> config_file		the input configuration file which contains all the input file keys and their paths</pre>
+<p>OPTIONAL:</p>
+<pre> parameter_file		the parameter configuration file which contains all the thresholds and cutoffs
+ 			if not input, the default.param file in the ASARP main program directory will be used</pre>
+<p>Details of the input config and parameter files can be found in the <i><a href='Files.html'>Files</a></i> page. For preparation of the input files used in <code>config_file</code>, see the pre-processing section: <i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='procReads.html'>procReads</a></i></p>
+<a name='OUTPUTS'></a><h2>OUTPUTS</h2>
 <p><code>output_file</code> is where the ASARP result summary is output, and meanwhile there will be 4 addtional detailed result files output:</p>
 <ul>
 <li><a name='output_file.ase.prediction -- the detailed results of (whole-gene-level) ASE patterns (exclusive to other ASARP patterns: AI, AS or AT)'></a><code>output_file.ase.prediction</code>
@@ -47,44 +54,45 @@ asarp
 <li><a name='output_file.controlSNV.prediction -- the control SNV information of each individual ASARP SNV'></a><code>output_file.controlSNV.prediction</code>
 -- the control SNV information of each individual ASARP SNV</li>
 </ul>
-<p><code>config_file</code> is the input configuration file which contains all the input file keys and their paths. The format is &lt;key&gt;tab&lt;path&gt;. Line starting with # are comments. Example: <i><a href='../default.config' target='_blank'>../default.config</a></i></p>
-<p>For preparation of the input files used in <code>config_file</code>, see the pre-processing section: <i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='procReads.html'>procReads</a></i></p>
-<p><code>parameter_file</code> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is &lt;parameter&gt;tab&lt;value&gt;. Lines starting with # are comments. It is optional and the default is: <i><a href='../default.param' target='_blank'>../default.param</a></i></p>
 <a name='-I USAGE'></a><h2>-I USAGE</h2>
 <p>Because asarp.pl requires other perl files in the same folder to run, <code>-I path</code> can be used if one would like to run ASARP elsewhere by adding its <code>path</code>.</p>
 <pre> perl -I path path/asarp.pl output_file config_file parameter_file</pre>
 <p>Note that in such a case, one should be careful of the locations of the config and parameter files. Abosulute paths are suggested for the files in <code>config_file</code>.</p>
-<p>See below for the terminology and the overview.</p>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
+<p>The ASARP method is presented below:</p>
+<a name='OVERVIEW'></a><h2>OVERVIEW</h2>
+<p>The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:</p>
+<p><img src='img/ASARP_core.png' border=0></p>
+<p>There are basically 3 steps.</p>
+<p>1. parse the input files and compile alternative mRNA processing events. see outputs of <i><a href='procReads.html'>procReads</a></i></p>
+<p>2. get the SNVs and match them with the events.</p>
+<p>3. process ASARP (including ASE) patterns and output the formatted results.</p>
 <a name='TERMINOLOGY'></a><h2>TERMINOLOGY</h2>
+<p>The predictions that ASARP makes are desribed below:</p>
+<p>Allele-Specific Expression (ASE)</p>
+<ul>
+<li><a name='ASE: a single SNV is called to have an ASE pattern (or simply ASE SNV) if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).'></a><b>ASE</b>: a single SNV is called to have an ASE pattern (or simply ASE SNV) if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).</li>
+</ul>
 <p>Allele-Specific Alternative RNA Processing (<b>ASARP</b>) types:</p>
 <ul>
-<li><a name='ASE: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).'></a><b>ASE</b>: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).</li>
-<li><a name='AS: Alternative Splicing;'></a><b>AS</b>: Alternative Splicing;</li>
-<li><a name='AI: Alternative (5'-end) Initiation;'></a><b>AI</b>: Alternative (5'-end) Initiation;</li>
-<li><a name='AT: Alternative (3'-end) Termination, or Alternative Poly-Adenylation'></a><b>AT</b>: Alternative (3'-end) Termination, or Alternative Poly-Adenylation</li>
+<li><a name='ASAS: Allele-Specific Alternative Splicing;'></a><b>ASAS</b>: Allele-Specific Alternative Splicing;</li>
+<li><a name='ASAI: Allele-Specific Alternative (5'-end) Initiation;'></a><b>ASAI</b>: Allele-Specific Alternative (5'-end) Initiation;</li>
+<li><a name='ASAT: Allele-Specific Alternative (3'-end) Termination, or Alternative Polyadenylation'></a><b>ASAT</b>: Allele-Specific Alternative (3'-end) Termination, or Alternative Polyadenylation</li>
 </ul>
-<p><b>NEV</b>: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as</p>
+<p>How to categorize ASARP patterns into specific Allele-Specific AI/AS/AT and/or combinations of them depends on whether the candidate SNV locations are in internal exons/introns (AS) and/or alternative 3' or 5' UTRs (AI/AT). A complex ASARP gene is with ASARP SNVs in more than one categories.</p>
+<p><img src='img/Types.png' border=0></p>
+<p><b>NEV</b>: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (also alternatively processed region) is also alternatively processed according to RNA-Seq (gene expression). It is calculated as (note that in some events only <code>NEV_gene</code> is available)</p>
 <ul>
 <li><a name='NEV_sp = min (NEV_flanking, NEV_gene), where'></a><code>NEV_sp = min (NEV_flanking, NEV_gene)</code>, where</li>
 <li><a name='NEV_flanking = (# event_reads/event_length)/(# flanking_region_total_reads/flanking_region_total_length), and'></a><code>NEV_flanking = (# event_reads/event_length)/(# flanking_region_total_reads/flanking_region_total_length)</code>, and</li>
 <li><a name='NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_constitutive_exon_length)'></a><code>NEV_gene = (# event_reads/event_length)/(# gene_constitutive_exon_reads/gene_constitutive_exon_length)</code></li>
 </ul>
 <p><code>*_length</code> means the total number of positions within the * region with non-zero reads.</p>
-<a name='OVERVIEW'></a><h2>OVERVIEW</h2>
-<p>The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:</p>
-<p><img src='img/ASARP.png' border=0></p>
-<p>How to categorize ASARP patterns into specific AI/AS/AT and/or combinations of them can be found in <i><a href='snpParser.html'>snpParser</a></i>.</p>
-<a name='The ASARP Pipeline'></a><h2>The ASARP Pipeline</h2>
-<p>There are basically 3 steps.</p>
-<p>1. parse the input files and compile alternative mRNA processing events. see <i><a href='fileParser.html'>fileParser</a></i></p>
-<p>2. get the SNVs and match them with the events. see <i><a href='snpParser.html'>snpParser</a></i></p>
-<p>3. process ASARP (including ASE) patterns and output the formatted results. see source and <i><a href='snpParser.html'>snpParser</a></i></p>
-<p>Look into the source: <i><a href='../asarp.pl' target='_blank'>../asarp.pl</a></i> for more details and it is self-explanatory.</p>
+<p><img src='img/Event.png' border=0></p>
 <a name='REQUIREMENT'></a><h1>REQUIREMENT</h1>
 <p><code>Statistics::R</code>: has to be installed. See <a href='http://search.cpan.org/~fangly/Statistics-R/lib/Statistics/R.pm' target='_blank'>search.cpan.org</a></p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
-<p><i><a href='fileParser.html'>fileParser</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
+<p><i><a href='Overview.html'>Overview</a></i>, <i><a href='fileParser.html'>fileParser</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
 <p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
 <p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>

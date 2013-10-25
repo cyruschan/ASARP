@@ -23,12 +23,14 @@ snp_distri
 <p>snp_distri.pl -- To calculate the SNV (position) distribution in exons, UTRs, introns, etc., according to transcript annotations. A SNV is disarded (not contributing to the total SNV number) if it is covered by &lt; 2 RNA-Seq reads.</p>
 <p>It also serves as an introductory application script to get familiar with the ASARP pipeline (<i><a href='asarp.html'>asarp</a></i>)</p>
 <a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
-<pre>  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]</pre>
+<pre>  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details [is_detailed]]</pre>
 <p><code>snv_file</code>: a SNV list, see the format description in <i><a href='snpParser.html'>snpParser</a></i></p>
 <p><code>powerful_snv_cutoff</code>: an optional cutoff to categorize SNVs into powerful (&gt;= <code>powerful_snv_cutoff</code>) and non-powerful types. Default: 20</p>
 <p><code>transcript_file</code>: Transcript and gene annotation file, see the format description in <i><a href='fileParser.html'>fileParser</a></i></p>
 <p>The optional arguments must be input in order.</p>
 <p><code>pwr_snv_details</code> and <code>ordinary_snv_details</code> are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.</p>
+<p><code>is_detailed</code>:	default: 0; when it is set 1 after both *_snv_details, detailed information of the SNVs will be output.
+The detail format: chr;geneName;snvPos;type</p>
 <ul>
 <li><a name='An example file is ../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt, which was created by merging ensembl Refseq, UCSC knowngene, Gencode gene, and Vegagene.'></a>An example file is ../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt,
 which was created by merging ensembl Refseq, UCSC knowngene, Gencode

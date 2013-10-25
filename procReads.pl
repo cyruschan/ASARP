@@ -438,17 +438,9 @@ To avoid unnecessary computational time to read SNVs of other chrosomes than the
 
 =head2 OUTPUT
 
-By default, the strand specific flag C<is_strand_sp> is unset, and the C<inptu_sam_file> strand information is considered unreliable and not used. The output files are standard bedgraph files http://genome.ucsc.edu/goldenPath/help/bedgraph.html with space as the dilimiter, and SNV files with the following format:
+By default, the strand specific flag C<is_strand_sp> is unset, and the C<inptu_sam_file> strand information is considered unreliable and not used. The output files are standard bedgraph files http://genome.ucsc.edu/goldenPath/help/bedgraph.html with space as the dilimiter, and SNV files should follow the file format described in L<Files>:
 
-Each line is space separated, with
-
- chromosome
- location 
- ref_allele>alt_allele 
- dbSnp_id 
- read_counts ref:alt:wrnt
-
-Note that C<read_counts> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. C<ref> indicates the read count of the reference allele, C<alt> the alternative allele, C<wrnt> (wrong nt) indicates other alleles neither ref nor alt. It is required that C<alt> > C<wrnt>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples would look like:
+Example SNV output lists look like this:
 
  chr10 1046712 G>A rs2306409 50:39:0
  chr10 1054444 A>G rs11253567 2:0:0

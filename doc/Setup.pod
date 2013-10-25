@@ -1,0 +1,163 @@
+=head1 Setup
+
+This page describes the setup details for the ASARP pipeline. The pipeline itself is installation free and runs on Linux/Unix platforms. It depends on the R statistical computing environment and Perl package Statistics::R.
+
+=head1 Platforms
+
+The pipeline is installation-free and runs on Linux/Unix platforms. It uses Linux/Unix commands in some components. For other users such as Windows users, the most reliable way is to first install a Linux/Unix virtual machine and follow the instructions on Linux/Unix. There are virtual machine environments supporting a wide range of different operating systems and computer architectures, e.g.:
+
+=over 6
+
+=item VirtualBox: https://www.virtualbox.org/ 
+
+=back
+
+=head1 Download
+
+=over 6
+
+=item Pipeline Download Link: xxxxxx.tar.gz
+
+=item Additional Demo Data: xxxxxx.tar.gz
+
+=back
+
+After downloading the pipeline, unzip the files as follows. 
+
+ your-folder$ tar -xzvf xxxxxx.tar.gz
+
+It is runnable once you have R and Statistics::R on your machine. See below for the requirements. 
+
+Similarly for the additional demo data, you can unzip them in the data file in C<your-folder/asarp_ss/data>
+
+ ~$ mv xxxx.tar.gz your-folder/asarp_ss/data
+ ~$ cd your-folder/asarp_ss/data
+ ~your-folder/asarp_ss/data$ tar -xzvf xxxx.tar.gz
+
+See the details in Quick Start: Demo
+
+=head1 Requirements
+
+To run the pipeline, users need to first set up R, which is widely used and its installation is well supported across different platforms.
+
+=over 6
+
+=item R: http://www.r-project.org/
+
+=back
+
+Second, users need to install the Perl package Statistics::R which the pipeline uses to interact with R. Installation of Perl packages can be found in detail at CPAN: http://www.cpan.org/modules/INSTALL.html. The documentation is detailed and it is relatively easy for sudo users. 
+
+=over 6
+
+=item Statistics::R: http://search.cpan.org/~fangly/Statistics-R/lib/Statistics/R.pm 
+
+=back
+
+For B<non-root users without sudo privilege>, one option is first install CPANM in a local directory, and install Perl packages locally using: C<cpanm Statistics::R>. See below for details.
+
+=head1
+Easy installation of Perl modules (as a non-root user)
+
+Credits from (the original website is unfortunately gone; a slightly modified copy is provided below): www.tagestad.no/2010/10/easy-installation-of-perl-modules.html
+By Espen Tagestad on October 11, 2010 8:04 PM
+
+------------------------------------------------------------------------
+
+Installing Perl modules traditionally with the operating systems package system as root has a lot of disadvantages. Often you will be forced to stick around with outdated versions, and when you want to do an upgrade you need to check that every application and user have their requirements or dependencies met. Or the opposite way but less frequent - the new version of the operating system wont let you run your legacy application that requires an old module. Installing smaller Perl modules via cpan and mixing them with already installed packages in C</usr/local/lib> can work for short while, but in the end you will most likely end up with a mess with a complete reinstallation of all modules as the result.
+
+...
+
+Unfortunately the newer ways of installing Perl modules is, as far as I could find, not documented in the official documentation of the Perl packages in the different distributions. The tools required is not installed by default either. Lets just cut to the chase: by installing the Perl modules local::lib combined with the more easy to use cpan-minus (App::cpanminus) installing og keeping your Perl modules updated will be as easy (or at least very closely) as using apt on Ubuntu. The method is also very useful if you want to install Perl modules on a system where you don't have root privileges. Lets walk through the setup.
+
+The installation is quite similar for every Unix-like operatin system. including FreeBSD, OS X, Solaris and Linux. You will, of course, need Perl installed, but apart from that keep as few as possible Perl modules installed in the base site_perl library.
+
+As your user (with cursor $) logged in to the system (development), fetch (or wget if you use Linux) and install C<local::lib>:
+
+ $ fetch \
+ http:// search.cpan.org/CPAN/authors/id/G/GE/GETTY/local-lib-1.006007.tar.gz
+ $ tar zxf local-lib-1.006007.tar.gz
+ $ cd local-lib-1.006007
+ local-lib-1.006007$ perl Makefile.PL --bootstrap 
+
+CPAN will ask you some question but hopefully answer most of them itself. Just press enter on most of them, or correct the settings that seems obviously wrong.
+
+ local-lib-1.006007$ make
+
+If everything is ok, install it.
+
+ local-lib-1.006007$ make install
+
+Then you need to set some environment variables to be loaded when your user log in. Simply execute this if you are using tcsh:
+
+ perl -I$HOME/perl5/lib/perl5 -Mlocal::lib >> ~/.cshrc
+
+If you are using bash instead of tcsh, execute this:
+
+ echo 'eval $(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)' >>~/.bashrc
+
+Now, to set them vars, simply log out and in, and check that they are set correctly (these three below need to be present):
+
+ $ env
+ ...
+ MODULEBUILDRC=/home/test/perl5/.modulebuildrc
+ PERL_MM_OPT=INSTALL_BASE=/home/test/perl5
+ PERL5LIB=/home/test/perl5/lib/perl5/i386-freebsd-64int:/home/test/perl5/lib/perl5
+ Next, configure cpan to install dependencies automatically and to download the modules from a nearby mirror:
+
+ $ perl -MCPAN -e shell
+ cpan[1]> o conf prerequisites_policy follow
+ cpan[2]> o conf build_requires_install_policy yes
+ cpan[3]> o conf urllist ftp:// ftp.uninett.no/pub/CPAN
+ cpan[4]> o conf commit
+ cpan[5]> quit
+
+Install App::cpanminus:
+
+ $ cpan -i App::cpanminus
+
+After some minutes with compiling and installing, the cpanminus will hopefully be installed. It is shipped with a executable 'cpanm' that is placed in your path. Type rehash to reload the path if you're using csh/tcsh.
+
+Lets try to install a small module, take YAML for example (CPAN will complain if its not there, so its good to get it in anyway):
+
+ $ cpanm YAML
+ --> Working on YAML
+ Fetching http:// search.cpan.org/CPAN/authors/id/A/AD/ADAMK/YAML-0.72.tar.gz ... OK
+ Configuring YAML-0.72 ... OK
+ Building and testing YAML-0.72 ... OK
+ Successfully installed YAML-0.72
+ $ 
+
+If you want do to something more complicated with a lot of module dependencies, try installing the nice Catalyst framework:
+
+ $ cpanm Catalyst::Devel
+
+If you want to upgrade a perl module, just run cpanm <module>, and cpanm will upgrade it if there is a new version available in CPAN. 
+
+------------------------------------------------------------------------
+
+To install R::Statistics then, simply type:
+
+ cpanm Statistics::R
+
+If the package installation fails to finish all tests, use force installation as follows:
+ 
+ cpanm -f Statistics::R
+
+=head1 SEE ALSO
+
+L<Overview>, L<asarp>
+
+=head1 COPYRIGHT
+
+This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.
+
+This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.
+
+=head1 AUTHOR
+
+Cyrus Tak-Ming CHAN
+
+Xiao Lab, Department of Integrative Biology & Physiology, UCLA
+
+=cut

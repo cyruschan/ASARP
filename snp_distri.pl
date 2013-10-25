@@ -29,7 +29,7 @@ ordinary_snv_details
 		These two are the output files for the detailed SNV categories of 
 		powerful and non-powerful (ordinary) SNVs respectively. 
 is_detailed	If is_detailed is set 1 after both *_snv_details, detailed information of the 
-		SNVs will be output.
+		SNVs will be output: chr;geneName;snvPos;type
 EOT
   exit;
 }
@@ -38,7 +38,7 @@ if($strandFlag == 1 || $strandFlag == 2){
 }elsif($strandFlag == 0){
   print "NOTE: Non-strand-specific output is set.\n"; 
 }else{
-  die "ERROR: strand_flag is expected to be 0 or 1/2. Now $strandFlag is input\n";
+  die "ERROR: strand_flag is expected to be 0 or 1/2. But $strandFlag is input\n";
 }
 
 if(!defined($POWCUTOFF)){
@@ -387,7 +387,7 @@ It also serves as an introductory application script to get familiar with the AS
 
 =head1 SYNOPSIS
 
-  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details]
+  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details [is_detailed]]
 
 C<snv_file>: a SNV list, see the format description in L<snpParser>
 
@@ -398,6 +398,9 @@ C<transcript_file>: Transcript and gene annotation file, see the format descript
 The optional arguments must be input in order.
 
 C<pwr_snv_details> and C<ordinary_snv_details> are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.
+
+C<is_detailed>:	default: 0; when it is set 1 after both *_snv_details, detailed information of the SNVs will be output.
+		The detail format: chr;geneName;snvPos;type
 
 =over 6
 

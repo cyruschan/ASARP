@@ -29,6 +29,9 @@ OPTIONAL
 isStrandSp	set 1 if the SNV files are strand-specific
 		default: non-strand-specific
 
+Scatter plots: output.scatt.pdf and histogram: output.hist.pdf will be
+generated alongside the output, visualizing the SNV statistics.
+
 EOT
   exit;
 }
@@ -152,22 +155,35 @@ script (equivalent to using Unix cat and/or grep).
 
 USAGE:
 
- perl $0 prefix suffix mono=0/1 output [isStrandSp]
+ perl mergeSnvs.pl  prefix suffix mono=x output [isStrandSp]
+
+ARGUMENTS:
 
  prefix		the folder path and prefix string for all chr* SNV files
  		e.g. "/home/N.A+/" for all chr* SNVs in that folder
  suffix		the suffix after chr[1..22/X/Y/M]
- mono=		2 options: 
-		"mono=1": allow mono-allelic SNVs; 
-		"mono=0": discard mono-allelic SNVs; 
+ mono=		options (no space): 
+		"mono=0": allow mono-allelic SNVs; 
+		"mono=x": discard SNVs with any allele < x reads; 
 		useful when genotype is unknown and dbSNPs are used
+		where mono-allelic SNVs would be called
  output		the output file name for the merged SNVs
  		note that output.plus and output.minus are by-product
  		outputs for + and - strands for strand-specific cases
  		make sure the output and chr* SNV file names do not conflict
 
- OPTIONAL
+OPTIONAL:
+
  isStrandSp	set 1 if the SNV files are strand-specific
+		default: non-strand-specific
+
+Scatter plots: output.scatt.pdf and histogram: output.hist.pdf will be generated alongside the output, visualizing the SNV statistics.
+
+=head1 EXAMPLE OUTPUTS
+
+Examples of scatter plots and histograms (mono=10):
+
+G<img/snvs.png>
 
 
 =head1 SEE ALSO

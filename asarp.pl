@@ -161,7 +161,7 @@ if(defined($outputFile)){
 
 =head1 NAME
 
-asarp.pl -- The new and improved ASARP pipeline to discover ASE/ASARP genes/SNVs, wchih now supports strand-specific RNA-Seq data. 
+asarp.pl -- The new and improved ASARP pipeline to discover ASE/ASARP genes/SNVs, which now supports strand-specific RNA-Seq data. 
 
 For details of the older version, refer to the paper: 
 I<Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104> and its Supplementary Materials. Link: http://nar.oxfordjournals.org/content/40/13/e104
@@ -173,6 +173,19 @@ G<img/Intro.png>
  perl asarp.pl output_file config_file [optional: parameter_file] 
 
 B<NEW>: the ASARP pipeline now supports strand-specific RNA-Seq data (which can be processed by the new pre-processing script: L<procReads>. One can set the optional strand-specific flag in the cnofig file. IMPORTANT: the strand-specific option does not work correctly on non-strand-specific data.
+
+ARGUMENTS:
+
+ config_file		the input configuration file which contains all the input file keys and their paths
+
+OPTIONAL:
+
+ parameter_file		the parameter configuration file which contains all the thresholds and cutoffs
+ 			if not input, the default.param file in the ASARP main program directory will be used
+
+Details of the input config and parameter files can be found in the L<Files> page. For preparation of the input files used in C<config_file>, see the pre-processing section: L<rmDup>, L<mergeSam>, L<procReads>
+
+=head2 OUTPUTS
 
 C<output_file> is where the ASARP result summary is output, and meanwhile there will be 4 addtional detailed result files output:
 
@@ -192,12 +205,6 @@ C<output_file> is where the ASARP result summary is output, and meanwhile there 
 
 =back
 
-C<config_file> is the input configuration file which contains all the input file keys and their paths. The format is <key>tab<path>. Line starting with # are comments. Example: F<../default.config>
-
-For preparation of the input files used in C<config_file>, see the pre-processing section: L<rmDup>, L<mergeSam>, L<procReads>
-
-C<parameter_file> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is <parameter>tab<value>. Lines starting with # are comments. It is optional and the default is: F<../default.param>
-
 =head2 -I USAGE
 
 Because asarp.pl requires other perl files in the same folder to run, C<-I path> can be used if one would like to run ASARP elsewhere by adding its C<path>. 
@@ -206,27 +213,55 @@ Because asarp.pl requires other perl files in the same folder to run, C<-I path>
 
 Note that in such a case, one should be careful of the locations of the config and parameter files. Abosulute paths are suggested for the files in C<config_file>.
 
-See below for the terminology and the overview.
-
 =head1 DESCRIPTION
 
+The ASARP method is presented below:
+
+=head2 OVERVIEW
+
+The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:
+
+G<img/ASARP_core.png>
+
+
+There are basically 3 steps. 
+
+1. parse the input files and compile alternative mRNA processing events. see outputs of L<procReads>
+
+2. get the SNVs and match them with the events.
+
+3. process ASARP (including ASE) patterns and output the formatted results.
+
 =head2 TERMINOLOGY
+
+The predictions that ASARP makes are desribed below:
+
+Allele-Specific Expression (ASE)
+
+=over 6
+
+=item B<ASE>: a single SNV is called to have an ASE pattern (or simply ASE SNV) if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).
+
+=back
 
 Allele-Specific Alternative RNA Processing (B<ASARP>) types:
 
 =over 6
 
-=item B<ASE>: Allele-Specific Expression, a single SNV is called to have an ASE pattern if its allelic ratio significally diverges from 0.5 (in other words 1:1 for Ref:Alt).
 
-=item B<AS>: Alternative Splicing; 
+=item B<ASAS>: Allele-Specific Alternative Splicing; 
 
-=item B<AI>: Alternative (5'-end) Initiation; 
+=item B<ASAI>: Allele-Specific Alternative (5'-end) Initiation; 
 
-=item B<AT>: Alternative (3'-end) Termination, or Alternative Poly-Adenylation
+=item B<ASAT>: Allele-Specific Alternative (3'-end) Termination, or Alternative Polyadenylation
 
 =back
 
-B<NEV>: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (region) is alternatively processed. For AS events, it is calculated as 
+How to categorize ASARP patterns into specific Allele-Specific AI/AS/AT and/or combinations of them depends on whether the candidate SNV locations are in internal exons/introns (AS) and/or alternative 3' or 5' UTRs (AI/AT). A complex ASARP gene is with ASARP SNVs in more than one categories. 
+
+G<img/Types.png>
+
+B<NEV>: Normalized Expression Value, a PSI (Percent Spliced-In) like value to measure whether an event (also alternatively processed region) is also alternatively processed according to RNA-Seq (gene expression). It is calculated as (note that in some events only C<NEV_gene> is available) 
 
 =over 6
 
@@ -240,25 +275,7 @@ B<NEV>: Normalized Expression Value, a PSI (Percent Spliced-In) like value to me
 
 C<*_length> means the total number of positions within the * region with non-zero reads.
 
-=head2 OVERVIEW
-
-The procedures (rules) for ASARP are illustrated in the following figure and terminology explained below:
-
-G<img/ASARP.png>
-
-How to categorize ASARP patterns into specific AI/AS/AT and/or combinations of them can be found in L<snpParser>.
-
-=head2 The ASARP Pipeline
-
-There are basically 3 steps. 
-
-1. parse the input files and compile alternative mRNA processing events. see L<fileParser>
-
-2. get the SNVs and match them with the events. see L<snpParser>
-
-3. process ASARP (including ASE) patterns and output the formatted results. see source and L<snpParser>
-
-Look into the source: F<../asarp.pl> for more details and it is self-explanatory.
+G<img/Event.png>
 
 =head1 REQUIREMENT
 
@@ -266,7 +283,7 @@ C<Statistics::R>: has to be installed. See http://search.cpan.org/~fangly/Statis
 
 =head1 SEE ALSO
 
-L<fileParser>, L<snpParser>, L<MyConstants>
+L<Overview>, L<fileParser>, L<snpParser>, L<MyConstants>
 
 =head1 COPYRIGHT
 

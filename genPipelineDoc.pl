@@ -12,13 +12,16 @@ genIndexFrameset();
 
 #######################################################
 # all sections (and in order)
-my @sections = qw (INTRO PREPROCESS ASARP ANALYSIS CORE-SUB);
+my @sections = qw (INTRODUCTION PREPROCESS ASARP ANALYSIS); # CORE-SUB);
 my %layout = ();
 
 #######################################################
 # Section 1: introduction
-#my @intro = qw( Introduction Publication );
-#$layout{"INTRO"} = \@intro;
+my @intro = qw( Overview Setup Files ); # Set-up File-formats);
+for(@intro){
+  system("perl genHtmlDoc.pl doc/$_.pod doc/$_.html $_");
+}
+$layout{"INTRODUCTION"} = \@intro;
 
 #######################################################
 # Section 2: all pre-processing scripts
@@ -127,7 +130,7 @@ sub genIndexFrameset{
     <frame src="title.html" noresize scrolling="no">
     <frameset border="0" frameborder="0" framespacing="0" cols="160px,*">
       <frame name="menu" src="menu.html" scrolling="auto" noresize>
-      <frame name="content" src="asarp.html" scrolling="auto" noresize>
+      <frame name="content" src="Overview.html" scrolling="auto" noresize>
     </frameset>
   </frameset>
 </html>

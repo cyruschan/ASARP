@@ -92,14 +92,8 @@ expression (ASE) studies</p>
 <code>read_counts</code> are not needed and ignored which are from DNA genomic sequencing.</p>
 <p>To avoid unnecessary computational time to read SNVs of other chrosomes than the one in <code>inptu_sam_file</code>, it is suggested to keep SNVs of the same chromosome in one seperate file.</p>
 <a name='OUTPUT'></a><h2>OUTPUT</h2>
-<p>By default, the strand specific flag <code>is_strand_sp</code> is unset, and the <code>inptu_sam_file</code> strand information is considered unreliable and not used. The output files are standard bedgraph files <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a> with space as the dilimiter, and SNV files with the following format:</p>
-<p>Each line is space separated, with</p>
-<pre> chromosome
- location 
- ref_allele&gt;alt_allele 
- dbSnp_id 
- read_counts ref:alt:wrnt</pre>
-<p>Note that <code>read_counts</code> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. <code>ref</code> indicates the read count of the reference allele, <code>alt</code> the alternative allele, <code>wrnt</code> (wrong nt) indicates other alleles neither ref nor alt. It is required that <code>alt</code> &gt; <code>wrnt</code>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples would look like:</p>
+<p>By default, the strand specific flag <code>is_strand_sp</code> is unset, and the <code>inptu_sam_file</code> strand information is considered unreliable and not used. The output files are standard bedgraph files <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a> with space as the dilimiter, and SNV files should follow the file format described in <i><a href='Files.html'>Files</a></i>:</p>
+<p>Example SNV output lists look like this:</p>
 <pre> chr10 1046712 G&gt;A rs2306409 50:39:0
  chr10 1054444 A&gt;G rs11253567 2:0:0
  chr10 1055866 A&gt;T rs4880751 1:2:1

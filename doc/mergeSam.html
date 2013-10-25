@@ -27,8 +27,8 @@ mergeSam
 <p>2. <b>mergeSam</b> (merging SAM files if there are independent duplicates)</p>
 <p>3. procReads (processing SAM files to get SNV read counts and generate bedgraph files)</p>
 </ul>
-<p>USAGE:
-perl mergeSam.pl folder_list prefix suffix output_folder</p>
+<p>USAGE:</p>
+<pre> perl mergeSam.pl folder_list prefix suffix output_folder</pre>
 <p>ARGUMENTS:</p>
 <pre> folder_list 	a file containing a line-separated list of folders 
           	representing mutilple biological replicates
@@ -45,8 +45,14 @@ perl mergeSam.pl folder_list prefix suffix output_folder</p>
 <p>NOTE:</p>
 <p>files matching folder/prefix*.suffix will be
 enumerated for merging, where &quot;folder&quot; is one element
-in the folder_list. Note the added / and *. in between
-The files are simply merged and not sorted.</p>
+in the folder_list. Note the added / and *. in between.</p>
+<p>The files are simply merged and not sorted.</p>
+<p>EXAMPLE:</p>
+<p>If one wants to merge all &quot;proc_chr*.rmdup.sam&quot; files under
+data/rep1, data/rep2, data/rep3 (list stored in &quot;rep.lst&quot;)
+and output the merged files to folder &quot;data.merged&quot;,
+mergeSam.pl should be run as follows:</p>
+<pre> perl mergeSam.pl rep.lst proc_chr rmdup.sam dadta.merged</pre>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='rmDup.html'>rmDup</a></i>, <i><a href='procReads.html'>procReads</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>

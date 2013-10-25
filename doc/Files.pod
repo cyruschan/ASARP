@@ -1,0 +1,142 @@
+=head1 Files
+
+This page describes the input and output files and their formats. 
+
+=head1 Input Files
+
+C<confg_file> and C<parameter_file> contain the input and parameter settings for ASARP.
+
+=head2 Configuration File
+
+C<config_file> is the input configuration file which contains all the input file keys and their paths. The format is <key>tab<path>. Line starting with # are comments. Example: F<../default.config>. The keys and paths are explained below ([opt] indicates an optional input file):
+
+ bedfolder	the path to the bedgraph files chr*.bedgraph
+ bedext		the extension after chr*. for the bedgraph files, 
+ 		default is bedgraph [opt]
+ xiaofile	the gene annotation file, we provide a pre-processed file 
+ 		for hg19 merging ensembl Refseq, UCSC knowngene, etc.
+ splicingfile	the annotated splicing events derived from xiaofile
+ 		we provide a pre-processed file for hg19
+ estfile	splicing events from ESTs [opt]
+ 		we provide a pre-processed file for hg19
+
+ strandflag	whether the RNA-Seq is strand-specific [opt]
+ 		0 or no input: non-strand-specific (default)
+		1: strand-specific
+
+ rnaseqfile	user specified splicing events [opt], 
+ 		which has the same format as splicingfile and
+		can be derived from their RNA-Seq data and annotations
+
+=head2 Parameter File
+
+C<parameter_file> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is <parameter>tab<value>. Lines starting with # are comments. The default is: F<../default.param>
+
+ powerful_snv	powerful SNV count cutoff
+ fdr		FDR cutoff for ASE genes [opt]
+ 		If input, the ASE p-value threshold
+ 		p_chi_snv will be ignored
+ p_chi_snv	p-value cutoff for Chi-squared test [opt]
+ 		to shortlist an ASE SNV
+ 		Either fdr or p_chi_snv needs to be input
+ p_fisher_pair	p-value cutoff for Fisher exact test.
+
+ # NEV upper cutoff for alternatively spliced regions
+ nev_lower	NEV lower bound (>=0)
+ nev_upper	NEV upper bound (<1)
+
+ ratio_diff	absolute allelit ratio difference cutoff 
+ 		for a target-control SNV pair
+
+For preparation of the input files used in C<config_file>, see the pre-processing section: L<rmDup>, L<mergeSam>, L<procReads>
+
+=head2 sam files
+
+Only sam files for uniquely mapped reads (read pairs) should be used. sam file header lines should be excluded. In paired-end cases, mapped read pair1 should be followed by mapped read pair2 immediately and their IDs should be identical or differ at most by /1 and /2.
+
+=head2 SNV list
+
+SNV list can be either the input to the pre-processing program L<procReads>, or the output of L<procReads> containing allele read counts extracted from sam files.
+Each line is B<space> separated, with the following attributes
+
+ chromosome
+ location 
+ ref_allele>alt_allele 
+ dbSnp_id (na if not available) 
+ ref:alt:wrnt (read counts of reference, alternative, and other mismatch alleles)
+ [strand] (optional: for strand-specific data)
+
+When used as B<input> to procReads, only the first 4 attributes are needed and the extra attributes are read through and ignored. Note that strand is not used even for strand-specific data because only one SNV is assumed at one locus. Example:
+
+ chr10 1046712 G>A rs2306409
+
+When used as B<output> of procReads (also input of ASARP prediction), the read counts are required. In strand-specific cases, the strand is also required, and note that one SNV locus may have reads in both + and - strands and are treated as two different cases.
+
+C<read_counts> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. C<ref> indicates the read count of the reference allele, C<alt> the alternative allele, C<wrnt> (wrong nt) indicates other alleles neither ref nor alt. It is required that C<alt> > C<wrnt>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples in a strand-specific setting would look like:
+
+ chr10 1046712 G>A rs2306409 30:23:0 +
+
+The compatible format of SNV lists as input or output enables chaining multiple components in the ASARP pipeline to analyze specific types of SNVs. For example, powerful SNVs output by L<aseSnvs> can be used as input for SNV distribution analysis by L<snp_dist>. SNVs selected from certain cell-line or tissue can be input to L<procReads> with different bedgraph track files to obtain their allele read counts in another cell-line or tissue, which can be further used for comparable ASARP analysis.
+
+=head2 gene (transcript) annotations
+
+
+
+=head2 Pre-processed events
+
+Events files represent all potential alternatively processed regions extracted from annotations or RNA-Seq data. For human (hg19), we have generated pre-processed event files bundled with the pipeline, namely C<splicingfile> and C<estfile>, from the gene annotations (C<xiaofile>) and older expressed sequence tag (EST) analysis respectively. C<splicingfile> is required as it is the most accurate, and C<estfile> is optional to provide more sensitivity. User can also generate their own C<rnaseqfile> using their RNA-Seq data (or even other resources) and existing annotations to increase sensitivity, as long as the format is compatible with C<splicingfile>.
+
+Their formats are illustrated as follows.
+
+C<splicingfile> and C<rnaseqfile> contain splicing events (alternatively processed regions) as determined respectively by annotations and user specified resources such as RNA-seq data. They have the same format, while the former is required and the latter optional. Users can generate their own events to replace the pre-processed ones at their preference. 
+For each gene, there is a header line where the gene symbol name and the constitutive exon coordinates are first listed. The format is >gene_symbol<tab>const_start1-const_end1;const_start2-const_end2;...const_startn-const_endn 
+
+The header line is followed by, if any, event lines starting with the keyword 'EVENT'. The format of the events is EVENT, chromosome, genename, strand (1 for + and -1 for -), event_region, flanking_region_1, flanking_region_2, where *_region are in the format of starting_coordinate-ending_coordinate (1-based start and end). For example (no events for CARTPT):
+
+ >ADAR	154574680-154574724;154574861-154575102
+ EVENT	chr1	ADAR	-1	154562660-154562737	154562233-154562404	154562738-154562885
+ EVENT	chr1	ADAR	-1	154569415-154569471	154569281-154569414	154569599-154569743
+ EVENT	chr1	ADAR	-1	154574725-154574860	154574680-154574724	154574861-154575102
+ ...
+ >CARTPT	71015707-71015790
+ >CAST	96083049-96083096
+ EVENT	chr5	CAST	1	95998056-95998201	95865525-95865584	96011243-96011305
+ EVENT	chr5	CAST	1	95998056-95998201	95997778-95997869	96011243-96011305
+ EVENT	chr5	CAST	1	96058343-96058402	96038561-96038619	96073553-96073651
+
+C<estfile> contains splicing events as determined from hg19 EST and cDNA data. The format is tab-delimited as: event_type (ASS/SE/RI, etc.), event_name (chr:pos:strand), starting_coordinate, ending_coordinate (1-based start and end). In the EST events, only the event regions are kept track of, and no flanking regions are recorded, so constitutive exons in C<splicingfile> will be used in NEV calculation. Examples:
+
+ ASS	chr20:61924538:+	61943772	61943775
+ ASS	chr20:61924538:+	61946753	61946755
+ SE	chr20:61924538:+	61956621	61956716
+ SE	chr20:61924538:+	61953410	61953463
+ RI	chr22:32058418:-	32017128	32017320
+ RI	chr22:31795509:+	32014212	32014300
+
+
+=over 6
+
+=item VirtualBox: https://www.virtualbox.org/ 
+
+=back
+
+
+=head1 Output Files
+
+To run the pipeline, users need to first set up R, which is widely used and its installation is well supported across different platforms.
+
+=head1 SEE ALSO
+
+L<Overview>, L<procReads>, L<aseSnvs>, L<snp_dist>, L<asarp>
+
+=head1 COPYRIGHT
+
+This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.
+
+This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.
+
+=head1 AUTHOR
+
+Cyrus Tak-Ming CHAN
+
+Xiao Lab, Department of Integrative Biology & Physiology, UCLA
