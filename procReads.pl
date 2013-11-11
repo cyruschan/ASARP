@@ -2,6 +2,7 @@
 use warnings;
 use strict;
 
+#BEGIN {push @INC, '.'}
 require "fileParser.pl"; # only to use binarySearch
 require "readUtilities.pl";
 # set autoflush for error and output
@@ -102,8 +103,16 @@ sub readSamFile{
   my $cnt = 0;
   print "Processing SAM file: $samFile and counting SNV reads...";
   open(FP, "<", $samFile) or die "ERROR: Can't open $samFile";
+  my $hdFlag = 0; #header flag
   while(<FP>){
     chomp $_;
+    if($_ =~ /^\@/){
+      if($hdFlag ==0){
+        print "NOTE: Header lines of the sam file will be ignored\n";
+      }
+      $hdFlag += 1;
+      next;
+    }
     my @attr = split('\t', $_);
     $sam[$cnt]  = join("\t", $attr[0], $attr[1], $attr[2], $attr[3], $attr[5], $attr[9]); # id strand chr start cigar and read: good enough
     ++$cnt;
@@ -112,6 +121,9 @@ sub readSamFile{
   close (FP);
   my $unit = 'lines';
   print " $cnt $unit. Done.\n";
+  if($hdFlag){
+    print "$hdFlag header lines ignored. Done.\n";
+  }
 
   return \@sam;
 }
@@ -299,6 +311,9 @@ sub addSnvInPair{
   my $start = $$attr[3];
   my $cigar = $$attr[4];
   my $block = parseCigar($start, $cigar);
+  if(!defined($block)){ # not supported CIGAR, directly return
+    return ($ref, '');
+  }
   #print "$cigar, $block | $$attr[11]\n";
   my $snvToAdd = "";
 
@@ -414,7 +429,7 @@ OPTIONAL [if input, must be input in order following is_strand_sp]:
 
 =head2 INPUT
 
-C<input_sam_file> should contain only 1 chromosome, and it should be in Dr. Jae-Hyung Lee's SAM format (check out http://www.ncbi.nlm.nih.gov/pubmed/21960545 for more details)
+C<input_sam_file> should contain only 1 chromosome, and it should be in SAM/JSAM format. If it is in JSAM format (check out http://www.ncbi.nlm.nih.gov/pubmed/21960545 for more details), L<procReadsJ> can also be used.
 
 The SNP list should be in a format like this:
 

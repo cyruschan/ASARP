@@ -109,6 +109,12 @@ sub procDnaSnv{
 sub getStrandInRead{
   # handle the strand info according to SAM format: http://samtools.sourceforge.net/SAM1.pdf
   my ($strand, $strandFlag) = @_; 
+  if($strand & 4){ # 0x4
+    die "ERROR: only mapped reads are accepted; please filter unmapped (0x4) reads using other tools\nException flag: $strand\n";
+  }
+  #if($strand & 256){ # 0x100
+  #  die "ERROR: only uniquely mapped reads are accepted; please filter unmapped (0x4) reads using other tools\nException flag: $strand\n";
+  #}
   if($strand & 16){ # i.e. 0x10 
     $strand = '-'; #antisense
     if($strandFlag == 2){ # pair 1 is anti-sense
@@ -471,13 +477,18 @@ sub parseCigar{
 	$block .= "$end";
       } elsif ($cigar_part =~ /(\d+)N/){
         $position += $1; # skipped positions
-      } else { die "ERROR: CIGAR not supported: $cigar\n"; }
+      } else { 
+	print STDERR "WARNING: CIGAR not supported: $cigar\n"; 
+        return undef; 
+      }
       #} elsif ($cigar_part =~ /(\d+)I/){
       #} elsif ($cigar_part =~ /(\d+)D/){
       #} elsif ($cigar_part =~ /(\d+)S/){
       $cigar =~ s/$cigar_part//;
     }else{
-      die "ERROR: CIGAR type not yet supported: $cigar\n";
+      print STDERR "WARNING: CIGAR not supported: $cigar\n"; 
+      return undef; 
+      #die "ERROR: CIGAR type not yet supported: $cigar\n";
     }
   }
   return $block;
