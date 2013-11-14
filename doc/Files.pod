@@ -50,9 +50,14 @@ C<parameter_file> is the parameter configuration file which contains all the thr
 
 For preparation of the input files used in C<config_file>, see the pre-processing section: L<rmDup>, L<mergeSam>, L<procReads>
 
-=head2 sam files
+=head2 SAM files
 
-Only sam files for uniquely mapped reads (read pairs) should be used. sam file header lines should be excluded. In paired-end cases, mapped read pair1 should be followed by mapped read pair2 immediately and their IDs should be identical or differ at most by /1 and /2.
+Both SAM and JSAM files are accepted. Besides the standard SAM attributes, JSAM files have different extra attributes from common aligners to store SNV and editing information. For more details of JSAM files, see L<procReadsJ>.
+
+For SAM/JSAM format, only SAM files for uniquely mapped reads (read pairs) should be used. Unmapped reads (0x4) should be removed pior to the preprocessing steps: L<rmDup>, L<mergeSam>, L<procReads>. SAM file header lines are ignored. In paired-end cases, mapped read pair1 should be followed by mapped read pair2 immediately and their IDs should be identical or differ at most by /1 and /2. For reads with insertion/deletion, they will be discarded according to the CIGAR string parsing.
+
+In a strand specific setting, 0x10 is used to identify the reads mapped in an anti-sense manner. However, if the strand flag is set to be 2 (i.e. pair 2 is sense and pair 1 is anti-sens), then 0x10 will be considered as sense. All other reads with 0x10 unset will be considered as the other case accordingly. Therefore, it is important to make sure the SAM/JSAM files contain only uniquely mapped reads.
+
 
 =head2 SNV list
 

@@ -48,6 +48,12 @@ To run the pipeline, users need to first set up R, which is widely used and its 
 
 Second, users need to install the Perl package Statistics::R which the pipeline uses to interact with R. Installation of Perl packages can be found in detail at CPAN: http://www.cpan.org/modules/INSTALL.html. The documentation is detailed and it is relatively easy for sudo users. 
 
+To test whether the installation is successful (for the ASARP pipeline), simply try C<testR.pl>
+
+ perl testR.pl
+
+It will do a simple statistical test and output the result if successful.
+
 =over 6
 
 =item Statistics::R: http://search.cpan.org/~fangly/Statistics-R/lib/Statistics/R.pm 
@@ -59,10 +65,10 @@ For B<non-root users without sudo privilege>, one option is first install CPANM 
 =head1
 Easy installation of Perl modules (as a non-root user)
 
-Credits from (the original website is unfortunately gone; a slightly modified copy is provided below): www.tagestad.no/2010/10/easy-installation-of-perl-modules.html
-By Espen Tagestad on October 11, 2010 8:04 PM
+ Credits from: www.tagestad.no/2010/10/easy-installation-of-perl-modules.html
+ By Espen Tagestad on October 11, 2010 8:04 PM
+ (the original website is unfortunately gone; a slightly modified copy is provided below)
 
-------------------------------------------------------------------------
 
 Installing Perl modules traditionally with the operating systems package system as root has a lot of disadvantages. Often you will be forced to stick around with outdated versions, and when you want to do an upgrade you need to check that every application and user have their requirements or dependencies met. Or the opposite way but less frequent - the new version of the operating system wont let you run your legacy application that requires an old module. Installing smaller Perl modules via cpan and mixing them with already installed packages in C</usr/local/lib> can work for short while, but in the end you will most likely end up with a mess with a complete reinstallation of all modules as the result.
 
@@ -143,6 +149,11 @@ To install R::Statistics then, simply type:
 If the package installation fails to finish all tests, use force installation as follows:
  
  cpanm -f Statistics::R
+
+To test whether the installation is successful, simply try C<testR.pl> in the ASARP folder
+
+ perl testR.pl
+
 
 =head1 SEE ALSO
 

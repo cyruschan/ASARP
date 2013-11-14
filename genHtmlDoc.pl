@@ -2,6 +2,9 @@
 use strict;
 use Pod::HtmlEasy;
 
+if(@ARGV < 3){
+  die "USAGE: perl $0 input.pod output.html title\n";
+}
 my ($inputPod, $outputHtml, $title) = @ARGV;
 #safety checks
 if(!($inputPod =~ /\.[pod|pl|pm|plx]/)){
@@ -50,3 +53,25 @@ title => $title,
 );
 
 $podhtml->pod2html($inputPod, %options);
+
+linkSpaceWorkaround($outputHtml, "$outputHtml");
+
+sub linkSpaceWorkaround{
+
+  #Pod::HtmlEasy will always generates the abbreviated forms of a html/ftp link
+  #in order to work around this, one has to add a space between http:// and the actual link,
+  #e.g. http://www.abc.com will be http:// www.abc.com to stop this
+  #to maintain the link reachable, this work-around simply again
+  #replaces all 'html:// ' and 'ftp:// ' with 'html://' and 'ftp://' using sed
+  # if outhtml is not input, the final output will be the input itself
+  my ($inhtml, $outhtml) = @_;
+  if(!defined($outhtml)){
+    $outhtml = $inhtml; # in = out: in-place
+  }
+  #  sed 's/ftp\:\/\/ /ftp\:\/\//g' <temp.txt >temp.new.txt
+  # replace ftp:// and then html:// 
+  system("sed 's/ftp\\:\\/\\/ /ftp\\:\\/\\//g' <$inhtml >$inhtml.tmp");
+  system("sed 's/http\\:\\/\\/ /http\\:\\/\\//g' <$inhtml.tmp >$outhtml");
+  system("rm $inhtml.tmp");
+
+}
