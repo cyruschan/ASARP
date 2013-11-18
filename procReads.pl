@@ -13,7 +13,7 @@ $| = 1;
 
 our $INTRVL = 100000; #interval to output processed counts
 my $samType = "a standard SAM file with
-	11 attributes. You can also samtools and bedtools; or
+	11 attributes. You can also use samtools and bedtools; or
 	to use procReadsJ.pl on the special jsam files introduced
 	by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
 	expression (ASE) studies";
@@ -375,15 +375,18 @@ This is part of the full pre-processing:
 
 USAGE:
 
- perl procReads.pl input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]
+ perl procReads.pl input_sam_file input_snvs output_snvs output_bedgraph is_paired_end
 
 NOTE:
 
 the read processing script is for a standard SAM file with
-11 attributes. You can also samtools and bedtools; or
+11 attributes. You can also use samtools and bedtools; or
 to use procReadsJ.pl on the special jsam files introduced
 by Dr. Jae-Hyung Lee for RNA-editin and allele specific 
 expression (ASE) studies
+
+There are some assumptions and requirements for the input SAM/JSAM files.
+See L<Files> for more details.
 
 ARGUMENTS:
 
@@ -419,11 +422,6 @@ OPTIONAL [if input, must be input in order following is_strand_sp]:
 			e.g. "nbt.editing reads: distinct after dup removal"
 			if not input, "default" will be used as the short title
 
- discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.
 
 =head1 DESCRIPTION
 

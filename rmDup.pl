@@ -11,7 +11,7 @@ $| = 1;
 
 if(@ARGV < 3){
   print <<EOT;
-USAGE: perl $0 input_sam_file output_sam_file is_paired_end [discarded_read_pos]
+USAGE: perl $0 input_sam_file output_sam_file is_paired_end
 NOTE: 	the duplicate removal script is for standard SAM and Dr. Jae-Hyung Lee's
 	20-attribute SAM file output formats, used in RNA-editing
 	or allele specific expression (ASE) studies
@@ -20,16 +20,21 @@ is_paired_end		0: single-end; 1: paired-end
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.
 
-OPTIONAL:
-discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.
-
 EOT
   exit;
 }
+
+#USAGE: perl $0 input_sam_file output_sam_file is_paired_end [discarded_read_pos]
+
+#hidden parameters
+
+#OPTIONAL:
+#discarded_read_pos	masked-out (low-quality) read positions in calculating 
+#			the max read quality scores, 
+#			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
+#			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
+#			NOTE: the remaining reads will still contain the positions.
+
 
 my ($samFile, $output, $pairEnded, $discardPos) = @ARGV;
 
@@ -212,7 +217,7 @@ This is part of the full pre-processing:
 
 USAGE: 
 
- perl rmDup.pl input_sam_file output_sam_file is_paired_end [discarded_read_pos]
+ perl rmDup.pl input_sam_file output_sam_file is_paired_end
 
 NOTE:
 
@@ -225,14 +230,6 @@ ARGUMENTS:
  is_paired_end		0: single-end; 1: paired-end
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.
-
-OPTIONAL:
-
- discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.
 
 =head1 DESCRIPTION
 

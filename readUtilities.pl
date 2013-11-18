@@ -573,11 +573,11 @@ sub printUsage{
 
   my ($samType) = @_;
   print <<EOT;
-USAGE: perl $0 chr input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp bedgraph_title discarded_read_pos]
+USAGE: perl $0 chr input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp [bedgraph_title]]
 
 NOTE: 	the read processing script is for $samType 
 chr			chromosome to be investigated (correspond to the input_sam_file)
-input_sam_file 		SAM file input after duplicate removal (use rmDup.pl, and optionally mergeSam.pl)
+input_sam_file 		SAM file input after duplicate removal and merging (use rmDup.pl and mergeSam.pl)
 intput_snvs		input SNV list (without read counts)
 output_snvs		output SNV candidates with read counts
 output_bedgraph		output bedgraph file, see below for the details:
@@ -605,15 +605,19 @@ bedgraph_title		a short title for the output bedgraph files (will be put in desc
 			e.g. "nbt.editing reads: distinct after dup removal"
 			if not input, "default" will be used as the short title
 
-discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.
-
 EOT
   exit;
+
+  #hidden options:
+  #USAGE: perl $0 chr input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [is_strand_sp bedgraph_title discarded_read_pos]
+#discarded_read_pos	masked-out (low-quality) read positions in calculating 
+#			the max read quality scores, 
+#			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
+#			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
+#			NOTE: the remaining reads will still contain the positions.
+
 }
+
 
 sub parseArg{
   my ($title, $strandFlag) = @_;

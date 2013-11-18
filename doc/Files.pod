@@ -56,7 +56,7 @@ Both SAM and JSAM files are accepted. Besides the standard SAM attributes, JSAM 
 
 For SAM/JSAM format, only SAM files for uniquely mapped reads (read pairs) should be used. Unmapped reads (0x4) should be removed pior to the preprocessing steps: L<rmDup>, L<mergeSam>, L<procReads>. SAM file header lines are ignored. In paired-end cases, mapped read pair1 should be followed by mapped read pair2 immediately and their IDs should be identical or differ at most by /1 and /2. For reads with insertion/deletion, they will be discarded according to the CIGAR string parsing.
 
-In a strand specific setting, 0x10 is used to identify the reads mapped in an anti-sense manner. However, if the strand flag is set to be 2 (i.e. pair 2 is sense and pair 1 is anti-sens), then 0x10 will be considered as sense. All other reads with 0x10 unset will be considered as the other case accordingly. Therefore, it is important to make sure the SAM/JSAM files contain only uniquely mapped reads.
+In a strand specific setting, 0x10 is used to identify the reads mapped in an anti-sense manner. However, if the strand flag is set to be 2 (i.e. pair 2 is sense and pair 1 is anti-sens), then 0x10 will be considered as sense. All other reads with 0x10 unset will be considered as the other strand accordingly. Note that for paired-end strand specific cases, typically the /1 and /2 pair will have complementary strand flags (e.g. 0 for /1 and 16 for /2). Therefore, it is important to make sure the SAM/JSAM files contain B<only uniquely mapped> reads (pairs).
 
 
 =head2 SNV list

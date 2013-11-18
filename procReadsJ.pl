@@ -15,7 +15,7 @@ my $samType = "Dr. Jae-Hyung Lee's
 	20-attribute SAM file output format, used in RNA-editing
 	or allele specific expression (ASE) studies. If you use
 	standard 10-attribute SAM files, you can use procReads.pl
-	provided in this pipeline, samtools or bedtools";
+	provided in this pipeline, or samtools and bedtools";
 if(@ARGV < 6){
   printUsage($samType);
 }

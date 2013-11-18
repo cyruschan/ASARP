@@ -21,9 +21,9 @@ folder_list 	a file containing a line-separated list of folders
 		     data/rep3
 		     ...
 prefix		the common chromosome file prefix in these folders
-		e.g. proc_chr for proc_chr1.sam, proc_chr2.sam, etc.
+		e.g. proc_chr for proc_chr1.rmdup.sam, proc_chr2.rmdup.sam, etc.
 suffix		the common file suffix in these folders
-		e.g. rmdup.sam for chr1.rmdup.sam, chr2.rmdup.sam, etc.
+		e.g. rmdup.sam for proc_chr1.rmdup.sam, proc_chr2.rmdup.sam, etc.
 output_folder	all the merged prefix*.suffix files will be put to that 
 		specified folder (assume it exists)
 
@@ -120,9 +120,9 @@ ARGUMENTS:
 		     data/rep3
 		     ...
  prefix		the common chromosome file prefix in these folders
-		e.g. proc_chr for proc_chr1.sam, proc_chr2.sam, etc.
+		e.g. proc_chr for proc_chr1.rmdup.sam, proc_chr2.rmdup.sam, etc.
  suffix		the common file suffix in these folders
-		e.g. rmdup.sam for chr1.rmdup.sam, chr2.rmdup.sam, etc.
+		e.g. rmdup.sam for proc_chr1.rmdup.sam, proc_chr2.rmdup.sam, etc.
  output_folder	all the merged prefix*.suffix files will be put to that 
 		specified folder (assume it exists)
 

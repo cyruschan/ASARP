@@ -60,9 +60,12 @@ my $n = @$rat;
 my $m = @$cov;
 print "$n ratios; $m coverages;\ntotal reference reads: $refcnt; alternative reads: $altcnt;\noutput $output\n";
 
-scatterPlot($rat, $cov, "$output.scatt.pdf");
-histogramPlot($rat, $refcnt, $altcnt, "$output.hist.pdf");
-
+if($n){
+  scatterPlot($rat, $cov, "$output.scatt.pdf");
+  histogramPlot($rat, $refcnt, $altcnt, "$output.hist.pdf");
+}else{
+  print "WARNING: no ratios found in $output; no scatter or histogram figures will be generated\n";
+}
 
 
 #########################################################################
