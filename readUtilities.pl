@@ -377,10 +377,14 @@ sub outputBedgraph{
   # output bedgraph for this chromosome
   my $addDescr = "$title; ";
   # get the track opt first
-  my ($dummyChr, $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
-  my $bedFirstPos = $bedgraph_idx[0];
+  my $bedFirstPos = -1;
+  my $bedLastPos = 0;
+  if(@bedgraph_idx > 0){ # extra check for exceptions
+  (my $dummyChr, my $dummyS, $bedLastPos) = split(" ", $bedgraph[-1]);
+  $bedFirstPos = $bedgraph_idx[0];
   if($strandFlag){
     $addDescr .= "strand-specific: the extra field is strand";
+    if(@bedgraphRc > 0){ # extra check for exceptions
     my ($dummyChr2, $dummyS2, $bedLastPos2) = split(" ", $bedgraphRc[-1]);
     if(defined($bedLastPos2) && $bedLastPos2 > $bedLastPos ){
       $bedLastPos = $bedLastPos2;
@@ -388,6 +392,8 @@ sub outputBedgraph{
     if($bedgraphRc_idx[0] < $bedFirstPos){
       $bedFirstPos = $bedgraphRc_idx[0];
     }
+    }
+  }
   }
   my $trackRange = "$chr:".($bedFirstPos+1).":".$bedLastPos; #start converted back to 1-based for chr range in UCSC
   my $trackOpt = "track type=bedGraph name=\"reads_$chr\" description=\"$trackRange $addDescr\" visibility=full autoScale=on gridDefault=on graphType=bar yLineOnOff=on yLineMark=0 smoothingWindow=off alwaysZero=on\n";
