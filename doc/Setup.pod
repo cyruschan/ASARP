@@ -14,7 +14,7 @@ The pipeline is installation-free and runs on Linux/Unix platforms. It uses Linu
 
 =head1 Download and Installation
 
-The pipeline download is available at: https://github.com/cyruschan/ASARP.git
+The pipeline download is available at https:// github.com/cyruschan/ASARP.git (Link: https://github.com/cyruschan/ASARP.git )
 
 The pipeline is maintained using GIT (http://git-scm.com/ ). Installation of GIT is easy and detailed in the website. To download the pipeline in Linux/Unix command line, simply clone it from the GitHub (https://github.com/ ) repository to C<your-folder>
 

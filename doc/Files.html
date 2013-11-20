@@ -17,10 +17,9 @@ Files
 <li><a href='#Parameter File'>Parameter File</a></li>
 <li><a href='#SAM files'>SAM files</a></li>
 <li><a href='#SNV list'>SNV list</a></li>
-<li><a href='#gene (transcript) annotations'>gene (transcript) annotations</a></li>
+<li><a href='#Gene (transcript) annotation file'>Gene (transcript) annotation file</a></li>
 <li><a href='#Pre-processed events'>Pre-processed events</a></li>
 </ul>
-<li><a href='#Output Files'>Output Files</a></li>
 <li><a href='#SEE ALSO'>SEE ALSO</a></li>
 <li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
 <li><a href='#AUTHOR'>AUTHOR</a></li>
@@ -87,7 +86,16 @@ Each line is <b>space</b> separated, with the following attributes</p>
 <p><code>read_counts</code> are RNA read counts obtained from the SAM (a.k.a the bedgraph) file. <code>ref</code> indicates the read count of the reference allele, <code>alt</code> the alternative allele, <code>wrnt</code> (wrong nt) indicates other alleles neither ref nor alt. It is required that <code>alt</code> &gt; <code>wrnt</code>, otherwise that SNV is discarded (dicarded on a particular strand if strand-specific option is on). Output SNV examples in a strand-specific setting would look like:</p>
 <pre> chr10 1046712 G&gt;A rs2306409 30:23:0 +</pre>
 <p>The compatible format of SNV lists as input or output enables chaining multiple components in the ASARP pipeline to analyze specific types of SNVs. For example, powerful SNVs output by <i><a href='aseSnvs.html'>aseSnvs</a></i> can be used as input for SNV distribution analysis by <i><a href='snp_dist.html'>snp_dist</a></i>. SNVs selected from certain cell-line or tissue can be input to <i><a href='procReads.html'>procReads</a></i> with different bedgraph track files to obtain their allele read counts in another cell-line or tissue, which can be further used for comparable ASARP analysis.</p>
-<a name='gene (transcript) annotations'></a><h2>gene (transcript) annotations</h2>
+<a name='Gene (transcript) annotation file'></a><h2>Gene (transcript) annotation file</h2>
+<p>This is the <code>xiaofile</code> in the config_file, representing all gene transcript annotation. It is almost the same as the UCSC RefSeq file format, except that the #bin field and header line are removed, and the last fields score, name2 and exonFrames are removed.</p>
+<p>Format (tab delimited):</p>
+<pre> ID, chr, strand, txStart, txEnd, cdsstart, cdsend, exoncount, exonstarts, exonends, genename, cdsstartstat,cdsendstat</pre>
+<p>IMPORTANT: all coordinates are hg19, 0-based start and 1-based end
+coordinates (UCSC tradition) in this file only.</p>
+<p>Examples look like this:</p>
+<pre> ENST00000237247 chr1    +       66999065        67210057        67000041        67208778        27      66999065,66999928,67091529,67098752,67099762,67105459,67108492,67109226,67126195,67133212,67136677,67137626,67138963,67142686,67145360,67147551,67149789,67154830,67155872,67161116,67184976,67194946,67199430,67205017,67206340,67206954,67208755,        66999090,67000051,67091593,67098777,67099846,67105516,67108547,67109402,67126207,67133224,67136702,67137678,67139049,67142779,67145435,67148052,67149870,67154958,67155999,67161176,67185088,67195102,67199563,67205220,67206405,67207119,67210057,   SGIP1   cmpl    cmpl
+ ENST00000371039 chr1    +       66999274        67210768        67000041        67208778        22      66999274,66999928,67091529,67098752,67105459,67108492,67109226,67136677,67137626,67138963,67142686,67145360,67154830,67155872,67160121,67184976,67194946,67199430,67205017,67206340,67206954,67208755,     66999355,67000051,67091593,67098777,67105516,67108547,67109402,67136702,67137678,67139049,67142779,67145435,67154958,67155999,67160187,67185088,67195102,67199563,67205220,67206405,67207119,67210768,     SGIP1   cmpl    cmpl</pre>
+<p>In our evaluation experiments consistent with the previous work, we use <code>data/hg19.merged.to.ensg.all.tx.03.18.2011.txt</code>. It was created by merging ensembl Refseq, UCSC knowngene, Gencode gene, and Vegagene.</p>
 <a name='Pre-processed events'></a><h2>Pre-processed events</h2>
 <p>Events files represent all potential alternatively processed regions extracted from annotations or RNA-Seq data. For human (hg19), we have generated pre-processed event files bundled with the pipeline, namely <code>splicingfile</code> and <code>estfile</code>, from the gene annotations (<code>xiaofile</code>) and older expressed sequence tag (EST) analysis respectively. <code>splicingfile</code> is required as it is the most accurate, and <code>estfile</code> is optional to provide more sensitivity. User can also generate their own <code>rnaseqfile</code> using their RNA-Seq data (or even other resources) and existing annotations to increase sensitivity, as long as the format is compatible with <code>splicingfile</code>.</p>
 <p>Their formats are illustrated as follows.</p>
@@ -111,11 +119,6 @@ For each gene, there is a header line where the gene symbol name and the constit
  SE	chr20:61924538:+	61953410	61953463
  RI	chr22:32058418:-	32017128	32017320
  RI	chr22:31795509:+	32014212	32014300</pre>
-<ul>
-<li><a name='VirtualBox: www.virtualbox.org'></a>VirtualBox: <a href='https://www.virtualbox.org/' target='_blank'>www.virtualbox.org</a></li>
-</ul>
-<a name='Output Files'></a><h1>Output Files</h1>
-<p>To run the pipeline, users need to first set up R, which is widely used and its installation is well supported across different platforms.</p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='Overview.html'>Overview</a></i>, <i><a href='procReads.html'>procReads</a></i>, <i><a href='aseSnvs.html'>aseSnvs</a></i>, <i><a href='snp_dist.html'>snp_dist</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
 <a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>

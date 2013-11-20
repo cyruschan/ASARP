@@ -83,9 +83,23 @@ C<read_counts> are RNA read counts obtained from the SAM (a.k.a the bedgraph) fi
 
 The compatible format of SNV lists as input or output enables chaining multiple components in the ASARP pipeline to analyze specific types of SNVs. For example, powerful SNVs output by L<aseSnvs> can be used as input for SNV distribution analysis by L<snp_dist>. SNVs selected from certain cell-line or tissue can be input to L<procReads> with different bedgraph track files to obtain their allele read counts in another cell-line or tissue, which can be further used for comparable ASARP analysis.
 
-=head2 gene (transcript) annotations
+=head2 Gene (transcript) annotation file
 
+This is the C<xiaofile> in the config_file, representing all gene transcript annotation. It is almost the same as the UCSC RefSeq file format, except that the #bin field and header line are removed, and the last fields score, name2 and exonFrames are removed.
 
+Format (tab delimited):
+
+ ID, chr, strand, txStart, txEnd, cdsstart, cdsend, exoncount, exonstarts, exonends, genename, cdsstartstat,cdsendstat
+
+IMPORTANT: all coordinates are hg19, 0-based start and 1-based end 
+coordinates (UCSC tradition) in this file only.
+
+Examples look like this:
+
+ ENST00000237247 chr1    +       66999065        67210057        67000041        67208778        27      66999065,66999928,67091529,67098752,67099762,67105459,67108492,67109226,67126195,67133212,67136677,67137626,67138963,67142686,67145360,67147551,67149789,67154830,67155872,67161116,67184976,67194946,67199430,67205017,67206340,67206954,67208755,        66999090,67000051,67091593,67098777,67099846,67105516,67108547,67109402,67126207,67133224,67136702,67137678,67139049,67142779,67145435,67148052,67149870,67154958,67155999,67161176,67185088,67195102,67199563,67205220,67206405,67207119,67210057,   SGIP1   cmpl    cmpl
+ ENST00000371039 chr1    +       66999274        67210768        67000041        67208778        22      66999274,66999928,67091529,67098752,67105459,67108492,67109226,67136677,67137626,67138963,67142686,67145360,67154830,67155872,67160121,67184976,67194946,67199430,67205017,67206340,67206954,67208755,     66999355,67000051,67091593,67098777,67105516,67108547,67109402,67136702,67137678,67139049,67142779,67145435,67154958,67155999,67160187,67185088,67195102,67199563,67205220,67206405,67207119,67210768,     SGIP1   cmpl    cmpl
+
+In our evaluation experiments consistent with the previous work, we use C<data/hg19.merged.to.ensg.all.tx.03.18.2011.txt>. It was created by merging ensembl Refseq, UCSC knowngene, Gencode gene, and Vegagene. 
 
 =head2 Pre-processed events
 
@@ -118,17 +132,6 @@ C<estfile> contains splicing events as determined from hg19 EST and cDNA data. T
  RI	chr22:32058418:-	32017128	32017320
  RI	chr22:31795509:+	32014212	32014300
 
-
-=over 6
-
-=item VirtualBox: https://www.virtualbox.org/ 
-
-=back
-
-
-=head1 Output Files
-
-To run the pipeline, users need to first set up R, which is widely used and its installation is well supported across different platforms.
 
 =head1 SEE ALSO
 
