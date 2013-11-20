@@ -21,4 +21,5 @@ else
 fi
 
 echo "See if the file size is reasonable"
+sleep 2
 ls -hs $hg19
