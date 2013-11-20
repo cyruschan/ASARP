@@ -34,14 +34,24 @@ $layout{"PREPROCESS"} = \@pres; # in order
 #######################################################
 # Section 3: all ASARP applications
 # main program, all application scripts
-my @apps = qw( asarp aseSnvs snp_distri );
+my @asarp = qw( asarp );
+for(@asarp){
+  system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
+}
+$layout{"ASARP"} = \@asarp; # in order
+
+#######################################################
+# Section 4: small applications
+# main program, all application scripts
+my @apps = qw( aseSnvs fdrASE snp_distri annotSnvGene );
 for(@apps){
   system("perl genHtmlDoc.pl $_.pl doc/$_.html $_");
 }
-$layout{"ASARP"} = \@apps; # in order
+$layout{"ANALYSIS"} = \@apps; # in order
+
 
 #######################################################
-# Section 4: all core parts
+# Section 5: all core parts
 ## core sub-routines (code)
 # all source code
 my @source = qw( fileParser snpParser );

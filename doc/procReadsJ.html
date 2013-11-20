@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.010001 [linux]">
+<title>
+procReadsJ
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>procReadsJ.pl -- Processing a duplicate-removed JSAM file (<i><a href='rmDup.html'>rmDup</a></i>) of a chromosome (Dr. JH Lee's format) to generate the chromosome specific SNV list and the bedgraph file. The output files are used as input files for the ASARP pipeline. See <i><a href='procReads.html'>procReads</a></i> for the version on standard SAM files.</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<p>This is part of the full pre-processing:</p>
+<ul>
+<p>1. rmDup (removing PCR duplicates for SAM files (including Dr. JH Lee's SAM format))</p>
+<p>2. mergeSam (merging SAM files if there are independent duplicates)</p>
+<p>3. <b>procReads</b> (processing SAM files to get SNV read counts and generate bedgraph files)</p>
+</ul>
+<p>USAGE:</p>
+<pre> perl procReadsJ.pl chr input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]</pre>
+<p>NOTE:</p>
+<p>the read processing script is for Dr. Jae-Hyung Lee's
+20-attribute SAM file output format, used in RNA-editing
+or allele specific expression (ASE) studies. If you use
+standard 10-attribute SAM files, you can use procReads.pl
+provided in this pipeline, samtools or bedtools</p>
+<p>The complete documentation with the same arguments and usage can be found in <i><a href='procReads.html'>procReads</a></i>
+The only difference between procReadsJ.pl and procReads.pl is that they work on jsam and
+standard sam (jsam also treated as standard sam) files respectively.</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

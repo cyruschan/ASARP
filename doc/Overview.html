@@ -1,0 +1,73 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.010001 [linux]">
+<title>
+Overview
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#Overview'>Overview</a></li>
+<li><a href='#Pipeline'>Pipeline</a></li>
+<li><a href='#Procedure'>Procedure</a></li>
+<ul>
+<li><a href='#Start 1: Mapping'>Start 1: Mapping</a></li>
+<li><a href='#Start 2: SNV reads and bedgraphs'>Start 2: SNV reads and bedgraphs</a></li>
+<li><a href='#Start 3: ASARP'>Start 3: ASARP</a></li>
+</ul>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='Overview'></a><h1>Overview</h1>
+<p>Heterozygous single nucleotide variants (SNVs) may exhibit allele-specific expression (ASE) as well as local allele-specific alternative mRNA processing (ASARP), including allele-specific alternative splicing (ASAS), alternative 5' initiation (ASAI), alternative 3' termination/polyadenylation (ASAT).</p>
+<p><img src='img/Intro.png' border=0></p>
+<p>The new ASARP pipeline to developed to discover ASE/ASARP genes/SNVs accurately and provide comprehensive analysis for ASARP with support to various RNA-Seq data. Starting from RNA-Seq mapping results, users can run the pipeline at different points given different input files they have. The overall flow of the pipeline is shown below.</p>
+<p><img src='img/ASARP_flow.png' border=0></p>
+<a name='Pipeline'></a><h1>Pipeline</h1>
+<p>The complete pipeline includes both pre-processing and ASARP prediction components with flexible post-mapping starts. Users can use the internal components to remove PCR duplicates, merge replicates and generate SNV statistics and bedgraph to input to the ASARP program. They can also use external tools such as samtools, bedtools and SNV-calling programs.</p>
+<p><img src='img/ASARP_pipeline.png' border=0></p>
+<p>For details of the older version, refer to the paper:
+<i>Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104</i> at <a href='http://nar.oxfordjournals.org/content/40/13/e104' target='_blank'>nar.oxfordjournals.org</a></p>
+<a name='Procedure'></a><h1>Procedure</h1>
+<p>The alternative starts and the detailed procedure are described here.</p>
+<a name='Start 1: Mapping'></a><h2>Start 1: Mapping</h2>
+<p>Prior to any start points, RNA-Seq mapping results are needed, which will be utilized to provide allele-specific SNV statistics and expression levels. There are many RNA-Seq mapping tools and pipelines available. To generate accurate mapping with precise SNV statistics, splicing and variant aware programs in combination of unbiased mapping procedures are highly recommended. The results in the <b>sam</b> file format are used (more details: <a href='http://samtools.sourceforge.net/SAMv1.pdf).' target='_blank'>samtools.sourceforge.net</a> Some choices are:</p>
+<ul>
+<li><a name='BLAT: genome.ucsc.edu'></a>BLAT: <a href='http://genome.ucsc.edu/FAQ/FAQblat.html' target='_blank'>genome.ucsc.edu</a></li>
+<li><a name='BOWTIE: bowtie-bio.sourceforge.net'></a>BOWTIE: <a href='http://bowtie-bio.sourceforge.net/index.shtml' target='_blank'>bowtie-bio.sourceforge.net</a></li>
+<li><a name='BOWTIE2: bowtie-bio.sourceforge.net'></a>BOWTIE2: <a href='http://bowtie-bio.sourceforge.net/bowtie2/index.shtml' target='_blank'>bowtie-bio.sourceforge.net</a></li>
+<li><a name='Novoalign: www.novocraft.com'></a>Novoalign: <a href='http://www.novocraft.com/main/index.php' target='_blank'>www.novocraft.com</a></li>
+<li><a name='BWA: bio-bwa.sourceforge.net'></a>BWA: <a href='http://bio-bwa.sourceforge.net/' target='_blank'>bio-bwa.sourceforge.net</a></li>
+<li><a name='Dual-filtering: a pipeline to combine multiple mappers to generate unbiased mapping, described in rnajournal.cshlp.org'></a>Dual-filtering: a pipeline to combine multiple mappers to generate unbiased mapping, described in <a href='http://rnajournal.cshlp.org/content/early/2013/04/18/rna.037903.112.abstract.html' target='_blank'>rnajournal.cshlp.org</a></li>
+</ul>
+<p>With sam files from mapping, pre-processing generates the <b>SNV</b> statistics with allele read counts and the compress track information in <b>bedgraph</b> file format (details: <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a> ). If the genomic SNV information is available from DNA sequencing, the heterozygous SNVs can be directly used (see <i><a href='procReads.html'>procReads</a></i>). Otherwise, users need to do SNV-calling from RNA-Seq and overlap them with common Single Nucleotide Polymorphisms (SNPs). See below for more details.</p>
+<p>Check out <code>demo.sh</code> in <i><a href='Demo.html'>Demo</a></i>.</p>
+<a name='Start 2: SNV reads and bedgraphs'></a><h2>Start 2: SNV reads and bedgraphs</h2>
+<p>If there are no genomic SNVs available, users need to call SNVs from RNA-Seq. The pipeline provides components to check common SNPs (dbSNPs: <a href='http://www.ncbi.nlm.nih.gov/SNP/' target='_blank'>www.ncbi.nlm.nih.gov</a> ) for their allelic reads, remove monoallelic SNVs with flexible read count thresholds. Alternatively, users can use more advanced tools to perform RNA-Seq based SNV calling. Some choices are:</p>
+<ul>
+<li><a name='samtools: samtools.sourceforge.net'></a>samtools: <a href='http://samtools.sourceforge.net/' target='_blank'>samtools.sourceforge.net</a></li>
+<li><a name='SNVMIX: compbio.bccrc.ca'></a>SNVMIX: <a href='http://compbio.bccrc.ca/software/snvmix/' target='_blank'>compbio.bccrc.ca</a></li>
+</ul>
+<p>To remove PCR duplicates and merge replicates, we provide self-contained pre-processing components <i><a href='rmDup.html'>rmDup</a></i> and <i><a href='mergeSam.html'>mergeSam</a></i>. Users can also choose samtools rmdup for pre-processing. <i><a href='rmDup.html'>rmDup</a></i> preserves unique pairs with splice junctions accurately for paired-end mapping results. Two pairs are consider different (not PCR duplicates) if any of the consecutive mapped regions are different.</p>
+<p>To generate bedgraph files, users can either use <i><a href='procReads.html'>procReads</a></i> in this pipeline or bedtools. <i><a href='procReads.html'>procReads</a></i> generates both SNV statistics and bedgraph at the same time (i.e. combining both samtools and bedtools tasks). Note that &quot;-split&quot; should be used in bedtools coverage to get correct pipe-ups of splice junction reads (<a href='http://bedtools.readthedocs.org/en/latest/content/tools/coverage.html' target='_blank'>bedtools.readthedocs.org</a> ).</p>
+<ul>
+<li><a name='bedtools: bedtools.readthedocs.org'></a>bedtools: <a href='http://bedtools.readthedocs.org/en/latest/' target='_blank'>bedtools.readthedocs.org</a></li>
+</ul>
+<a name='Start 3: ASARP'></a><h2>Start 3: ASARP</h2>
+<p>With both SNV read count and bedgraph files ready, the ASARP prediction component can be run directly. The details of ASARP are available in <i><a href='asarp.html'>asarp</a></i>.</p>
+<p>See <code>demo2.sh</code> in <i><a href='Demo.html'>Demo</a></i>.</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='rmDup.html'>rmDup</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

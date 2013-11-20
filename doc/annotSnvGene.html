@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.010001 [linux]">
+<title>
+annotSnvGene
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#DESCRIPTIONS'>DESCRIPTIONS</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>annotSnvGene.pl -- to fetch gene region annotation for SNVs in detail.
+The results will be organized by genes. For each gene, the SNVs
+will be output, along with all of their hosting transcript IDs,
+their region annotation type, and the neighboring exons.</p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<p>USAGE:</p>
+<pre> perl $0 input_snv_file gene_annotation_file</pre>
+<p>ARGUMENTS:</p>
+<p>input_snv_file		SNV input file in the following format
+chr position [any additional fields] strand (examples below)
+chr10 97624709 +
+chr10 97625099 G&gt;A rs4512761 267:186:0 +
+(strand should be the last attribute)</p>
+<p>gene_annotation_file	the gene transcript annotation file used in the ASARP
+config, i.e. &quot;xiaofile&quot;.
+Example: data/hg19.merged.to.ensg.all.tx.03.18.2011.txt</p>
+<p>NOTE:</p>
+<p>currently only strand-specific SNV files are supported
+for non strand specific input, user has to add the strand
+attribute: +/- at the end of each SNV accordingly (e.g. the
+strand of the gene containing the SNV)
+All the fields, if any, between the position and the strand are ignored
+e.g. only the 1st, 2nd and 6th attributes from the following SNV is used
+chr10 97624709 A&gt;C rs2275759 111:137:0 +</p>
+<p>The results will be output to screen and they can be redirected
+to an output file via adding &quot;&gt;&gt; output_file&quot;</p>
+<a name='DESCRIPTIONS'></a><h1>DESCRIPTIONS</h1>
+<p>It will first print out all + strand cases arranged by chromosomes and genes, and then
+all - strand cases. The output format will be</p>
+<pre> chr position region_type:[subtype:]strand gene transcript_ID:SNV_hosting_region[ left_exon right_exon]
+
+ *_exon format: exon_start,exon_end (not applicable for UTR regions)
+ </pre>
+<p>The output will look like this:</p>
+<pre> ALL + STRAND CASES
+ chr1    AK4
+ chr1 65694819   exon:3'UTR:+    AK4     NM_203464:65691746-65697828
+ chr1 65694819   exon:3'UTR:+    AK4     NM_001005353:65691746-65697828  
+ chr1    AK3L1
+ chr1 65694819   exon:3'UTR:+    AK3L1   ENST00000327299:65691746-65697819
+ chr1 65695853   exon:3'UTR:+    AK3L1   ENST00000327299:65691746-65697819
+
+ chr10   ENTPD1
+ chr10 97624709  intron:+        ENTPD1  ENST00000453258:97624619-97625933       97624481,97624618       97625934,97629452
+ chr10 97624709  intron:+        ENTPD1  UC001KLI.3:97624619-97625933    97624481,97624618       97625934,97637022
+ chr10 97624709  intron:+        ENTPD1  NM_001098175:97624619-97625933  97624481,97624618       97625934,97637023
+ ...
+ ALL - STRAND CASES
+ ...
+ chr5 96130836   exon:normal:-   ERAP1   UC003KMN.2:96130745-96130865    96130745,96130865       96132878,96133012
+ chr5 96139595   exon:normal:-   ERAP1   NM_016442:96139106-96139646     96139106,96139646       96143563,96143892
+ chr5 96139595   exon:normal:-   ERAP1   UC003KML.2:96139106-96139646    96139106,96139646       96143563,96143892</pre>
+<p>Note that the results will be lengthy so it is better to analyze a small subset of selected SNVs using this script.</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='Overview.html'>Overview</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

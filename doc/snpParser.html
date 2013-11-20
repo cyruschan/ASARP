@@ -36,7 +36,7 @@ snpParser
 	# read and parse SNVs
 	my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
         # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
-	($SNVPCUTOFF) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+	($SNVPCUTOFF) = fdrControl($pRef, $FDRCUTOFF, 0); #1--verbose
 	# match SNVs with gene transcript annotations
 	my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 	# match gene SNVs with AI/AT and alternative splicing (AS) events

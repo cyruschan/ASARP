@@ -1943,19 +1943,29 @@ sub fdrControl{
   #print "Running R using BH and BY\n";
   $R->run('x <- p.adjust('.$rVarPlist.', method="BH")');
   $R->run('rLen <- length(x)');
-  #$R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
   my $rSize = $R->get('rLen');
   #print "Getting x from R: size $rSize\n";
   my $pAdjustRef = getListfromR($R, 'x');
-  #my $pAdjustByRef = getListfromR($R, 'y');
+
+  my $pAdjustByRef = undef;
+  if($isVerbose){
+    $R->run('y <- p.adjust('.$rVarPlist.', method="BY")');
+    $pAdjustByRef = getListfromR($R, 'y');
+  }
   $R->stop;
 
   my ($modifiedFdrP, $aHat) = getModiFdr(\@pList, $pAdjustRef, $orgFdrCutoff, $isVerbose);
   #print "pAdjust (BY)\n@$pAdjustByRef\n";
-  #print "BY: ";
-  #my $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
-  #print "BH: ";
-  #my $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
+  #
+  my ($bhFdrP, $byFdrP) = (undef, undef);
+  if($isVerbose){
+    print "Verbose mode: Besides the final output modiBH FRD control adjusted p-value cutoff, the adjusted p-value cutoffs of BH and BY methods are also shown (for reference only)\n";
+    $bhFdrP = getFdr(\@pList, $pAdjustRef, $orgFdrCutoff);
+    $byFdrP = getFdr(\@pList, $pAdjustByRef, $orgFdrCutoff);
+    print "BH method (for reference only): $bhFdrP\n";
+    print "BY method (for reference only): $byFdrP\n";
+
+  }
 
   my $finalP = $modifiedFdrP; # decided to use the modifiedBH method finally
   #if($aHat >= 0.5){   #if($finalP > $orgFdrCutoff){ 
@@ -1965,7 +1975,7 @@ sub fdrControl{
   # make a switch here for testing different methods:
   #$finalP = $bhFdrP; print "BH method used\n";
   #$finalP = $byFdrP; print "BY method used\n";
-  return ($finalP); #, $modifiedFdrP, $bhFdrP, $byFdrP);
+  return ($finalP, $modifiedFdrP, $bhFdrP, $byFdrP);
 }
 
 ################ minor auxiliary (mainly for print outs and debugs) ####
@@ -2255,7 +2265,7 @@ snpParser.pl -- All the sub-routines for SNV (sometimes denoted interchangeably 
 	# read and parse SNVs
 	my ($snpRef, $pRef) = initSnp($snpF, $POWCUTOFF);
         # suggested, get the Chi-Squared Test p-value cutoff from FDR ($FDRCUTOFF)
-	($SNVPCUTOFF) = fdrControl($pRef, $FDRCUTOFF, 1); #1--verbose
+	($SNVPCUTOFF) = fdrControl($pRef, $FDRCUTOFF, 0); #1--verbose
 	# match SNVs with gene transcript annotations
 	my $geneSnpRef = setGeneSnps($snpRef, $transRef);
 	# match gene SNVs with AI/AT and alternative splicing (AS) events

@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.010001 [linux]">
+<title>
+Demo
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#Demo'>Demo</a></li>
+<li><a href='#Demo 1: Starting from SAM files with all preprocessing steps'>Demo 1: Starting from SAM files with all preprocessing steps</a></li>
+<li><a href='#Demo 2: Starting from bedgraph and RNA SNV files'>Demo 2: Starting from bedgraph and RNA SNV files</a></li>
+<li><a href='#P-value cutoffs with FDR control'>P-value cutoffs with FDR control</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='Demo'></a><h1>Demo</h1>
+<p>This page describes the two quick demonstrations (demo) for users to get started with the ASARP pipeline, one starting from SAM files and the other from bedgraph and RNA SNV files. Please check out <i><a href='Setup.html'>Setup</a></i> before running the demo. The demo scripts and data are bundled with the pipeline, available in the demo folder.</p>
+<p>NOTE: the data provided are small subsets from large real data, serving for the demonstraton purpose only.</p>
+<a name='Demo 1: Starting from SAM files with all preprocessing steps'></a><h1>Demo 1: Starting from SAM files with all preprocessing steps</h1>
+<p>This pipeline (<code>demo.sh</code>) demonstrates the scenario where there are two replicates (R1 and R2) for the SAM files, and a SNV list generated from genomic sequencing. All the pre-processing steps will be applied including duplicate removal, merging replicates, and processing bedgraphs and RNA SNVs, namely <i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i> and <i><a href='procReads.html'>procReads</a></i>. The demonstration also prints informative messages to help users understand each step towards the ASARP predictions. All the preprocessing results will be output to folder <code>preproc</code>. <code>demo.results</code> will contain the final ASARP output.</p>
+<p>Run the script:</p>
+<pre> chmod +x demo.sh
+ ./demo.sh</pre>
+<p>Snapshot of running <code>demo.sh</code>:</p>
+<p><img src='img/demo.png' border=0></p>
+<a name='Demo 2: Starting from bedgraph and RNA SNV files'></a><h1>Demo 2: Starting from bedgraph and RNA SNV files</h1>
+<p>This pipeline demonstrates the scenario where the bedgraph and RNA SNV files are ready, i.e. Start Point 3 in the flowchart in <i><a href='Overview.html'>Overview</a></i>. The bedgraph and RNA SNV files are included in the folder <code>demo2data</code>, and they are actually generated using the previous demo. <code>demo2.results</code> will contain the final ASARP output.</p>
+<p>Snapshot of running <code>demo2.sh</code>:</p>
+<p><img src='img/demo2.png' border=0></p>
+<a name='P-value cutoffs with FDR control'></a><h1>P-value cutoffs with FDR control</h1>
+<p>While the modiBH (modified Benjamini Hochberg) FDR control method is used to adjust the ASE SNV p-value cutoff in ASARP because of its best overall simulated performance in ASE and ASARP, users can also visualize the other FDR control methods:</p>
+<pre> perl -I .. ../fdrASE.pl testFdrASE demo2.config demo.param</pre>
+<p>The output file <code>testFdrASE.pdf</code> displays the different p-value cutoffs.</p>
+<p><img src='img/aseFdrAll.png' border=0></p>
+<p>For more details, see <i><a href='fdrASE.html'>fdrASE</a></i>. There are other analysis tools for the different SNV categories and SNV output can be chained as input for various kinds of analysis.</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='Overview.html'>Overview</a></i>, <i><a href='Setup.html'>Setup</a></i>, <i><a href='asarp.html'>asarp</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

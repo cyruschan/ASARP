@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="generator" content="Pod::HtmlEasy/1.1.10 Pod::Parser/1.37 Perl/5.010001 [linux]">
+<title>
+fdrASE
+</title>
+<link rel="stylesheet" href="default.css" type="text/css">
+</head>
+<body  alink="#FF0000" bgcolor="#FFFFFF" link="#000000" text="#000000" vlink="#000066">
+<div class="toc">
+<ul>
+<li><a href='#NAME'>NAME</a></li>
+<li><a href='#SYNOPSIS'>SYNOPSIS</a></li>
+<li><a href='#DESCRIPTIONS'>DESCRIPTIONS</a></li>
+<li><a href='#SEE ALSO'>SEE ALSO</a></li>
+<li><a href='#COPYRIGHT'>COPYRIGHT</a></li>
+<li><a href='#AUTHOR'>AUTHOR</a></li>
+</ul>
+</div>
+<div class='pod'>
+<a name='NAME'></a><h1>NAME</h1>
+<p>fdrASE.pl -- to plot and analyze ASE SNV p-values according to different FDR control methods:
+modiBH (modified BH method; employed in ASARP), BH (Benjamini Hochberg), BY (Benjamini Yekutieli)
+More details of the p-value adjustment methods (from R) are available at:
+<a href='http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html' target='_blank'>stat.ethz.ch</a></p>
+<a name='SYNOPSIS'></a><h1>SYNOPSIS</h1>
+<p>USAGE:</p>
+<pre> perl $0 output_plots config_file [optional: parameter_file]</pre>
+<p>The two input files: config_file and parameter_file are the same as ASARP's
+output_plots.pdf and output_plots.zoom.pdf (close view of the cutoffs) will be output</p>
+<p>User can try the demo RNA SNV file in the demo folder (see <i><a href='Demo.html'>Demo</a></i> for more details) as follows:
+Assume you are in the ASARP main folder</p>
+<pre> cd demo
+ perl -I .. ../fdrASE.pl testFdrASE demo2.config demo.param</pre>
+<p>Results will be testFdrASE.pdf and testFdrASE.zoom.pdf respectively, as shown below:</p>
+<p><img src='img/aseFdrAll.png' border=0></p>
+<p><img src='img/aseFdrZoom.png' border=0></p>
+<p>Note that the demo dataset is so small that modiBH has the same cutoff of BH method in the examples.</p>
+<a name='DESCRIPTIONS'></a><h1>DESCRIPTIONS</h1>
+<p>The two output plots files show the overall (output_plots.pdf) and zoomed (output_plots.zoom.pdf)
+views of the p-value cutoffs by different FDR control methods. The FDR control employed in ASARP
+is the modified Benjamini Hochberg (modiBH) method, which shows the best balanced FDR for ASE and
+ASARP gene predictions. Users can also directly set p-value cutoff (<code>p_chi_snv</code>) based on a particular
+FDR method instead in the <code>parameter_file</code> for ASARP
+(remember to comment out <code>fdr</code> to make <code>p_chi_snv</code> in effect)</p>
+<p>Results from analyzing the demo RNA SNV file (demo/demo2data/rna.snv.demo.lst)</p>
+<a name='SEE ALSO'></a><h1>SEE ALSO</h1>
+<p><i><a href='Overview.html'>Overview</a></i>, <i><a href='asarp.html'>asarp</a></i>, <i><a href='Demo.html'>Demo</a></i></p>
+<a name='COPYRIGHT'></a><h1>COPYRIGHT</h1>
+<p>This pipeline is free software; you can redistribute it and/or modify it given that the related works and authors are cited and acknowledged.</p>
+<p>This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose.</p>
+<a name='AUTHOR'></a><h1>AUTHOR</h1>
+<p>Cyrus Tak-Ming CHAN</p>
+<p>Xiao Lab, Department of Integrative Biology &amp; Physiology, UCLA</p>
+</div></body></html>

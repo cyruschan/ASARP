@@ -1,0 +1,15 @@
+# paramter list:
+# powerful SNV count cutoff
+powerful_snv	20
+# [OPTIONAL] p-value cutoffs for the Chi-squared tests to shortlist ASE SNVs
+# [format] p_chi_snv	0.014
+#in order for this cutoff to take effect, you should comment out FDR cutoff (i.e. fdr)
+#FDR cutoff (if provided, a new p_chi_snv will be calculated and the user specified one ignored)
+fdr	0.05
+#p-value cutoff for the Fisher exact tests.
+p_fisher_pair	0.05
+# NEV upper cutoff for alternatively spliced regions
+nev_lower	0
+nev_upper	0.8
+# absolute allelit ratio difference cutoff for target-control SNV pairs
+ratio_diff	0.2
