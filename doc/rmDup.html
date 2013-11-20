@@ -29,7 +29,7 @@ rmDup
 <p>3. procReads (processing SAM files to get SNV read counts and generate bedgraph files)</p>
 </ul>
 <p>USAGE:</p>
-<pre> perl rmDup.pl input_sam_file output_sam_file is_paired_end [discarded_read_pos]</pre>
+<pre> perl rmDup.pl input_sam_file output_sam_file is_paired_end</pre>
 <p>NOTE:</p>
 <p>the duplicate removal script is for standard SAM and Dr. Jae-Hyung Lee's
 20-attribute SAM file output formats, used in RNA-editing
@@ -38,12 +38,6 @@ or allele specific expression (ASE) studies</p>
 <pre> is_paired_end		0: single-end; 1: paired-end
 			For paired-end reads, all reads should be paired up, 
 			where pair-1 should be always followed by pair-2 in the next line.</pre>
-<p>OPTIONAL:</p>
-<pre> discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
 <p><code>input_sam_file</code> should contain only 1 chromosome, and it should be in standard SAM format or Dr. Jae-Hyung Lee's SAM format (check out <a href='http://www.ncbi.nlm.nih.gov/pubmed/21960545' target='_blank'>www.ncbi.nlm.nih.gov</a> for more details)</p>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>

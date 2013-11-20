@@ -71,7 +71,8 @@ sub linkSpaceWorkaround{
   #  sed 's/ftp\:\/\/ /ftp\:\/\//g' <temp.txt >temp.new.txt
   # replace ftp:// and then html:// 
   system("sed 's/ftp\\:\\/\\/ /ftp\\:\\/\\//g' <$inhtml >$inhtml.tmp");
-  system("sed 's/http\\:\\/\\/ /http\\:\\/\\//g' <$inhtml.tmp >$outhtml");
-  system("rm $inhtml.tmp");
+  system("sed 's/http\\:\\/\\/ /http\\:\\/\\//g' <$inhtml.tmp >$inhtml.tmp2");
+  system("sed 's/https\\:\\/\\/ /https\\:\\/\\//g' <$inhtml.tmp2 >$outhtml");
+  system("rm $inhtml.tmp*");
 
 }

@@ -12,29 +12,17 @@ The pipeline is installation-free and runs on Linux/Unix platforms. It uses Linu
 
 =back
 
-=head1 Download
+=head1 Download and Installation
 
-=over 6
+The pipeline is maintained using GIT (http://git-scm.com/ ). To download the pipeline, simply go to the GitHub (https://github.com/ ) repository (or any other GIT repository) C<asarp-repository>, and C<clone> the project to C<your-folder>
 
-=item Pipeline Download Link: xxxxxx.tar.gz
+ git clone asarp-repository your-folder
 
-=item Additional Demo Data: xxxxxx.tar.gz
+As it is available on GitHub, you can get it using:
 
-=back
+ git clone https:// github.com/cyruschan/ASARP.git your-folder
 
-After downloading the pipeline, unzip the files as follows. 
-
- your-folder$ tar -xzvf xxxxxx.tar.gz
-
-It is runnable once you have R and Statistics::R on your machine. See below for the requirements. 
-
-Similarly for the additional demo data, you can unzip them in the data file in C<your-folder/asarp_ss/data>
-
- ~$ mv xxxx.tar.gz your-folder/asarp_ss/data
- ~$ cd your-folder/asarp_ss/data
- ~your-folder/asarp_ss/data$ tar -xzvf xxxx.tar.gz
-
-See the details in Quick Start: Demo
+It is runnable once you have R and Statistics::R on your machine. See below for the requirements. The demonstration scripts and data are also bundled, you can try the demonstrations described in L<Demo> once you have the required R and Statistics::R ready (see below).
 
 =head1 Requirements
 
@@ -46,13 +34,7 @@ To run the pipeline, users need to first set up R, which is widely used and its 
 
 =back
 
-Second, users need to install the Perl package Statistics::R which the pipeline uses to interact with R. Installation of Perl packages can be found in detail at CPAN: http://www.cpan.org/modules/INSTALL.html. The documentation is detailed and it is relatively easy for sudo users. 
-
-To test whether the installation is successful (for the ASARP pipeline), simply try C<testR.pl>
-
- perl testR.pl
-
-It will do a simple statistical test and output the result if successful.
+Second, users need to install the Perl package Statistics::R which the pipeline uses to interact with R.
 
 =over 6
 
@@ -60,7 +42,17 @@ It will do a simple statistical test and output the result if successful.
 
 =back
 
-For B<non-root users without sudo privilege>, one option is first install CPANM in a local directory, and install Perl packages locally using: C<cpanm Statistics::R>. See below for details.
+Installation of Perl packages can be found in detail at CPAN: http://www.cpan.org/modules/INSTALL.html . The documentation is detailed and it is easy for local/sudo users. Installation: 
+
+ sudo cpan Statistics::R
+
+To test whether the installation is successful (for the ASARP pipeline), simply try C<testR.pl>
+
+ perl testR.pl
+
+It will do a simple statistical test and output the result if successful.
+
+For B<non-root users without sudo privilege>, one option is first install CPAN Minus (cpanm) in a local directory, and install Perl packages locally using: C<cpanm Statistics::R>. While the cpanm information is available at CPAN: http://www.cpan.org/modules/INSTALL.html , users can also follow the step-by-step guideline below:
 
 =head1
 Easy installation of Perl modules (as a non-root user)

@@ -44,6 +44,8 @@ Prior to any start points, RNA-Seq mapping results are needed, which will be uti
 
 With sam files from mapping, pre-processing generates the B<SNV> statistics with allele read counts and the compress track information in B<bedgraph> file format (details: http://genome.ucsc.edu/goldenPath/help/bedgraph.html ). If the genomic SNV information is available from DNA sequencing, the heterozygous SNVs can be directly used (see L<procReads>). Otherwise, users need to do SNV-calling from RNA-Seq and overlap them with common Single Nucleotide Polymorphisms (SNPs). See below for more details.
 
+Check out C<demo.sh> in L<Demo>.
+
 =head2 Start 2: SNV reads and bedgraphs
 
 If there are no genomic SNVs available, users need to call SNVs from RNA-Seq. The pipeline provides components to check common SNPs (dbSNPs: http://www.ncbi.nlm.nih.gov/SNP/ ) for their allelic reads, remove monoallelic SNVs with flexible read count thresholds. Alternatively, users can use more advanced tools to perform RNA-Seq based SNV calling. Some choices are:
@@ -69,6 +71,8 @@ To generate bedgraph files, users can either use L<procReads> in this pipeline o
 =head2 Start 3: ASARP
 
 With both SNV read count and bedgraph files ready, the ASARP prediction component can be run directly. The details of ASARP are available in L<asarp>. 
+
+See C<demo2.sh> in L<Demo>.
 
 =head1 SEE ALSO
 

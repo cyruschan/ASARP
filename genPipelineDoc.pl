@@ -17,7 +17,7 @@ my %layout = ();
 
 #######################################################
 # Section 1: introduction
-my @intro = qw( Overview Setup Files ); # Set-up File-formats);
+my @intro = qw( Overview Setup Demo Files ); # Set-up File-formats);
 for(@intro){
   system("perl genHtmlDoc.pl doc/$_.pod doc/$_.html $_");
 }

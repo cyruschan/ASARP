@@ -34,13 +34,15 @@ procReads
 <p>3. <b>procReads</b> (processing SAM files to get SNV read counts and generate bedgraph files)</p>
 </ul>
 <p>USAGE:</p>
-<pre> perl procReads.pl input_sam_file input_snvs output_snvs output_bedgraph is_paired_end [discarded_read_pos]</pre>
+<pre> perl procReads.pl input_sam_file input_snvs output_snvs output_bedgraph is_paired_end</pre>
 <p>NOTE:</p>
 <p>the read processing script is for a standard SAM file with
-11 attributes. You can also samtools and bedtools; or
+11 attributes. You can also use samtools and bedtools; or
 to use procReadsJ.pl on the special jsam files introduced
 by Dr. Jae-Hyung Lee for RNA-editin and allele specific
 expression (ASE) studies</p>
+<p>There are some assumptions and requirements for the input SAM/JSAM files.
+See <i><a href='Files.html'>Files</a></i> for more details.</p>
 <p>ARGUMENTS:</p>
 <pre> chr			chromosome to be investigated (correspond to the input_sam_file)
  input_sam_file		SAM file input after duplicate removal (use rmDup.pl)
@@ -67,13 +69,7 @@ expression (ASE) studies</p>
 <pre> bedgraph_title		a short title for the output bedgraph files (will be put in description of the header line)
                         if there are spaces in between it should be quoted
 			e.g. &quot;nbt.editing reads: distinct after dup removal&quot;
-			if not input, &quot;default&quot; will be used as the short title
-
- discarded_read_pos	masked-out (low-quality) read positions in calculating 
-			the max read quality scores, 
-			in 1-based, inclusive, interval (a:b,c:d,... no space) format:
-			e.g. 1:1,61:70 will discard the 1st, 61st-70th read positions.
-			NOTE: the remaining reads will still contain the positions.</pre>
+			if not input, &quot;default&quot; will be used as the short title</pre>
 <a name='DESCRIPTION'></a><h1>DESCRIPTION</h1>
 <a name='INPUT'></a><h2>INPUT</h2>
 <p><code>input_sam_file</code> should contain only 1 chromosome, and it should be in SAM/JSAM format. If it is in JSAM format (check out <a href='http://www.ncbi.nlm.nih.gov/pubmed/21960545' target='_blank'>www.ncbi.nlm.nih.gov</a> for more details), <i><a href='procReadsJ.html'>procReadsJ</a></i> can also be used.</p>
