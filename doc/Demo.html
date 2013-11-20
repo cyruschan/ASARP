@@ -11,6 +11,7 @@ Demo
 <div class="toc">
 <ul>
 <li><a href='#Demo'>Demo</a></li>
+<li><a href='#Requirement'>Requirement</a></li>
 <li><a href='#Demo 1: Starting from SAM files with all preprocessing steps'>Demo 1: Starting from SAM files with all preprocessing steps</a></li>
 <li><a href='#Demo 2: Starting from bedgraph and RNA SNV files'>Demo 2: Starting from bedgraph and RNA SNV files</a></li>
 <li><a href='#P-value cutoffs with FDR control'>P-value cutoffs with FDR control</a></li>
@@ -23,10 +24,17 @@ Demo
 <a name='Demo'></a><h1>Demo</h1>
 <p>This page describes the two quick demonstrations (demo) for users to get started with the ASARP pipeline, one starting from SAM files and the other from bedgraph and RNA SNV files. Please check out <i><a href='Setup.html'>Setup</a></i> before running the demo. The demo scripts and data are bundled with the pipeline, available in the demo folder.</p>
 <p>NOTE: the data provided are small subsets from large real data, serving for the demonstraton purpose only.</p>
+<a name='Requirement'></a><h1>Requirement</h1>
+<p>Before running the demo scripts, make sure the gene annottion file is unzipped (see <i><a href='Setup.html'>Setup</a></i>) following the instructions below.
+For human data, we include the necessary data files such as the hg19 gene annotation. Because of the upload limit of GitHub, the example file needs to be unzipped.</p>
+<pre> cd demo
+ chmod +x extract.hg19.sh
+ ./extract.hg19.sh</pre>
 <a name='Demo 1: Starting from SAM files with all preprocessing steps'></a><h1>Demo 1: Starting from SAM files with all preprocessing steps</h1>
 <p>This pipeline (<code>demo.sh</code>) demonstrates the scenario where there are two replicates (R1 and R2) for the SAM files, and a SNV list generated from genomic sequencing. All the pre-processing steps will be applied including duplicate removal, merging replicates, and processing bedgraphs and RNA SNVs, namely <i><a href='rmDup.html'>rmDup</a></i>, <i><a href='mergeSam.html'>mergeSam</a></i> and <i><a href='procReads.html'>procReads</a></i>. The demonstration also prints informative messages to help users understand each step towards the ASARP predictions. All the preprocessing results will be output to folder <code>preproc</code>. <code>demo.results</code> will contain the final ASARP output.</p>
 <p>Run the script:</p>
-<pre> chmod +x demo.sh
+<pre> cd demo
+ chmod +x demo.sh
  ./demo.sh</pre>
 <p>Snapshot of running <code>demo.sh</code>:</p>
 <p><img src='img/demo.png' border=0></p>

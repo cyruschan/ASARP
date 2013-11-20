@@ -4,12 +4,22 @@ This page describes the two quick demonstrations (demo) for users to get started
 
 NOTE: the data provided are small subsets from large real data, serving for the demonstraton purpose only.
 
+=head1 Requirement
+
+Before running the demo scripts, make sure the gene annottion file is unzipped (see L<Setup>) following the instructions below.
+For human data, we include the necessary data files such as the hg19 gene annotation. Because of the upload limit of GitHub, the example file needs to be unzipped.
+
+ cd demo
+ chmod +x extract.hg19.sh
+ ./extract.hg19.sh
+
 =head1 Demo 1: Starting from SAM files with all preprocessing steps
 
 This pipeline (C<demo.sh>) demonstrates the scenario where there are two replicates (R1 and R2) for the SAM files, and a SNV list generated from genomic sequencing. All the pre-processing steps will be applied including duplicate removal, merging replicates, and processing bedgraphs and RNA SNVs, namely L<rmDup>, L<mergeSam> and L<procReads>. The demonstration also prints informative messages to help users understand each step towards the ASARP predictions. All the preprocessing results will be output to folder C<preproc>. C<demo.results> will contain the final ASARP output.
 
 Run the script:
 
+ cd demo
  chmod +x demo.sh
  ./demo.sh
 

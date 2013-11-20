@@ -33,6 +33,13 @@ Setup
 <p>The pipeline is maintained using GIT (<a href='http://git-scm.com/' target='_blank'>git-scm.com</a> ). Installation of GIT is easy and detailed in the website. To download the pipeline in Linux/Unix command line, simply clone it from the GitHub (<a href='https://github.com/' target='_blank'>github.com</a> ) repository to <code>your-folder</code></p>
 <pre> git clone https://github.com/cyruschan/ASARP.git your-folder</pre>
 <p>It is runnable once you have R and Statistics::R on your machine. See below for the requirements. The demonstration scripts and data are also bundled, you can try the demonstrations described in <i><a href='Demo.html'>Demo</a></i> once you have the required R and Statistics::R ready (see below).</p>
+<p>For human data, we include the necessary data files such as the hg19 gene annotation. Because of the upload limit of GitHub, the example file needs to be unzipped.</p>
+<pre> cd demo
+ chmod +x extract.hg19.sh
+ ./extract.hg19.sh</pre>
+<p>Or go to the data folder to check if the zipped/unzipped gene annotation file is there</p>
+<pre> cd data
+ gunzip -c hg19.merged.to.ensg.all.tx.03.18.2011.txt.gz &gt;hg19.merged.to.ensg.all.tx.03.18.2011.txt </pre>
 <a name='Requirements'></a><h1>Requirements</h1>
 <p>To run the pipeline, users need to first set up R, which is widely used and its installation is well supported across different platforms.</p>
 <ul>

@@ -22,6 +22,17 @@ The pipeline is maintained using GIT (http://git-scm.com/ ). Installation of GIT
 
 It is runnable once you have R and Statistics::R on your machine. See below for the requirements. The demonstration scripts and data are also bundled, you can try the demonstrations described in L<Demo> once you have the required R and Statistics::R ready (see below).
 
+For human data, we include the necessary data files such as the hg19 gene annotation. Because of the upload limit of GitHub, the example file needs to be unzipped.
+
+ cd demo
+ chmod +x extract.hg19.sh
+ ./extract.hg19.sh
+
+Or go to the data folder to check if the zipped/unzipped gene annotation file is there
+
+ cd data
+ gunzip -c hg19.merged.to.ensg.all.tx.03.18.2011.txt.gz >hg19.merged.to.ensg.all.tx.03.18.2011.txt 
+
 =head1 Requirements
 
 To run the pipeline, users need to first set up R, which is widely used and its installation is well supported across different platforms.
