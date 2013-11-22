@@ -67,13 +67,12 @@ fileParser
  --transcript annotation file path ($xiaoF), 
  --annotation.event path ($splicingF), 
  --est.event file path ($estF, optional: '' returned if not provided in $configs)</pre>
-<p>The default config file as an example can be found in <i><a href='../default.config' target='_blank'>../default.config</a></i>.</p>
-<p>Lines for RNA-Seq.event and EST.event file paths may be skipped as they are optional.</p>
+<p>The default config file as an example can be found in the project <code>default.config</code>.</p>
 <p><b>File formats</b>:</p>
 <ul>
 <li><a name='Annotation file format: Transcript and gene annotation specified in $xiaoF'></a>Annotation file format:
 Transcript and gene annotation specified in <code>$xiaoF</code></li>
-<p>The example file by default, <i><a href='../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt' target='_blank'>../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt</a></i>,
+<p>The example file by default, <code>data/hg19.merged.to.ensg.all.tx.03.18.2011.txt(.gz)</code>,
 was created by merging ensembl Refseq, UCSC knowngene, Gencode
 gene, and Vegagene.</p>
 <p><i>Format</i> (tab delimited):
@@ -83,17 +82,17 @@ cdsstartstat,cdsendstat</p>
 <p><i>IMPORTANT</i>: all coordinates are hg19, 0-based start and 1-based end
 coordinates (UCSC convention) **in this file only???**.</p>
 <li><a name='Event (splicing event) file formats:'></a>Event (splicing event) file formats:</li>
-<p>Annotation events specified in <code>$splicingF</code> (example: <i><a href='../data/annotation.event' target='_blank'>../data/annotation.event</a></i>)</p>
+<p>Annotation events specified in <code>$splicingF</code> (example: <code>data/annotation.event</code>)</p>
 <p>The file contains splicing events as annotated in the above file
 (<code>$xiaoF</code>).  The format is the same as that for rnaseq_event.
 (1-based start and end)</p>
-<p>RNA-Seq events specified in <code>$rnaseqF</code> (example: <i><a href='../data/rnaseq.event' target='_blank'>../data/rnaseq.event</a></i>)</p>
+<p>RNA-Seq events specified in <code>$rnaseqF</code> (example: <code>data/rnaseq.event</code>)</p>
 <p>The file contains splicing events as determined by our RNA-seq data.
 It lists the events for each gene. The format of the events is,
 EVENT, chromosome, genename, strand, event_region, flanking_region_1,
 flanking_region_2, where *_region are in the format of
 starting_coordinate-ending_coordinate. (1-based start and end)</p>
-<p>EST events specified in <code>$estF</code> (example: <i><a href='../data/est.event' target='_blank'>../data/est.event</a></i>)</p>
+<p>EST events specified in <code>$estF</code> (example: <code>data/est.event</code>)</p>
 <p>The file contains splicing events as determined from hg19 EST and cDNA data.
 The format is tab-delimited as: event_type, event_name, starting_coordinate,
 ending_coordinate. (1-based start and end)</p>
@@ -112,7 +111,7 @@ ending_coordinate. (1-based start and end)</p>
  --Fisher's Exact Test p-value cutoff for target-control SNV pairs in ASARP ($ASARPPCUTOFF),
  --NEV lower and upper cutoffs (excl.) ($NEVCUTOFFLOWER, $NEVCUTOFFUPPER),
  --allelic ratio difference cutoff for target-control SNV pairs in ASARP ($ALRATIOCUTOFF)</pre>
-<p>The default parameter config file as an example can be found in <i><a href='../default.param' target='_blank'>../default.param</a></i>.
+<p>The default parameter config file as an example can be found in <code>default.param</code>.
 All parameters are required and have to be set.</p>
 <li><a name='readTranscriptFile'></a><code>readTranscriptFile</code></li>
 <p>read the transcript annotation file</p>
@@ -197,7 +196,7 @@ All parameters are required and have to be set.</p>
   i.e. there can be size of list + 1 possible locations for an element)
   --unmatch flag: 1 means **unmatch**, 0 means **match**</pre>
 <li><a name='Other utility subs'></a>Other utility subs</li>
-<p>Kindly go to have a look at the source: <i><a href='../fileParser.pl' target='_blank'>../fileParser.pl</a></i>. There will be some comments around. Good luck!</p>
+<p>Kindly go to have a look at the source: <code>fileParser.pl</code>. There will be some comments around. Good luck!</p>
 </ul>
 <a name='SEE ALSO'></a><h1>SEE ALSO</h1>
 <p><i><a href='asarp.html'>asarp</a></i>, <i><a href='snpParser.html'>snpParser</a></i>, <i><a href='MyConstants.html'>MyConstants</a></i></p>

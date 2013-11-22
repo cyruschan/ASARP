@@ -1266,9 +1266,7 @@ get all input annotation/event file/folder paths contained in the configuration 
  --annotation.event path ($splicingF), 
  --est.event file path ($estF, optional: '' returned if not provided in $configs)
 
-The default config file as an example can be found in F<../default.config>.
-
-Lines for RNA-Seq.event and EST.event file paths may be skipped as they are optional.
+The default config file as an example can be found in the project C<default.config>.
 
 B<File formats>:
 
@@ -1277,7 +1275,7 @@ B<File formats>:
 =item Annotation file format:
 Transcript and gene annotation specified in C<$xiaoF>
 
-The example file by default, F<../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt>, 
+The example file by default, C<data/hg19.merged.to.ensg.all.tx.03.18.2011.txt(.gz)>, 
 was created by merging ensembl Refseq, UCSC knowngene, Gencode
 gene, and Vegagene. 
 
@@ -1291,13 +1289,13 @@ coordinates (UCSC convention) **in this file only???**.
 
 =item Event (splicing event) file formats:
 
-Annotation events specified in C<$splicingF> (example: F<../data/annotation.event>)
+Annotation events specified in C<$splicingF> (example: C<data/annotation.event>)
 
 The file contains splicing events as annotated in the above file
 (C<$xiaoF>).  The format is the same as that for rnaseq_event.
 (1-based start and end)
 
-RNA-Seq events specified in C<$rnaseqF> (example: F<../data/rnaseq.event>)
+RNA-Seq events specified in C<$rnaseqF> (example: C<data/rnaseq.event>)
 
 The file contains splicing events as determined by our RNA-seq data.
 It lists the events for each gene. The format of the events is, 
@@ -1305,7 +1303,7 @@ EVENT, chromosome, genename, strand, event_region, flanking_region_1,
 flanking_region_2, where *_region are in the format of 
 starting_coordinate-ending_coordinate. (1-based start and end)
 
-EST events specified in C<$estF> (example: F<../data/est.event>) 
+EST events specified in C<$estF> (example: C<data/est.event>) 
 
 The file contains splicing events as determined from hg19 EST and cDNA data.
 The format is tab-delimited as: event_type, event_name, starting_coordinate,
@@ -1330,7 +1328,7 @@ get all the numeric parameters including p-value cutoffs, NEV lower/upper thresh
  --NEV lower and upper cutoffs (excl.) ($NEVCUTOFFLOWER, $NEVCUTOFFUPPER),
  --allelic ratio difference cutoff for target-control SNV pairs in ASARP ($ALRATIOCUTOFF)
 
-The default parameter config file as an example can be found in F<../default.param>.
+The default parameter config file as an example can be found in C<default.param>.
 All parameters are required and have to be set.
 
 =item C<readTranscriptFile>
@@ -1460,7 +1458,7 @@ binary search for insert (or location), including left, right insert (location) 
 
 =item Other utility subs
 
-Kindly go to have a look at the source: F<../fileParser.pl>. There will be some comments around. Good luck!
+Kindly go to have a look at the source: C<fileParser.pl>. There will be some comments around. Good luck!
 
 =back
 

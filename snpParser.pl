@@ -2323,7 +2323,7 @@ each SNV:
 	(# reads for 
 	reference allele:alternative allele:wrong nucleotide)
 
-Example file: F<../data/snp.list.fig3>
+Example file: C<data/snp.list.fig3>
 
 =head2 Sub-routines (major)
 

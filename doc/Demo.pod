@@ -6,7 +6,7 @@ NOTE: the data provided are small subsets from large real data, serving for the 
 
 =head1 Requirement
 
-Before running the demo scripts, make sure the gene annottion file is unzipped (see L<Setup>) following the instructions below.
+Before running the demo scripts, B<make sure R and Statistics::R are available, and the gene annottion file is unzipped> (see L<Setup>) following the instructions below:
 For human data, we include the necessary data files such as the hg19 gene annotation. Because of the upload limit of GitHub, the example file needs to be unzipped.
 
  cd demo

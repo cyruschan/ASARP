@@ -24,7 +24,7 @@ The alternative starts and the detailed procedure are described here.
 
 =head2 Start 1: Mapping
 
-Prior to any start points, RNA-Seq mapping results are needed, which will be utilized to provide allele-specific SNV statistics and expression levels. There are many RNA-Seq mapping tools and pipelines available. To generate accurate mapping with precise SNV statistics, splicing and variant aware programs in combination of unbiased mapping procedures are highly recommended. The results in the B<sam> file format are used (more details: http://samtools.sourceforge.net/SAMv1.pdf). Some choices are:
+Prior to any start points, RNA-Seq mapping results are needed, which will be utilized to provide allele-specific SNV statistics and expression levels. There are many RNA-Seq mapping tools and pipelines available. To generate accurate mapping with precise SNV statistics, splicing and variant aware programs in combination of unbiased mapping procedures are highly recommended. The results in the B<sam> file format are used (more details: http://samtools.sourceforge.net/SAMv1.pdf ). Some choices are:
 
 =over 6
 
@@ -52,7 +52,7 @@ For (heterozygous) SNV calling from DNA / genomic sequencing (beyond our scope),
 
 =item samtools: http://samtools.sourceforge.net/
 
-=item SOAPsnv: soap.genomics.org.cn/SOAPsnv.html
+=item SOAPsnv: http://soap.genomics.org.cn/SOAPsnv.html
 
 =item SNVer: http://snver.sourceforge.net/
 

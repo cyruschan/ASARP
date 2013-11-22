@@ -208,6 +208,7 @@ modiBH (modified BH method; employed in ASARP), BH (Benjamini Hochberg), BY (Ben
 More details of the p-value adjustment methods (from R) are available at: 
 http://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
 
+
 =head1 SYNOPSIS
 
 USAGE: 
@@ -223,7 +224,7 @@ Assume you are in the ASARP main folder
  cd demo
  perl -I .. ../fdrASE.pl testFdrASE demo2.config demo.param
 
-Results will be testFdrASE.pdf and testFdrASE.zoom.pdf respectively, as shown below:
+Results will be testFdrASE.pdf and testFdrASE.zoom.pdf respectively, as shown below from analyzing the demo RNA SNV file (demo/demo2data/rna.snv.demo.lst)
 
 G<img/aseFdrAll.png>
 
@@ -240,7 +241,8 @@ ASARP gene predictions. Users can also directly set p-value cutoff (C<p_chi_snv>
 FDR method instead in the C<parameter_file> for ASARP 
 (remember to comment out C<fdr> to make C<p_chi_snv> in effect)
 
-Results from analyzing the demo RNA SNV file (demo/demo2data/rna.snv.demo.lst)
+modiBH was used in the previous ASARP method and is kept in the new version (with Perl implementation).
+I<Li G, Bahn JH, Lee JH, Peng G, Chen Z, Nelson SF, Xiao X. Identification of allele-specific alternative mRNA processing via transcriptome sequencing, Nucleic Acids Research, 2012, 40(13), e104> at http://nar.oxfordjournals.org/content/40/13/e104
 
 =head1 SEE ALSO
 

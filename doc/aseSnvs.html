@@ -30,8 +30,8 @@ aseSnvs
 The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in the <code>parameter_file</code> (same in the ASARP pipelien). Other parameters are read through and ignored.</p>
 <a name='INPUTS'></a><h2>INPUTS</h2>
 <p>The application counts the powerful SNVs and ASE SNVs. It accepts the same configuration and parameter file formats as the full ASARP pipeline. See below and <i><a href='asarp.html'>asarp</a></i> for more details.</p>
-<p><code>config_file</code> is the input configuration file which contains all the input file keys and their paths. The format is &lt;key&gt;tab&lt;path&gt;. Line starting with # are comments. Example: <i><a href='../default.config' target='_blank'>../default.config</a></i></p>
-<p><code>parameter_file</code> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is &lt;parameter&gt;tab&lt;value&gt;. Lines starting with # are comments. It is optional and the default is: <i><a href='../default.param' target='_blank'>../default.param</a></i></p>
+<p><code>config_file</code> is the input configuration file which contains all the input file keys and their paths. The format is &lt;key&gt;tab&lt;path&gt;. Line starting with # are comments. Example: <code>default.config</code></p>
+<p><code>parameter_file</code> is the parameter configuration file which contains all the thresholds and cutoffs, e.g. p-value cuttoffs and bounds for absolute allelic ratio difference. The format of each line is &lt;parameter&gt;tab&lt;value&gt;. Lines starting with # are comments. It is optional and the default is: <code>default.param</code></p>
 <p>See the format descriptions in <i><a href='snpParser.html'>snpParser</a></i> for more details about the input SNV list content.</p>
 <a name='OUTPUTS'></a><h2>OUTPUTS</h2>
 <p>There will be two result files:
