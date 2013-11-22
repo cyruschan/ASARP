@@ -46,6 +46,22 @@ With sam files from mapping, pre-processing generates the B<SNV> statistics with
 
 Check out C<demo.sh> in L<Demo>.
 
+For (heterozygous) SNV calling from DNA / genomic sequencing (beyond our scope), users may choose from:
+
+=over 6
+
+=item samtools: http://samtools.sourceforge.net/
+
+=item SOAPsnv: soap.genomics.org.cn/SOAPsnv.html
+
+=item SNVer: http://snver.sourceforge.net/
+
+=item GATK: http://www.broadinstitute.org/gatk/ 
+
+=back
+
+
+
 =head2 Start 2: SNV reads and bedgraphs
 
 If there are no genomic SNVs available, users need to call SNVs from RNA-Seq. The pipeline provides components to check common SNPs (dbSNPs: http://www.ncbi.nlm.nih.gov/SNP/ ) for their allelic reads, remove monoallelic SNVs with flexible read count thresholds. Alternatively, users can use more advanced tools to perform RNA-Seq based SNV calling. Some choices are:

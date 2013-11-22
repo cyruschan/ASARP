@@ -48,6 +48,13 @@ Overview
 </ul>
 <p>With sam files from mapping, pre-processing generates the <b>SNV</b> statistics with allele read counts and the compress track information in <b>bedgraph</b> file format (details: <a href='http://genome.ucsc.edu/goldenPath/help/bedgraph.html' target='_blank'>genome.ucsc.edu</a> ). If the genomic SNV information is available from DNA sequencing, the heterozygous SNVs can be directly used (see <i><a href='procReads.html'>procReads</a></i>). Otherwise, users need to do SNV-calling from RNA-Seq and overlap them with common Single Nucleotide Polymorphisms (SNPs). See below for more details.</p>
 <p>Check out <code>demo.sh</code> in <i><a href='Demo.html'>Demo</a></i>.</p>
+<p>For (heterozygous) SNV calling from DNA / genomic sequencing (beyond our scope), users may choose from:</p>
+<ul>
+<li><a name='samtools: samtools.sourceforge.net'></a>samtools: <a href='http://samtools.sourceforge.net/' target='_blank'>samtools.sourceforge.net</a></li>
+<li><a name='SOAPsnv: soap.genomics.org.cn/SOAPsnv.html'></a>SOAPsnv: soap.genomics.org.cn/SOAPsnv.html</li>
+<li><a name='SNVer: snver.sourceforge.net'></a>SNVer: <a href='http://snver.sourceforge.net/' target='_blank'>snver.sourceforge.net</a></li>
+<li><a name='GATK: www.broadinstitute.org'></a>GATK: <a href='http://www.broadinstitute.org/gatk/' target='_blank'>www.broadinstitute.org</a></li>
+</ul>
 <a name='Start 2: SNV reads and bedgraphs'></a><h2>Start 2: SNV reads and bedgraphs</h2>
 <p>If there are no genomic SNVs available, users need to call SNVs from RNA-Seq. The pipeline provides components to check common SNPs (dbSNPs: <a href='http://www.ncbi.nlm.nih.gov/SNP/' target='_blank'>www.ncbi.nlm.nih.gov</a> ) for their allelic reads, remove monoallelic SNVs with flexible read count thresholds. Alternatively, users can use more advanced tools to perform RNA-Seq based SNV calling. Some choices are:</p>
 <ul>
