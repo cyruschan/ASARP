@@ -157,6 +157,8 @@ sub getAseAll{
   chomp @pred;
   close(FP);
 
+  my $stFlag = 0; #detect strand specific setting
+
   my $checkText = "ASE gene level (all powerful SNVs are ASEs)";
   if($pred[0] ne $checkText){
     die "ERROR: expecting $input to be ase.prediction (with header: $checkText)\n";
@@ -188,6 +190,7 @@ sub getAseAll{
 	if(defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
           $info .= " $strandInfo"; # add strand information
 	  $keySnv = "$keySnv;$strandInfo";
+	  $stFlag = 1;
         }
 	push @allKeySnvs, $keySnv; # a new snv added
         
@@ -201,7 +204,7 @@ sub getAseAll{
     }
   }
 
-  return (\%aseHs, \%snvHs);
+  return (\%aseHs, \%snvHs, $stFlag);
 }
 
 sub hashRefNo

@@ -1,7 +1,7 @@
 =head1 Overview
 
 
-Heterozygous single nucleotide variants (SNVs) may exhibit allele-specific expression (ASE) as well as local allele-specific alternative mRNA processing (ASARP), including allele-specific alternative splicing (ASAS), alternative 5' initiation (ASAI), alternative 3' termination/polyadenylation (ASAT).
+Heterozygous single nucleotide variants (SNVs) may exhibit allele-specific expression (ASE) as well as local allele-specific alternative mRNA processing (ASARP), including allele-specific alternative splicing (ASAS), alternative 5' transcriptional initiation (ASTI), alternative 3' termination/polyadenylation (ASAP).
 
 G<img/Intro.png>
 

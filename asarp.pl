@@ -251,9 +251,9 @@ Allele-Specific Alternative RNA Processing (B<ASARP>) types:
 
 =item B<ASAS>: Allele-Specific Alternative Splicing; 
 
-=item B<ASAI>: Allele-Specific Alternative (5'-end) Initiation; 
+=item B<ASTI>: Allele-Specific (5'-end) Transcriptional Initiation (or called ASAI Alternative Initiation); 
 
-=item B<ASAT>: Allele-Specific Alternative (3'-end) Termination, or Alternative Polyadenylation
+=item B<ASAP>: Allele-Specific (3'-end) Alternative Polyadenylation (or called ASAT Alternative Termination)
 
 =back
 
