@@ -114,10 +114,19 @@ if($type eq "ASE"){
     }
     $cnt += 1;
     #print "$_\n";
-    my ($ctrlP, $ctrlCnt) = split(/\t/, $contrlSnv->{$_});
+    my ($ctrlP, $ctrlCnt, $ctrlLine) = split(/\t/, $contrlSnv->{$_});
+    my (@sar) = split(/ /, $ctrlLine);
+    my $ctrlAlCnt = $sar[-1];
+    if($stFlag2){
+      $ctrlAlCnt = $sar[-2];
+    }
+    if(!($ctrlAlCnt =~ /\d+:\d+:\d+/)){
+      die "ERROR: parsing the allelic count of SAMPLE2: $ctrlAlCnt in $contrlSnv->{$_}\n";
+    }
     #
     #$select{$_} = "$caseSnv->{$_}\n$contrlSnv->{$_}\n";
-    $select{$_} = "$caseSnv->{$_}\t(ctrl: $ctrlP;$ctrlCnt)\n";
+    #$select{$_} = "$caseSnv->{$_}\t(ctrl: $ctrlP;$ctrlCnt;ctrlAlCnt)\n";
+    $select{$_} = "$caseSnv->{$_}\t(ctrl: $ctrlP;$ctrlAlCnt)\n";
     #print "$caseSnv->{$_}\n";
     #print "$contrlSnv->{$_}\n";
     #print "\n";
