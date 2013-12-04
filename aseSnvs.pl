@@ -26,9 +26,9 @@ The criteria (powerful and ASE, i.e. p-value, cutoffs) are contained in paramete
 
 The extra optional parameter overwritten_p (if input, it must follow parameter_file)
 specifies a new p-value cutoff to overwrite the FDR control adjusted p-value cutoff
-when needed. According to our study, a relaxed FDR control works best for ASE/ASARP
-gene results. However, this may be too relaxing if one is interested in **individual**
-ASE SNVs.
+when needed. According to our study, the modified BH (modiBH) FDR control works best 
+for ASE/ASARP gene results. However, this may be too relaxing if one is interested in 
+**individual** ASE SNVs.
 
 There will be two result files: 
 "output_file.ase" with the ASE SNVs (a subset of the powerful SNVs), and 

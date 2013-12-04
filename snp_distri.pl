@@ -427,9 +427,9 @@ If the SNV overlaps certain 5'/3' UTRs, it is considered as in 5'/3' UTRs (non-c
 
 Only when a SNV never overlaps any exons nor 5'/3' UTRs, and its genome location is within certain transcript span, it is considered as in introns, regardless of the times it overlaps. As a result, intron SNVs are exclusive to exons and 5'/3' UTRs.
 
-A SNV can be categorized into multiple categories, denoted as complex. Therefore, complex is the union of SNVs with any combinations of Exon and 5'/3' UTR types. In-gene SNVs are the union of all the categories: exon, 5' UTR, 3' UTR, intron. Therefore, the sum of intron, exon, 5' and 3' UTR SNV counts will be larger than the total in-gene SNV count if complex SNVs exist. In-gene and Intergenic SNVs are exclusive to each other.
+A SNV can be categorized into multiple categories, denoted as complex. Therefore, complex contains SNVs with combinations of Exon and 5'/3' UTR types. In-gene SNVs are the union of all the categories: exon, 5' UTR, 3' UTR, intron. Therefore, the sum of intron, exon, 5' and 3' UTR SNV counts will be larger than the total in-gene SNV count if complex SNVs exist. In-gene and Intergenic SNVs are exclusive to each other.
 
-For any of the above cases, a SNV is considered in-gene. If a SNV is not in-gene, it is considered in the intergenic regions.
+For any of the above cases, a SNV is considered in-gene. If a SNV is not in-gene at all, it is considered in the intergenic regions.
 
 The application also outputs percentage (over the total SNV positions) sumamries for powerful, non-powerful and overall SNV distributions. Sample output:
 
