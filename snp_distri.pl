@@ -228,6 +228,10 @@ sub getGeneSnpsDistri
       if($inEx || $in5UTR || $in3UTR){ #once SNV matches some exon, 5'UTR, or 3'UTR, it cannot be considered as in an intron
         $inIn = 0;
       }
+      #if($inEx){ # try absolute UTR percentage
+      #  $in5UTR=0;
+      #  $in3UTR=0;
+      #}
       $dist[$i]{$_} = join(',', $inEx, $inIn, $in5UTR, $in3UTR);
     }
   }
