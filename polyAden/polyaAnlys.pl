@@ -1,7 +1,14 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-BEGIN { push @INC, "../" }
+BEGIN { 
+use File::Basename;
+my $dir=dirname($0);
+$dir = dirname($dir); # 1-lv up
+unshift(@INC, $dir);
+print "$dir\n";
+#push @INC, "../";
+}
 require "anlysUtilities.pl"; #sub's for compSamples
 require "mirnaParser.pl";
 

@@ -16,14 +16,20 @@ my ($outputFile, $snpF, $xiaoF, $strandFlag, $POWCUTOFF, $snvPwrOut, $snvOrdOut,
 if(@ARGV < 4){ # !defined($outputFile) || !defined($snpF) || !defined($xiaoF)){
   print <<EOT; 
   
-USAGE: perl $0 output_file snv_file transcript_file strand_flag [powerful_snv_cutoff pwr_snv_details ordinary_snv_details is_detailed]
+USAGE: perl $0 output_file snv_file transcript_file strand_flag [powerful_snv_cutoff [pwr_snv_details ordinary_snv_details [is_detailed]]]
 
 ARGUMENTS:
+output_file>	output file
+snv_file	SNV input file (can be strand specific, see strand_flag)
+transcript_file	gene annotation file (i.e. xiaofile used in ASARP config)
 strand_flag	0--non-strand-specific; 1/2--strand-specific (not distinguishable at this step).
 		If set, there will be 2 snv_details files for each category (pwr or ordinary), 
 		with .plus and .minus indicating the distribtuion in the + and - strands
 OPTIONAL:
 The optional arguments must be input in order.
+powerful_snv_cutoff>
+		an optional cutoff to categorize SNVs into powerful 
+		(>= C<powerful_snv_cutoff>) and non-powerful types. Default: 20
 pwr_snv_details	
 ordinary_snv_details 
 		These two are the output files for the detailed SNV categories of 
@@ -391,24 +397,35 @@ It also serves as an introductory application script to get familiar with the AS
 
 =head1 SYNOPSIS
 
-  perl snp_distri.pl output_file snv_file transcript_file [powerful_snv_cutoff pwr_snv_details ordinary_snv_details [is_detailed]]
+  perl snp_distri.pl output_file snv_file transcript_file strand_flag [powerful_snv_cutoff [pwr_snv_details ordinary_snv_details [is_detailed]]]
 
-C<snv_file>: a SNV list, see the format description in L<snpParser>
+ARGUMENTS:
 
-C<powerful_snv_cutoff>: an optional cutoff to categorize SNVs into powerful (>= C<powerful_snv_cutoff>) and non-powerful types. Default: 20
+C<output_file>: output file (see below)
+C<snv_file>:	SNV input file (can be strand specific, see strand_flag), see L<Files>
+C<transcript_file>:	gene annotation file (i.e. xiaofile used in ASARP config), see L<Files>
 
-C<transcript_file>: Transcript and gene annotation file, see the format description in L<fileParser>
+C<strand_flag>:	0--non-strand-specific; 1/2--strand-specific (not distinguishable at this step).
+		If set, there will be 2 snv_details files for each category (pwr or ordinary), 
+		with .plus and .minus indicating the distribtuion in the + and - strands
+
+OPTIONAL:
 
 The optional arguments must be input in order.
 
-C<pwr_snv_details> and C<ordinary_snv_details> are the output files for the detailed SNV categories of powerful and non-powerful (ordinary) SNVs respectively.
+C<powerful_snv_cutoff>: an optional cutoff to categorize SNVs into powerful (>= C<powerful_snv_cutoff>) and non-powerful types. Default: 20
 
-C<is_detailed>:	default: 0; when it is set 1 after both *_snv_details, detailed information of the SNVs will be output.
-		The detail format: chr;geneName;snvPos;type
+C<pwr_snv_details>
 
+C<ordinary_snv_details>:
+		These two are the output files for the detailed SNV categories of 
+		powerful and non-powerful (ordinary) SNVs respectively. 
+
+C<is_detailed>:	If is_detailed is set 1 after both *_snv_details, detailed information of the 
+		SNVs will be output: chr;geneName;snvPos;type
 =over 6
 
-=item An example file is ../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt, 
+=item An example transcript_file is ../data/hg19.merged.to.ensg.all.tx.03.18.2011.txt, 
 which was created by merging ensembl Refseq, UCSC knowngene, Gencode
 gene, and Vegagene. 
 
