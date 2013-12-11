@@ -155,6 +155,8 @@ sub getGeneSnpsDistri
   }
   my $allSnpNo = 0; #all SNV positions, including those without matching any gene transcripts
 
+  my %snvTypeGeneName = ();
+
   for (my $i=1; $i<=$CHRNUM; $i++){
     my ($geneRef) = getListByKeyChr($geneSnpRef, $geneSnpKey, $i); 
     my $geneChrRef = getChrGeneSnpsSorted($geneSnpRef, $geneSnpKey, $i);
@@ -198,15 +200,19 @@ sub getGeneSnpsDistri
 
 	    if($matchInfo =~ /exon/ && !($matchInfo =~ /UTR/)){ #UTR also has the exon: key word
 	      $inEx = 1;
+	      $snvTypeGeneName{"$chr;$snpPos;EXON"} = $geneName;
 	    }
 	    if($matchInfo =~ /intron/){
 	      $inIn = 1;
+	      $snvTypeGeneName{"$chr;$snpPos;INTRON"} = $geneName;
 	    }
 	    if($matchInfo =~ /5'UTR/){
 	      $in5UTR = 1;
+	      $snvTypeGeneName{"$chr;$snpPos;5'UTR"} = $geneName;
 	    }
 	    if($matchInfo =~ /3'UTR/){
 	      $in3UTR = 1;
+	      $snvTypeGeneName{"$chr;$snpPos;3'UTR"} = $geneName;
 	    }
             #print "($inEx, $inIn, $in5UTR, $in3UTR)\n";
 	    #exit;
@@ -229,10 +235,15 @@ sub getGeneSnpsDistri
 
   # clean-up for absolute concept of introns: only when a SNV never overlaps with any transcripts
   for(my $i=1; $i<=$CHRNUM; $i++){
+    my $chr = formatChr($i); #print "\n";
     for(keys %{$dist[$i]}){
       my ($inEx, $inIn, $in5UTR, $in3UTR) = split(',', $dist[$i]{$_});
       if($inEx || $in5UTR || $in3UTR){ #once SNV matches some exon, 5'UTR, or 3'UTR, it cannot be considered as in an intron
         $inIn = 0;
+	my $dKey = "$chr;$_;INTRON";
+	if(defined($snvTypeGeneName{$dKey})){
+	  delete $snvTypeGeneName{$dKey};
+	}
       }
       #if($inEx){ # try absolute UTR percentage
       #  $in5UTR=0;
@@ -247,10 +258,10 @@ sub getGeneSnpsDistri
   if(defined($detailedOutput)){
     if(!defined($strandInfo)){
       open($fp, ">", $detailedOutput) or die "ERROR: Cannot open $detailedOutput\n";
-      print $fp "chr\tpos\tcategory\n";
+      print $fp "chr\tpos\tcategory\tgene\n";
     }else{
       open($fp, ">", $detailedOutput) or die "ERROR: Cannot open $detailedOutput\n";
-      print $fp "chr\tpos\tcategory\tstrand\n"; #additional strand
+      print $fp "chr\tpos\tcategory\tgene\tstrand\n"; #additional strand
     }
   }
 
@@ -279,22 +290,25 @@ sub getGeneSnpsDistri
 
       if(defined($detailedOutput)){
         my $category = "";
+	my %cateGenes = ();
 	if($inEx+$in5UTR+$in3UTR == 0){
 	  $category = "INTRON;";
+	  $cateGenes{$snvTypeGeneName{"$chr;$_;INTRON"}} = 1;
 	  #if($inIn){
 	  #  $category = "INTRON";
 	  #}else{
 	  #  $category = "INTERGENIC"; #no such cases in in-gene SNVs
 	  #}
 	}else{
-	  if($inEx){ $category .="EXON;"; }
-	  if($in5UTR){ $category .="5'UTR;"; }
-	  if($in3UTR){ $category .="3'UTR;"; }
+	  if($inEx){ $category .="EXON;"; $cateGenes{$snvTypeGeneName{"$chr;$_;EXON"}} = 1;}
+	  if($in5UTR){ $category .="5'UTR;"; $cateGenes{$snvTypeGeneName{"$chr;$_;5'UTR"}} = 1;}
+	  if($in3UTR){ $category .="3'UTR;"; $cateGenes{$snvTypeGeneName{"$chr;$_;3'UTR"}} = 1;}
 	}
+	my $allGeneNames = join(';', keys %cateGenes);
         if(!defined($strandInfo)){
-	  print $fp "$chr\t$_\t$category\n";
+	  print $fp "$chr\t$_\t$category\t$allGeneNames\n";
 	}else{
-	  print $fp "$chr\t$_\t$category\t$strandInfo\n";
+	  print $fp "$chr\t$_\t$category\t$allGeneNames\t$strandInfo\n";
 	}
       }
     }
@@ -480,16 +494,14 @@ The application also outputs percentage (over the total SNV positions) sumamries
 
 If C<pwr_snv_details> and C<ordinary_snv_details> are input, you will have two addtional output files providing detailed categories of all individual B<in-gene> SNVs. E.g.
 
- chr	pos	category
- chr1	68586620	INTRON
- chr1	68591173	3'UTR;
- chr1	68590177	INTRON
- chr1	68608003	INTRON
- chr1	68591253	3'UTR;
- chr1	68591405	3'UTR;
- chr1	68624878	EXON;
- chr1	68589935	INTRON
- chr1	68585708	INTRON
+ chr	pos	category	gene	[strand]
+ chr1    6583701 3'UTR;  NOL9    -
+ chr1    223967953       3'UTR;  TP53BP2 -
+ chr1    225607144       EXON;   LBR     -
+
+ chr1    10366692        3'UTR;  KIF1B   +
+ chr1    244845185       INTRON; FAM152A +
+ chr1    1563789 EXON;   MIB2    +
 
 =head1 SEE ALSO
 

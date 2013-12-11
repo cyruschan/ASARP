@@ -1,14 +1,14 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
-BEGIN { 
-use File::Basename;
-my $dir=dirname($0);
-$dir = dirname($dir); # 1-lv up
-unshift(@INC, $dir);
-print "$dir\n";
+#BEGIN { 
+#use File::Basename;
+#my $dir=dirname($0);
+#$dir = dirname($dir); # 1-lv up
+#unshift(@INC, $dir);
+#print "$dir\n";
 #push @INC, "../";
-}
+#}
 require 'fileParser.pl';
 require 'snpParser.pl';
 require 'readUtilities.pl';

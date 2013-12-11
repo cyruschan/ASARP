@@ -115,7 +115,7 @@ sub readSummary
         if($miDs){	$dsrpt += 1;	}
         if($miCr){	$crt += 1;	}
 	if(!$miCr && !$miDs){
-	  $shrd += 0;
+	  $shrd += 1;
 	}
 	# REF should have fewer reads
 	if($miDs && $refNo < $altNo){ #disrupt
@@ -133,7 +133,9 @@ sub readSummary
     } # end of one SNV
   }
   my $ovrMsg = "SNV: disrupted: $dsrpt ($refYes)\tcreated: $crt ($altYes)\tswitched: $swtch\tshared: $shrd\n";
-  $ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tmiRNA: $miTargets\nTarget ratios: gene: ".($miTargets/$gCnt)." snv: ".($miTargets/$sCnt)."\n";
+  my $snvTargets = $dsrpt+$crt+$swtch;
+  $ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tsnv targets: $snvTargets\nTarget ratios: gene: ".($snvTargets/$gCnt)." snv: ".($snvTargets/$sCnt)."\n";
+  #$ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tmiRNA: $miTargets\nTarget ratios: gene: ".($miTargets/$gCnt)." snv: ".($miTargets/$sCnt)."\n";
   print $ovrMsg;
   $content .= $ovrMsg;
   return $content;
@@ -159,13 +161,23 @@ sub filterShared{
 	  $shrd += 1;
 	  my ($scr, $enr) = split(';', $refHs->{$_});
 	  my ($sca, $ena) = split(';', $altHs->{$_});
+	  if(abs($enr-$ena) >= 5){ #big energy change
+	    if($enr < $ena){
+	      delete $altHs->{$_};
+	    }else{ #($enr > $ena){
+	      delete $refHs->{$_};
+	    }
+	  }else{ # difference is small
+	      delete $refHs->{$_};
+	      delete $altHs->{$_};
+	  }
 	  if(abs($ena) > abs($enr)){ $enr = $ena; }
 	  if(abs($enr) > abs($minEn)){
 	    $minEn = $enr; # the lowest energy (with maximal abs)
 	  }
 
-	  delete $refHs->{$_};
-	  delete $altHs->{$_};
+	  #delete $refHs->{$_};
+	  #delete $altHs->{$_};
 	}
       }
    print "MIN_SHARED_ENERGY: $minEn\n";
