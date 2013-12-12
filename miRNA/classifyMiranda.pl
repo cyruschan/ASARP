@@ -135,6 +135,15 @@ sub readSummary
   my $ovrMsg = "SNV: disrupted: $dsrpt ($refYes)\tcreated: $crt ($altYes)\tswitched: $swtch\tshared: $shrd\n";
   my $snvTargets = $dsrpt+$crt+$swtch;
   $ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tsnv targets: $snvTargets\nTarget ratios: gene: ".($snvTargets/$gCnt)." snv: ".($snvTargets/$sCnt)."\n";
+
+  my $pc = 'N/A';
+  if($dsrpt+$crt){
+    $pc = ($refYes+$altYes)/($dsrpt+$crt);
+  }
+  $pc = sprintf("%.2f", $pc*100);
+  $ovrMsg .= "Percent: $pc %\n";
+
+
   #$ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tmiRNA: $miTargets\nTarget ratios: gene: ".($miTargets/$gCnt)." snv: ".($miTargets/$sCnt)."\n";
   print $ovrMsg;
   $content .= $ovrMsg;
