@@ -184,11 +184,11 @@ sub getAseAll{
         my ($snpInfo, $strandInfo) = split(';', $pred[$i]);
         my($id, $p, $al, $pos, $reads) = split(',', $snpInfo);
         my ($r1, $r2) = split(':', $reads);
-        my $info = join(" ", $chr, $pos, $al, $id);
+        #my $info = join(" ", $chr, $pos, $al, $id);
         my $keySnv = "$chr;$pos"; #chr, gene and reads: X:Y are also needed
         
 	if(defined($strandInfo) && ($strandInfo eq '+' || $strandInfo eq '-')){
-          $info .= " $strandInfo"; # add strand information
+          #$info .= " $strandInfo"; # add strand information
 	  $keySnv = "$keySnv;$strandInfo";
 	  $stFlag = 1;
         }

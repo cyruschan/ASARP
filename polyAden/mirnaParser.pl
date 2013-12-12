@@ -200,7 +200,7 @@ sub getRawReadLines{
   for my $chrName (keys %chrSnvs){
     my @poss = sort{$a <=>$b} keys %{$chrSnvs{$chrName}}; # all poss
     my ($minP, $maxP) = ($poss[0], $poss[-1]); # filter out useless positions
-    print "$chrName range: ($minP, $maxP)\n@poss\n"; #exit;
+    print "$chrName range: ($minP, $maxP)\n"; #@poss\n"; #exit;
     my $samFile = "$folder/$chrName.$suffix";
     open(FP, "<", $samFile) or die "ERROR: Can't open $samFile";
     while(<FP>){
