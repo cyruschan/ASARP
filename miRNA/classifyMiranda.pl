@@ -55,9 +55,11 @@ sub readSummary
   print "$gCnt genes with $sCnt SNVs and $tCnt initial mirna targets\n";
   print "Filtering allele-specific miRNA targets\n";
 
+  my ($gd, $gc, $gs) = (0, 0, 0);
   my ($dsrpt, $crt, $swtch, $shrd, $miTargets) = (0, 0, 0, 0, 0);
   my ($refYes, $altYes) = (0, 0);
   for my $gk (keys %hits){
+    my ($tgd, $tgc, $tgs) = (0, 0, 0);
     print "$gk\n";
     for my $sk (keys %{$hits{$gk}}){
       print "$sk\n"; # for one SNV
@@ -111,9 +113,10 @@ sub readSummary
       }
       if($miDs && $miCr){ # both disrupt and create at the same SNV: that's switch
         $swtch += 1;
+	$tgs = 1;
       }else{
-        if($miDs){	$dsrpt += 1;	}
-        if($miCr){	$crt += 1;	}
+        if($miDs){	$dsrpt += 1; $tgd = 1;	}
+        if($miCr){	$crt += 1; $tgc = 1;	}
 	if(!$miCr && !$miDs){
 	  $shrd += 1;
 	}
@@ -131,17 +134,23 @@ sub readSummary
       $miTargets += $miSh+$miCr+$miDs; # total mir Targets
 
     } # end of one SNV
-  }
+    ($gd, $gc, $gs) = ($gd+$tgd, $gc+$tgc, $gs+$tgs); 
+  } #end of one gene
   my $ovrMsg = "SNV: disrupted: $dsrpt ($refYes)\tcreated: $crt ($altYes)\tswitched: $swtch\tshared: $shrd\n";
   my $snvTargets = $dsrpt+$crt+$swtch;
-  $ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tsnv targets: $snvTargets\nTarget ratios: gene: ".($snvTargets/$gCnt)." snv: ".($snvTargets/$sCnt)."\n";
+  #$ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tsnv targets: $snvTargets\nTarget ratios: gene: ".($snvTargets/$gCnt)." snv: ".($snvTargets/$sCnt)."\n";
+  $ovrMsg .= "summary:\tgene: $gCnt\tsnv: $sCnt\tchanged: $snvTargets(disrupt: $dsrpt; create: $crt; switch: $swtch)\n";
 
   my $pc = 'N/A';
-  if($dsrpt+$crt){
-    $pc = ($refYes+$altYes)/($dsrpt+$crt);
+  #if($gCnt){ #$sCnt){ #$dsrpt+$crt){
+  if($sCnt){ #$dsrpt+$crt){
+    $pc = ($dsrpt+$crt+$swtch)/$sCnt;
+    #$pc = ($dsrpt+$crt)/$sCnt;
+    #$pc = ($refYes+$altYes)/($dsrpt+$crt);
   }
   $pc = sprintf("%.2f", $pc*100);
-  $ovrMsg .= "Percent: $pc %\n";
+  $ovrMsg .= "Percent: $pc % (($dsrpt+$crt+$swtch)/$sCnt)\n";
+
 
 
   #$ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tmiRNA: $miTargets\nTarget ratios: gene: ".($miTargets/$gCnt)." snv: ".($miTargets/$sCnt)."\n";
@@ -170,7 +179,7 @@ sub filterShared{
 	  $shrd += 1;
 	  my ($scr, $enr) = split(';', $refHs->{$_});
 	  my ($sca, $ena) = split(';', $altHs->{$_});
-	  if(abs($enr-$ena) >= 5){ #big energy change
+	  if(0){ #eliminate this part #abs($enr-$ena) >= 5){ #big energy change
 	    if($enr < $ena){
 	      delete $altHs->{$_};
 	    }else{ #($enr > $ena){
