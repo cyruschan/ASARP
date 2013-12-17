@@ -83,6 +83,8 @@ C<read_counts> are RNA read counts obtained from the SAM (a.k.a the bedgraph) fi
 
 The compatible format of SNV lists as input or output enables chaining multiple components in the ASARP pipeline to analyze specific types of SNVs. For example, powerful SNVs output by L<aseSnvs> can be used as input for SNV distribution analysis by L<snp_dist>. SNVs selected from certain cell-line or tissue can be input to L<procReads> with different bedgraph track files to obtain their allele read counts in another cell-line or tissue, which can be further used for comparable ASARP analysis.
 
+B<NOTE: SNVs with only one read count (e.g. 1:0:x or 0:1:x) will be discarded by all SNV analysis components within the pipeline, so they are not included in any kind of output results of the pipeline.>
+
 =head2 Gene (transcript) annotation file
 
 This is the C<xiaofile> in the config_file, representing all gene transcript annotation. It is almost the same as the UCSC RefSeq file format, except that the #bin field and header line are removed, and the last fields score, name2 and exonFrames are removed.

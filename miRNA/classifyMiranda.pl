@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-if(@ARGV < 4 ){
+if(@ARGV < 5 ){
   print <<EOT;
 
 USAGE: perl $0 input_summary score_th energy_th output_summary
@@ -10,15 +10,15 @@ USAGE: perl $0 input_summary score_th energy_th output_summary
 EOT
   exit;
 }
-my ($input, $SCORE, $ENERGY, $output) = @ARGV;
+my ($input, $cell, $SCORE, $ENERGY, $output) = @ARGV;
 
-my $res = readSummary($input, $SCORE, $ENERGY);
+my $res = readSummary($input, $cell, $SCORE, $ENERGY);
 outputResults($output, $res);
 
 
 sub readSummary
 {
-  my ($in, $SCORETH, $ENERGYTH) = @_;
+  my ($in, $CELL, $SCORETH, $ENERGYTH) = @_;
   my %hits = ();
   my $content = '';
   open(FP, $in) or die "ERROR: cannot open $in\n";
@@ -139,7 +139,13 @@ sub readSummary
   my $ovrMsg = "SNV: disrupted: $dsrpt ($refYes)\tcreated: $crt ($altYes)\tswitched: $swtch\tshared: $shrd\n";
   my $snvTargets = $dsrpt+$crt+$swtch;
   #$ovrMsg .= "gene: $gCnt\tsnv: $sCnt\tsnv targets: $snvTargets\nTarget ratios: gene: ".($snvTargets/$gCnt)." snv: ".($snvTargets/$sCnt)."\n";
-  $ovrMsg .= "summary:\tgene: $gCnt\tsnv: $sCnt\tchanged: $snvTargets(disrupt: $dsrpt; create: $crt; switch: $swtch)\n";
+
+  my $ttlSnvs = `cat $CELL/*fa | grep '^>' | wc -l`; # total number of SNVs
+  chomp $ttlSnvs;
+  $ttlSnvs /= 2; # two sequences per SNV
+  my $spc = sprintf("%.2f", $sCnt/$ttlSnvs*100);
+  my $spc2 = sprintf("%.2f", $snvTargets/$ttlSnvs*100);
+  $ovrMsg .= "summary:\tgene: $gCnt\tsnv: $sCnt/$ttlSnvs ($spc %)\tchanged: $snvTargets($spc2 % disrupt: $dsrpt; create: $crt; switch: $swtch)\n";
 
   my $pc = 'N/A';
   #if($gCnt){ #$sCnt){ #$dsrpt+$crt){
@@ -179,7 +185,7 @@ sub filterShared{
 	  $shrd += 1;
 	  my ($scr, $enr) = split(';', $refHs->{$_});
 	  my ($sca, $ena) = split(';', $altHs->{$_});
-	  if(0){ #eliminate this part #abs($enr-$ena) >= 5){ #big energy change
+	  if(abs($enr-$ena) >= 5){ #big energy change  #0){ #eliminate this part #
 	    if($enr < $ena){
 	      delete $altHs->{$_};
 	    }else{ #($enr > $ena){

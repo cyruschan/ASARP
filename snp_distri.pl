@@ -452,6 +452,8 @@ C<output_file>: Tab dilimited counts of SNV positions in different gene regions.
 	Non-powerful(<20)       3846    32143   1246    3679    1323    39566   6580    46146
 	Overall 7634    33115   1832    7776    2787    47503   6922    54425
 
+B<NOTE: SNVs with only one read count (e.g. 1:0:x or 0:1:x) will be discarded by all SNV analysis components in the pipeline, so they are not included, even in Non-powerful categories>
+
 =head1 DESCRIPTION
 
 The application is SNV position (ref genome location) oriented. In other words, if (rarely, and not seen in our data) one position contains multiple SNVs, it will be still considered as one SNV (position). A SNV may overalp multiple transcripts of multiple genes. The rule to determine the categories of a SNV is as follows:
